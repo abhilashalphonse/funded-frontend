@@ -1,20 +1,8 @@
 import React, { useState } from "react";
-// import { useAuth } from "../AuthContext";
+import { useAuth } from "../../AuthContext"; 
 // import acg from "../assets/ACG.png";
 import { Eye, EyeOff, ChevronDown, Check, ArrowLeft } from "lucide-react";
 import Logo from '../../assets/ACG.png';
-
-/* ------------------------------------------------------------------ */
-/*  Integration notes                                                  */
-/*  1. Delete the useAuth mock below, restore the real import.         */
-/*  2. Swap <Wordmark /> for your ACG.png if you want the raster mark. */
-/* ------------------------------------------------------------------ */
-function useAuth() {
-  return {
-    signIn: async () => ({ error: null }),
-    signUp: async () => ({ error: null }),
-  };
-}
 
 /* ------------------------------------------------------------------ */
 /*  Why this pass looks different                                      */
@@ -65,7 +53,7 @@ function BackButton({ onBack }) {
     <button
       onClick={onBack}
       type="button"
-      className="group absolute left-6 top-6 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-neutral-500 transition-colors hover:text-white focus:outline-none sm:left-8 sm:top-8"
+      className="group absolute left-6 top-6 z-10 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-neutral-500 transition-colors hover:text-white focus:outline-none sm:left-8 sm:top-8"
     >
       <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" strokeWidth={2} />
       Back
@@ -87,10 +75,12 @@ function Card({ children, wide }) {
   );
 }
 
-function SocialButton({ icon, label }) {
+function SocialButton({ icon, label, onClick, disabled = false }) {
   return (
     <button
       type="button"
+      onClick={onClick}
+      disabled={disabled}
       className="flex h-[38px] w-full items-center justify-center gap-2 rounded-lg border border-white/[0.09] bg-white/[0.015] text-[13px] font-medium text-neutral-300 transition-all duration-150 hover:border-white/[0.18] hover:bg-white/[0.04] hover:text-white focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
     >
       {icon}
@@ -195,7 +185,7 @@ function LoginForm({ onSwitchToSignup }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -209,6 +199,18 @@ function LoginForm({ onSwitchToSignup }) {
     } catch (err) {
       setError(err.message || "Invalid login credentials.");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const { error: googleSignInError } = await signInWithGoogle();
+      if (googleSignInError) throw googleSignInError;
+    } catch (err) {
+      setError(err.message || "Unable to start Google sign-in.");
       setLoading(false);
     }
   };
@@ -227,7 +229,7 @@ function LoginForm({ onSwitchToSignup }) {
       </p>
 
       <div className="mt-6 flex flex-col gap-2">
-        <SocialButton icon={GoogleMark} label="Continue with Google" />
+        <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleLogin} disabled={loading} />
         <SocialButton icon={AppleMark} label="Continue with Apple" />
         <SocialButton icon={FacebookMark} label="Continue with Facebook" />
       </div>
@@ -306,7 +308,7 @@ function SignupForm({ onSwitchToLogin }) {
   const [idAgree, setIdAgree] = useState(false);
   const [marketingAgree, setMarketingAgree] = useState(false);
 
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -343,6 +345,18 @@ function SignupForm({ onSwitchToLogin }) {
     } catch (err) {
       setError(err.message || "An error occurred during registration.");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const { error: googleSignInError } = await signInWithGoogle();
+      if (googleSignInError) throw googleSignInError;
+    } catch (err) {
+      setError(err.message || "Unable to start Google sign-in.");
       setLoading(false);
     }
   };
@@ -465,7 +479,7 @@ function SignupForm({ onSwitchToLogin }) {
         <span className="h-px flex-1 bg-white/[0.08]" />
       </div>
 
-      <SocialButton icon={GoogleMark} label="Continue with Google" />
+      <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleSignup} disabled={loading} />
 
       <p className="mt-6 text-center text-[12.5px] text-neutral-500">
         Already have an account?{" "}

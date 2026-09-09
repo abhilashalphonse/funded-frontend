@@ -948,10 +948,10 @@ const navItems = [
   { id: 'leaderboard', name: 'Leaderboard', icon: Trophy },
   { id: 'profile', name: 'Profile Settings', icon: User },
 ];
+ 
 
 
-
-export default function Dashboard({ onBack }) {
+export default function Dashboard({ onBack = () => {} }) {
   const { signOut } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');

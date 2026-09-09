@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import logo from '../../assets/ACG.png';
 
-export default function Navbar() {
+export default function Navbar({ onSignIn = () => {} }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -36,7 +36,7 @@ export default function Navbar() {
 
         {/* Auth Actions - Professional "Ghost" Style */}
         <div className="hidden md:flex items-center gap-3">
-          <button className="text-[13px] font-medium text-[#888888] hover:text-white transition-all duration-300">
+          <button onClick={onSignIn} className="text-[13px] font-medium text-[#888888] hover:text-white transition-all duration-300">
             Sign In
           </button>
           <button className="text-[13px] font-medium border border-white/10 bg-white/5 text-white px-4 py-1.5 rounded-full hover:bg-white hover:text-black transition-all duration-300">
@@ -62,7 +62,7 @@ export default function Navbar() {
             </a>
           ))}
           <div className="pt-6 border-t border-white/[0.08] flex flex-col gap-4">
-            <button className="w-full text-left text-white font-medium">Sign In</button>
+            <button onClick={onSignIn} className="w-full text-left text-white font-medium">Sign In</button>
             <button className="w-full bg-white text-black py-2 rounded-full font-medium text-sm">Get Started</button>
           </div>
         </div>

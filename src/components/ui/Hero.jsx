@@ -89,7 +89,7 @@ const Hero = () => {
             {/* Sidebar */}
             <div className="w-full md:w-56 border-r border-white/[0.06] bg-[#05060A]/50 p-3 hidden md:flex flex-col gap-1">
               <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Overview</div>
-              {['Positions', 'Order History', 'Performance', 'API Keys'].map((item, i) => (
+              {['Positions', 'Order History', 'Performance', 'Challenges'].map((item, i) => (
                 <div key={i} className={`px-3 py-2 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors ${i === 0 ? 'bg-white/[0.06] text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.02]'}`}>
                   {i === 0 ? <Activity className="w-4 h-4 opacity-70" /> : <Terminal className="w-4 h-4 opacity-50" />}
                   {item}

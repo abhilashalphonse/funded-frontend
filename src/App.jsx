@@ -16,7 +16,7 @@ import StartChallengeSection from "./components/StartChallengeSection";
 import Footer from "./components/Footer";
 import Dashboard from "./components/Dashboard";
 import Auth from "./components/Auth";
-import PaymentPage from "./components/PaymentPage"; 
+import PaymentPage from "./components/PaymentPage";  
 
 
 
@@ -64,7 +64,7 @@ function App() {
   return (
     <div className="min-h-screen bg-black">
       {showLogin ? (
-        <Auth onBack={() => setShowLogin(false)} />
+        <Auth onBack={() => setScreen("homepage")} /> 
       ) : (
         <>
           <Navbar onLogin={() => {
