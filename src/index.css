@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  /* Custom brand colors */
+  --color-brand-canvas: #05060A;
+  --color-brand-surface: #0A0C12;
+  --color-brand-blue: #2E6BFF;
+  --color-brand-gold: #D4AF37;
+
+  /* Custom background pattern */
+  --bg-image-grid-pattern: linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px), 
+                           linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+
+  /* Custom animation definition */
+  --animate-fade-in-up: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  /* Keyframes for the animation */
+  @keyframes fade-in-up {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
