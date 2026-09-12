@@ -46,7 +46,7 @@ function App() {
 
   // 2. Authenticated State
   if (user && showDashboard) {  
-    return (
+    return ( 
       <Dashboard onBack={() => setShowDashboard(false)} /> 
     );
   }
@@ -65,7 +65,7 @@ function App() {
     <div className="min-h-screen bg-black">
       {showLogin ? (
         <Auth onBack={() => setScreen("homepage")} /> 
-      ) : (
+      ) : ( 
         <>
           <Navbar onLogin={() => {
             if (user) setShowDashboard(true);

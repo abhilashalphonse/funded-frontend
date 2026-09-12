@@ -11,81 +11,39 @@ import {
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
 
+const pageDetails = {
+  overview: { title: 'Account #509421', description: 'Your live evaluation account', action: 'Open WebTrader' },
+  analytics: { title: 'Advanced Metrics', description: 'Performance and risk analysis', action: 'Export report' },
+  calendar: { title: 'Economic Calendar', description: 'Market events and trading restrictions', action: 'View schedule' },
+  traders: { title: 'Traders', description: 'Explore active funded peers', action: 'Browse all traders' },
+  academy: { title: 'Academy', description: 'Continue your trading education', action: 'My progress' },
+  billing: { title: 'Billing', description: 'Payout methods, invoices, and payment details', action: 'Payment settings' },
+  leaderboard: { title: 'Leaderboard', description: 'Current payout-cycle standings', action: 'View rules' },
+  profile: { title: 'Profile Settings', description: 'Manage your account preferences', action: 'Save changes' },
+};
 
-const OverviewSection = () => {
- const [activeTab, setActiveTab] = useState("Overview");
-  const tabs = ["Overview", "Positions", "History", "Analytics", "Settings"];
+const PageHeader = ({ activeTab }) => {
+  const page = pageDetails[activeTab];
 
   return (
-    // The entire application shell must be pure black
-    <div className="min-h-screen bg-[#000000] text-[#EDEDED] font-sans selection:bg-white/20">
-      
-      {/* 1. Vercel-Style Top App Bar (Optional context for the full look) */}
-      <nav className="h-14 border-b border-[#222222] flex items-center px-6 justify-between">
-        <div className="flex items-center gap-3 text-[13px] font-medium text-[#888888]">
-          <div className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center font-bold text-[10px]">
-            A
-          </div>
-          <span className="text-[#EDEDED]">acg-prop</span>
-          <span className="text-[#333333]">/</span>
-          <span className="text-[#EDEDED]">Alex</span>
+    <header className="mb-8 flex flex-col gap-5 border-b border-[#222222] pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="rounded border border-[#222222] bg-[#0A0A0A] px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-[#888888]">Phase 1 Evaluation</span>
+          <span className="flex items-center gap-1.5 text-[12px] text-[#888888]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Live Connection</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-[13px] text-[#888888]">Support</span>
-          <span className="text-[13px] text-[#888888]">Docs</span>
-        </div>
-      </nav>
+        <h1 className="text-[28px] font-medium leading-none tracking-tight text-white sm:text-[32px]">{page.title}</h1>
+        <p className="mt-2 text-[13px] text-[#888888]">{page.description}</p>
+      </div>
+      <button className="h-8 w-fit rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20">{page.action}</button>
+    </header>
+  );
+};
 
-      <main className="max-w-[1040px] mx-auto px-6 py-12">
-        
-        {/* 2. Linear-Style Header */}
-        <header className="mb-10 flex items-end justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="px-2 py-0.5 rounded border border-[#222222] bg-[#0A0A0A] text-[11px] font-medium text-[#888888] uppercase tracking-wider">
-                Phase 1 Evaluation
-              </span>
-              <span className="flex items-center gap-1.5 text-[12px] text-[#888888]">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Live Connection
-              </span>
-            </div>
-            <h1 className="text-[32px] font-semibold tracking-tighter text-white leading-none">
-              Account #509421
-            </h1>
-          </div>
-          
-          <button className="h-8 px-4 rounded-md bg-white text-black text-[13px] font-medium hover:bg-[#EBEBEB] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
-            Open WebTrader
-          </button>
-        </header>
 
-        {/* 3. Vercel-Style Tab Navigation (Razor sharp bottom borders) */}
-        <div className="border-b border-[#222222] mb-8">
-          <div className="flex items-center gap-6">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-3 text-[14px] transition-colors relative ${
-                    isActive ? "text-white" : "text-[#888888] hover:text-[#EDEDED]"
-                  }`}
-                >
-                  {tab}
-                  {isActive && (
-                    <div className="absolute bottom-[-1px] left-0 right-0 h-[1px] bg-white" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 4. Content Area */}
-        {activeTab === "Overview" && (
-          <div className="animate-in fade-in duration-500 space-y-6">
+const OverviewSection = () => {
+  return (
+    <div className="animate-in fade-in duration-500 space-y-6">
             
             {/* Core Metrics Grid - Absolute minimalism, tabular numbers */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -228,9 +186,6 @@ const OverviewSection = () => {
               </div>
 
             </div>
-          </div>
-        )}
-      </main>
     </div>
   );
 }
@@ -1145,8 +1100,10 @@ export default function Dashboard({ onBack = () => {} }) {
 
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 overflow-y-auto w-full">
-          {/* Conditional Layout Injection */}
-          {renderTabContent()}
+          <div className="dashboard-surface mx-auto w-full max-w-[1040px] px-5 py-8 sm:px-6 sm:py-12">
+            <PageHeader activeTab={activeTab} />
+            {renderTabContent()}
+          </div>
         </main>
       </div>
     </div>

@@ -26,3 +26,31 @@
     }
   }
 }
+
+/* Keep every dashboard tab on the same compact account-overview surface. */
+.dashboard-surface .rounded-2xl {
+  border-radius: 0.75rem;
+}
+
+.dashboard-surface [class*="bg-[#0A0C12]"] {
+  background-color: #0A0A0A;
+}
+
+.dashboard-surface [class*="border-white/[0.08]"] {
+  border-color: #222222;
+}
+
+.dashboard-surface [class*="text-gray-400"],
+.dashboard-surface [class*="text-gray-500"] {
+  color: #888888;
+}
+
+/* The account overview uses quiet typography; preserve that weight across every tab. */
+.dashboard-surface [class*="font-black"] {
+  font-weight: 600;
+}
+
+.dashboard-surface [class*="font-bold"],
+.dashboard-surface [class*="font-semibold"] {
+  font-weight: 500;
+}
