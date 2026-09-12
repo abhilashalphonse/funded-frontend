@@ -1,93 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from "./AuthContext";
-import Navbar from "./components/Navbar";
-import HeroSection from "./components/HeroSection";
-import FeaturesSection from "./components/FeaturesSection";
-import YourChallengeSection from "./components/YourChallengeSection";
-import ChallengesSection from "./components/ChallengeSection";
-import ReviewSection from "./components/ReviewSection";
-import HowItWorksSection from "./components/HowItWorksSection";
-import PlatformsSection from "./components/PlatformsSection";
-import AcademySection from "./components/AcademySection";
-import TeamSection from "./components/TeamSection";
-import SupportSection from "./components/SupportSection";
-import FaqSection from "./components/FaqSection";
-import StartChallengeSection from "./components/StartChallengeSection";
-import Footer from "./components/Footer";
-import Dashboard from "./components/Dashboard";
-import Auth from "./components/Auth";
-import PaymentPage from "./components/PaymentPage";  
+import { useState } from "react";
+import { useAuth } from "./AuthContext.jsx";
 
-
+import Homepage from "./components/ui/Homepage.jsx";
+import Auth from "./components/ui/Auth.jsx";
+import Dashboard from "./components/ui/Dashboard.jsx";
 
 function App() {
-  const [showLogin, setShowLogin] = useState(false);
-  const { user, loading } = useAuth();
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [screen, setScreen] = useState("homepage");
+  const { user } = useAuth();
 
-  // Sync dashboard visibility with the user's authentication status
-  useEffect(() => {
-    if (user) {
-      setShowDashboard(true);
-    } else {
-      setShowDashboard(false);
-    }
-  }, [user]);
-
-  // 1. Loading State
-  if (loading) { 
-    return (
-      <div className="min-h-screen w-full bg-[#0a0b0d] flex items-center justify-center">
-        <span className="h-5 w-5 rounded-full border-2 border-sky-500/20 border-t-sky-500 animate-spin" />
-      </div>
-    );
+  if (screen === "dashboard" || (screen === "auth" && user)) {
+    return <Dashboard onBack={() => setScreen("homepage")} />;
   }
 
-  // 2. Authenticated State
-  if (user && showDashboard) {  
-    return ( 
-      <Dashboard onBack={() => setShowDashboard(false)} /> 
-    );
+  if (screen === "auth") {
+    return <Auth onBack={() => setScreen("homepage")} />;
   }
 
-  if (selectedPlan) {
-    return (
-      <PaymentPage
-        plan={selectedPlan}
-        onBack={() => setSelectedPlan(null)}
-      />
-    );
-  }
-
-  // 3. Unauthenticated State (Landing Page)
-  return (
-    <div className="min-h-screen bg-black">
-      {showLogin ? (
-        <Auth onBack={() => setScreen("homepage")} /> 
-      ) : ( 
-        <>
-          <Navbar onLogin={() => {
-            if (user) setShowDashboard(true);
-            else setShowLogin(true);
-          }} />
-          <HeroSection />
-          <YourChallengeSection /> 
-          <ChallengesSection onSelectPlan={setSelectedPlan} /> {/* <-- pass callback */}
-          <FeaturesSection />
-          <ReviewSection />
-          <HowItWorksSection />
-          <PlatformsSection />
-          <AcademySection />
-          <TeamSection />
-          <SupportSection />
-          <FaqSection />
-          <StartChallengeSection />
-          <Footer />
-        </>
-      )}
-    </div>
-  );
+  return <Homepage onSignIn={() => setScreen("auth")} />;
 }
 
 export default App;
