@@ -26,7 +26,7 @@ const steps = [
   {
     date: 'Jul 21',
     label: 'First payout',
-    sub: '12 days after funded',
+    sub: '14 days after funded',
     value: '$6,050.90',
     meta: 'Paid out in 4 hrs',
     active: true,

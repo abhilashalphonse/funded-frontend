@@ -18,7 +18,7 @@ function Homepage({ onSignIn }) {
     <>
     <Navbar onSignIn={onSignIn} />
     <Hero /> 
-    <TrustSection />
+    <TrustSection /> 
     <BuildChallenge />
     <HowItWorksSection />
     <Proof />

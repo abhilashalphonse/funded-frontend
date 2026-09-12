@@ -45,7 +45,7 @@ const Hero = () => {
 
         {/* Subheadline */}
         <p className="animate-fade-in-up [animation-delay:200ms] max-w-xl mx-auto text-lg text-gray-400 mb-10 leading-relaxed font-light">
-          Trade up to $500,000 in funded capital. Follow clear risk rules, and earn rewards when you perform.
+          Trade up to $100,000 in funded capital. Follow clear risk rules, and earn rewards when you perform.
         </p>
 
         {/* Call to Actions */}
