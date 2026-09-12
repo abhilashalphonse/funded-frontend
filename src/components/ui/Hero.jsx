@@ -30,7 +30,7 @@ const Hero = () => {
         {/* Minimalist Pill Badge */}
         <div className="animate-fade-in-up flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:bg-white/[0.02] transition-colors cursor-pointer">
           <div className="w-1.5 h-1.5 rounded-full bg-white/[0.8] animate-pulse" />
-          <span className="tracking-wide">Free Trial</span>
+          <span className="tracking-wide">How about a Free Trial?</span>
           <ArrowRight className="w-3.5 h-3.5 opacity-50" strokeWidth={1.5} />
         </div>
 

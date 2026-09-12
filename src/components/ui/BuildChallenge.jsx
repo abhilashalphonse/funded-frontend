@@ -277,7 +277,7 @@ function ChallengeHeader() {
         Build Your Challenge
       </h1>
       <p className="text-base sm:text-lg text-gray-400 font-light max-w-md">
-        Configure a challenge built around how you trade.
+        Choose the capital, risk, payout and trading conditions that fit your strategy
       </p>
     </div>
   );

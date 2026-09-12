@@ -5,7 +5,7 @@ const steps = [
   {
     date: 'Jul 4',
     label: 'Evaluation purchased',
-    value: '$422',
+    value: '$449',
     meta: '$100K 2-Step Challenge',
   },
   {
@@ -27,8 +27,8 @@ const steps = [
     date: 'Jul 21',
     label: 'First payout',
     sub: '12 days after funded',
-    value: '$4,050.90',
-    meta: 'Paid out in 9 hrs',
+    value: '$6,050.90',
+    meta: 'Paid out in 4 hrs',
     active: true,
   },
 ];
@@ -68,7 +68,7 @@ const AcgJourney = () => {
   useEffect(() => {
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) {
-      setPct(6118);
+      setPct(1247.99);
       return;
     }
     const obs = new IntersectionObserver(
@@ -80,7 +80,7 @@ const AcgJourney = () => {
           const tick = (now) => {
             const t = Math.min(1, (now - start) / duration);
             const eased = 1 - Math.pow(1 - t, 3);
-            setPct(Math.round(eased * 6118));
+            setPct(Math.round(eased * 1247.99));
             if (t < 1) requestAnimationFrame(tick);
           };
           requestAnimationFrame(tick);
@@ -202,7 +202,7 @@ const AcgJourney = () => {
 
           <div className="inline-flex items-center gap-1.5 text-gray-500 text-xs mb-7">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>9 payouts and counting</span>
+            <span>first payout and counting</span>
           </div>
 
           <div className="text-5xl font-medium text-white tracking-tight mb-2 leading-none tabular-nums">
@@ -215,9 +215,9 @@ const AcgJourney = () => {
           </p>
 
           <div className="flex items-center justify-center gap-2.5 text-gray-500 text-sm mb-6 px-3 py-1.5 rounded-md border border-white/10">
-            <span>$422</span>
+            <span>$449</span>
             <ArrowRightCircle className="w-3.5 h-3.5 text-gray-600" />
-            <span className="text-gray-200">$26,242</span>
+            <span className="text-gray-200">$6050</span>
           </div>
 
           <button className="w-full h-10 rounded-md bg-white text-[#05060A] font-medium text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5">
