@@ -20,7 +20,7 @@ function Homepage({ onSignIn }) {
     <Hero /> 
     <TrustSection /> 
     <BuildChallenge />
-    <HowItWorksSection />
+    <HowItWorksSection /> 
     <Proof />
     <Support />
     <Footer />

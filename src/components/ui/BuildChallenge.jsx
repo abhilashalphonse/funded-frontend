@@ -794,16 +794,7 @@ export default function BuildChallenge() {
   advanced.newsTrading,
   advanced.weekendHolding,
 ]);
-console.log('PHASE 2 PRICING DEBUG', {
-  phase2ProfitTarget: rules.phase2ProfitTarget,
-  rawBasePrice: pricing?.rawBasePrice,
-  adjustmentTotal: pricing?.adjustmentTotal,
-  rawMultiplier: pricing?.rawMultiplier,
-  multiplier: pricing?.multiplier,
-  rawSubtotal: pricing?.rawSubtotal,
-  subtotal: pricing?.subtotal,
-  finalPrice: pricing?.finalPrice,
-});
+
 
   const handleStart = () => {
     if (!validation.valid) return;
