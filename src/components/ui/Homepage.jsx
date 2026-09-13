@@ -12,14 +12,14 @@ import BuildChallenge from './BuildChallenge';
 
 
 
-function Homepage({ onSignIn }) { 
- 
+function Homepage({ onSignIn, onSelectPlan }) {
+
   return (
     <>
     <Navbar onSignIn={onSignIn} />
     <Hero /> 
     <TrustSection /> 
-    <BuildChallenge />
+    <BuildChallenge onSelectPlan={onSelectPlan} />
     <HowItWorksSection /> 
     <Proof />
     <Support />

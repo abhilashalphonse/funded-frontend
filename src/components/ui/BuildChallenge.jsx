@@ -679,7 +679,7 @@ function SummaryLine({ label, value }) {
    intentionally out of scope for this component.
    ============================================================================ */
 
-export default function BuildChallenge() {
+export default function BuildChallenge({ onSelectPlan }) {
   const [step, setStep] = useState(STEP_TYPES.TWO_STEP);
   const [accountSize, setAccountSize] = useState(RECOMMENDED_ACCOUNT_SIZE);
   const [rules, setRules] = useState(DEFAULT_RULES[STEP_TYPES.TWO_STEP]);
@@ -797,17 +797,22 @@ export default function BuildChallenge() {
 
 
   const handleStart = () => {
-    if (!validation.valid) return;
-    // Placeholder only — wire this up to POST /api/challenges/price and
-    // then checkout. The browser's `pricing` value above is a preview;
-    // the backend must independently recompute it from challengeDefinition
-    // + commercialConfig before charging anything.
-    console.log('Start challenge with config:', {
-      challengeDefinition: { step, accountSize, rules },
-      commercialConfig: advanced,
-      pricingPreview: pricing,
-    });
+  if (!validation.valid) return;
+
+  const challenge = {
+    challengeDefinition: {
+      step,
+      accountSize,
+      rules,
+    },
+    commercialConfig: advanced,
+    pricingPreview: pricing,
   };
+
+  console.log('Start challenge with config:', challenge);
+
+  onSelectPlan(challenge);
+};
 
   return (
     <div className="relative min-h-screen bg-[#05060A] text-white font-sans selection:bg-white/20 selection:text-white">

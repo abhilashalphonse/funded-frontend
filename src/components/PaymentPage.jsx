@@ -1,515 +1,726 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
+  Lock,
+  ShieldCheck,
   CreditCard,
   Bitcoin,
-  ShieldCheck,
-  Lock,
-  CheckCircle2,
+  Check,
+  Loader2,
+  Plus,
+  Mail,
   AlertCircle,
-  Wallet,
-  Zap,
-  Rocket,
-  Info,
+  Tag,
   ChevronDown,
-  Sparkles
+  LogIn,
 } from "lucide-react";
+import logo from "../assets/ACG.png";
 
-// Pricing Database (USD) — kept in sync with the Challenges section
-const PRICING = {
-  "1-step": { 10000: 89, 25000: 98, 50000: 301, 100000: 549, 200000: 910 },
-  "2-step": { 5000: 49, 10000: 69, 25000: 129, 50000: 249, 100000: 448, 200000: 789 },
+/* ============================================================================
+   ACG FUNDED — CHECKOUT / CHALLENGE ACTIVATION PAGE
+
+   Funnel:
+
+   Marketing
+      ↓
+   Challenge Builder
+      ↓
+   PAYMENT PAGE (guest checkout)
+      ↓
+   Payment Provider
+      ↓
+   Payment Confirmation
+      ↓
+   Account Creation
+      ↓
+   Challenge Creation
+      ↓
+   MT5 Account Creation
+      ↓
+   Trading
+
+   IMPORTANT:
+   - Checkout does NOT require authentication. The customer's email is what
+     identifies the checkout/customer; account creation happens after
+     payment is confirmed on the backend.
+   - Existing customers get a subtle "Already have an account? Sign in"
+     affordance instead of a login wall.
+   - Backend remains the source of truth for price/payment/order status.
+   - No raw card data is handled by ACG.
+   - No payment success is faked in this component.
+   - MT5 is the only trading platform for V1.
+
+   Expected plan shape:
+
+   {
+     stepMode: "1-step" | "2-step",
+     currencyCode,
+     accountId,
+     accountSize,
+     priceEUR,
+     price,
+     currency: { code, symbol, rate, ... }
+   }
+============================================================================ */
+
+/* --------------------------------------------------------------------------
+   Display-only challenge objectives.
+
+   IMPORTANT: mirrored from the existing Challenge component. Before
+   production launch, unify these with challengeRules.js so the checkout
+   never has to maintain its own copy of the challenge rules.
+-------------------------------------------------------------------------- */
+const OBJECTIVES_BY_MODE = {
+  "1-step": { target: 10, dailyLoss: 3, maxLoss: 6, time: "Unlimited" },
+  "2-step": { target: 8, dailyLoss: 5, maxLoss: 10, time: "Unlimited" },
 };
 
-// Account sizes differ per mode — 2-step also offers a $5k tier that 1-step doesn't.
-const ACCOUNT_SIZES_BY_MODE = {
-  "1-step": [10000, 25000, 50000, 100000, 200000],
-  "2-step": [5000, 10000, 25000, 50000, 100000, 200000],
+const STATUS = {
+  IDLE: "IDLE",
+  PROCESSING: "PROCESSING",
+  INTEGRATION_PENDING: "INTEGRATION_PENDING",
 };
 
-const PLATFORMS = ["MT4", "MT5", "cTrader"];
+const formatAccountSize = (size) => {
+  if (!Number.isFinite(size)) return "";
+  return size >= 1000 ? `$${Math.round(size / 1000)}K` : `$${size}`;
+};
 
-const BUNDLES = [
-  { 
-    qty: 1, 
-    discount: 0, 
-    title: "1 Account", 
-    badge: "Default",
-    features: [] 
-  },
-  { 
-    qty: 2, 
-    discount: 0.05, 
-    title: "2 Accounts", 
-    badge: "Increase chances",
-    features: ["Trade different strategies", "Reduce evaluation risk"] 
-  },
-  { 
-    qty: 3, 
-    discount: 0.10, 
-    title: "3 Accounts", 
-    badge: "Most Popular",
-    features: ["Scale faster", "Better diversification"] 
-  },
-  { 
-    qty: 5, 
-    discount: 0.15, 
-    title: "5 Accounts", 
-    badge: "⭐ Best Value",
-    features: ["Professional setup", "Maximum scaling", "Biggest savings"] 
-  },
-];
+const formatMoney = (amount, currency) => {
+  const symbol = currency?.symbol ?? "$";
+  const rounded = Math.round((amount ?? 0) * 100) / 100;
+  return `${symbol}${rounded.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
-export default function PaymentPage({ plan, onBack  }) {
-  if (!plan) return null;
-  const { price, currency } = plan;
+/* ============================================================================
+   HEADER
+============================================================================ */
 
-  // Checkout State
-  const [paymentMethod, setPaymentMethod] = useState("card");
-
-  // Configuration State — seeded from the incoming plan, but now real state
-  const [stepMode, setStepMode] = useState(plan.stepMode);
-  const [accountSize, setAccountSize] = useState(plan.accountSize);
-  const [platform, setPlatform] = useState("MT5");
-  const [bundleQty, setBundleQty] = useState(1);
-  const [showObjectives, setShowObjectives] = useState(false);
-
-  const accountSizes = useMemo(() => ACCOUNT_SIZES_BY_MODE[stepMode], [stepMode]);
-
-  // Keep the selected account size valid whenever the step mode changes
-  // (e.g. 2-step's $5k tier doesn't exist under 1-step).
-  useEffect(() => {
-    if (!accountSizes.includes(accountSize)) {
-      setAccountSize(accountSizes.includes(100000) ? 100000 : accountSizes[0]);
-    }
-  }, [accountSizes, accountSize]);
-
-  // Dynamic Pricing Math
-  const basePrice = PRICING[stepMode]?.[accountSize] ?? price ?? 0;
-  const activeBundle = BUNDLES.find(b => b.qty === bundleQty);
-  
-  const unitPrice = basePrice * (1 - activeBundle.discount);
-  const subtotal = basePrice * bundleQty;
-  const bundleDiscount = subtotal - (unitPrice * bundleQty);
-  const total = unitPrice * bundleQty;
-
-  const objectives = useMemo(() => {
-    if (stepMode === "1-step") {
-      return { target: "10%", dailyLoss: "3%", maxLoss: "6%", time: "Unlimited" };
-    }
-    return { target: "8% (P1) / 6% (P2)", dailyLoss: "5%", maxLoss: "10%", time: "Unlimited" };
-  }, [stepMode]);
-
+function CheckoutHeader({ onSignIn }) {
   return (
-    <section className="relative overflow-hidden bg-[#05060A] px-4 py-12 md:py-16 min-h-screen flex text-slate-300 font-sans selection:bg-blue-500/30">
-      {/* Structural Visual Effects */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[50%] rounded-full bg-[#2E6BFF] blur-[160px] opacity-[0.08]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#FF7A3D] blur-[160px] opacity-[0.06]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_50%,#000_20%,transparent_100%)]" />
+    <header className="flex items-center justify-between py-5">
+      <img src={logo} alt="ACG Funded" className="h-6 w-auto object-contain" />
+
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onSignIn}
+          className="hidden sm:flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 transition-colors hover:text-white focus:outline-none"
+        >
+          <LogIn className="h-3.5 w-3.5" strokeWidth={2} />
+          Already have an account? Sign in
+        </button>
+
+        <div className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400">
+          <Lock className="h-3.5 w-3.5" strokeWidth={2} />
+          Secure Checkout
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ============================================================================
+   HERO
+============================================================================ */
+
+function CheckoutHero({ onBack }) {
+  return (
+    <div className="mb-8 sm:mb-10">
+      <button
+        type="button"
+        onClick={onBack}
+        className="group mb-5 flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-500 transition-colors hover:text-white focus:outline-none"
+      >
+        <ChevronLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" strokeWidth={2} />
+        Change challenge
+      </button>
+
+      <div className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-500">
+        <span className="h-1 w-1 rounded-full bg-zinc-500" />
+        Challenge Activation
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl">
-        {/* Header / Back Button */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex items-center justify-between"
-        >
-          <button
-            onClick={onBack} 
-            className="group flex items-center gap-2 text-sm font-bold text-slate-400 transition-colors hover:text-white"
+      <h1 className="mt-3 text-[28px] font-semibold tracking-tight text-white sm:text-4xl">
+        Complete your challenge
+      </h1>
+
+      <p className="mt-1.5 text-sm text-zinc-500">You're one step away from trading.</p>
+    </div>
+  );
+}
+
+/* ============================================================================
+   MT5 PLATFORM
+============================================================================ */
+
+function PlatformCard() {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
+        Trading Platform
+      </div>
+
+      <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        </span>
+
+        <div>
+          <div className="leading-tight text-sm font-semibold text-white">MT5</div>
+          <div className="leading-tight text-xs text-zinc-500">MetaTrader 5</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   OBJECTIVES
+============================================================================ */
+
+function ObjectivesRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between border-b border-white/[0.05] py-2.5 last:border-0">
+      <span className="text-xs text-zinc-500">{label}</span>
+      <span className="tabular-nums text-sm font-medium text-white">{value}</span>
+    </div>
+  );
+}
+
+/* ============================================================================
+   CHALLENGE SUMMARY
+   (single "Change challenge" affordance lives in CheckoutHero — not
+   duplicated here.)
+============================================================================ */
+
+function ChallengeSummary({ plan }) {
+  const stepLabel = plan.stepMode === "1-step" ? "1-Step Challenge" : "2-Step Challenge";
+  const objectives = OBJECTIVES_BY_MODE[plan.stepMode] ?? OBJECTIVES_BY_MODE["2-step"];
+  const total = plan.price ?? 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-6 sm:p-7"
+    >
+      <div className="mb-3 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
+        Your Challenge
+      </div>
+
+      <div className="tabular-nums text-4xl font-semibold tracking-tight text-white">
+        {formatAccountSize(plan.accountSize)}
+      </div>
+
+      <div className="mt-1 text-sm text-zinc-400">{stepLabel}</div>
+
+      <div className="mt-6">
+        <PlatformCard />
+      </div>
+
+      <div className="mt-6 border-t border-white/[0.06] pt-5">
+        <div className="mb-1 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
+          Challenge Objectives
+        </div>
+
+        <ObjectivesRow label="Profit Target" value={`${objectives.target}%`} />
+        <ObjectivesRow label="Daily Loss" value={`${objectives.dailyLoss}%`} />
+        <ObjectivesRow label="Max Loss" value={`${objectives.maxLoss}%`} />
+        <ObjectivesRow label="Trading Period" value={objectives.time} />
+      </div>
+
+      <div className="mt-6 space-y-2 border-t border-white/[0.06] pt-5 text-sm">
+        <div className="flex items-center justify-between text-zinc-400">
+          <span>Challenge</span>
+          <span className="tabular-nums font-medium text-white">{formatMoney(total, plan.currency)}</span>
+        </div>
+
+        <div className="flex items-center justify-between text-zinc-400">
+          <span>Discount</span>
+          <span className="tabular-nums font-medium text-white">{formatMoney(0, plan.currency)}</span>
+        </div>
+
+        <div className="mt-1 flex items-center justify-between border-t border-white/[0.06] pt-3">
+          <span className="text-sm font-semibold text-white">Total</span>
+          <span className="tabular-nums text-2xl font-semibold tracking-tight text-white">
+            {formatMoney(total, plan.currency)}
+          </span>
+        </div>
+      </div>
+
+      {/* Secondary upsell — intentionally low emphasis, never auto-added */}
+      <button
+        type="button"
+        className="mt-6 flex w-full items-center justify-between rounded-lg border border-dashed border-white/[0.1] px-4 py-3 text-left text-xs text-zinc-500 transition-colors hover:border-white/20 hover:text-zinc-300 focus:outline-none"
+      >
+        <span className="flex items-center gap-2">
+          <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          Add another account
+        </span>
+        <span className="text-zinc-600">Save 5%</span>
+      </button>
+    </motion.div>
+  );
+}
+
+/* ============================================================================
+   EMAIL (guest checkout — this is the customer identifier, no auth required)
+============================================================================ */
+
+function EmailField({ email, onChange }) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor="checkout-email" className="text-[11px] font-medium uppercase tracking-widest text-zinc-500">
+        Email
+      </label>
+
+      <div className="relative">
+        <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" strokeWidth={1.75} />
+        <input
+          id="checkout-email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="you@example.com"
+          className="w-full rounded-lg border border-white/[0.09] bg-white/[0.02] py-2.5 pl-10 pr-3.5 text-[13.5px] text-white outline-none transition-all duration-150 placeholder:text-neutral-600 focus:border-white/30 focus:bg-white/[0.03] focus:ring-1 focus:ring-white/20"
+        />
+      </div>
+
+      <p className="text-[11px] leading-relaxed text-zinc-600">
+        We'll use this email to create and deliver access to your ACG account.
+      </p>
+    </div>
+  );
+}
+
+/* ============================================================================
+   PROMO CODE (collapsed by default — display only until backend validates)
+============================================================================ */
+
+function PromoCode({ code, onChange, onApply, applied }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 transition-colors hover:text-white focus:outline-none"
+        aria-expanded={open}
+      >
+        <Tag className="h-3.5 w-3.5" strokeWidth={1.75} />
+        Have a promo code?
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={1.75} />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] transition-colors group-hover:bg-white/[0.08]">
-              <ChevronLeft className="h-4 w-4" />
-            </div>
-            Back to Challenges
-          </button>
-          
-          <div className="flex items-center gap-2 text-emerald-400/90 text-sm font-semibold bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-            <Lock className="w-4 h-4" />
-            <span>Secure Checkout</span>
-          </div>
-        </motion.div>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-start">
-          
-          {/* LEFT COLUMN: Order Configuration & Summary */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-5 flex flex-col gap-6"
-          >
-            <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0A0C12]/80 shadow-2xl backdrop-blur-xl p-6 sm:p-8">
-              <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-white text-[10px]">1</span>
-                Choose Challenge
-              </h2>
-              
-              {/* Step Mode Toggle */}
-              <div className="mb-6 flex rounded-xl border border-white/[0.05] bg-white/[0.01] p-1">
-                <button
-                  onClick={() => setStepMode("2-step")}
-                  className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition-all duration-300 ${
-                    stepMode === "2-step" ? "bg-[#2A2B30] text-white shadow-md border border-white/10" : "text-slate-500 hover:text-white"
-                  }`}
-                >
-                  <Rocket className="w-3.5 h-3.5" /> 2-Step
-                </button>
-                <button
-                  onClick={() => setStepMode("1-step")}
-                  className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition-all duration-300 ${
-                    stepMode === "1-step" ? "bg-[#2A2B30] text-white shadow-md border border-white/10" : "text-slate-500 hover:text-white"
-                  }`}
-                >
-                  <Zap className="w-3.5 h-3.5" /> 1-Step
-                </button>
-              </div>
-
-              {/* Account Size Selection */}
-              <div className="mb-6">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Account Size</div>
-                <div className="flex flex-wrap gap-2">
-                  {accountSizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setAccountSize(size)}
-                      className={`flex-1 min-w-[60px] rounded-lg border py-2 text-xs font-bold transition-all duration-300 ${
-                        accountSize === size
-                          ? "border-[#2E6BFF]/50 bg-[#2E6BFF]/10 text-white"
-                          : "border-white/[0.05] bg-white/[0.02] text-slate-400 hover:border-white/[0.1] hover:text-white"
-                      }`}
-                    >
-                      {size / 1000}K
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Platform Selection */}
-              <div className="mb-8">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Trading Platform</div>
-                <div className="flex gap-2">
-                  {PLATFORMS.map((plat) => (
-                    <button
-                      key={plat}
-                      onClick={() => setPlatform(plat)}
-                      className={`flex-1 rounded-lg border py-2 text-xs font-bold transition-all duration-300 ${
-                        platform === plat
-                          ? "border-emerald-500/50 bg-emerald-500/10 text-white"
-                          : "border-white/[0.05] bg-white/[0.02] text-slate-400 hover:border-white/[0.1] hover:text-white"
-                      }`}
-                    >
-                      {plat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="w-full h-[1px] bg-white/[0.06] mb-8" />
-
-              {/* STEP 2: Choose Bundle */}
-              <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-white text-[10px]">2</span>
-                Choose Bundle
-              </h2>
-              
-              <div className="flex flex-col gap-3 mb-8">
-                {BUNDLES.map((bundle) => {
-                  const isSelected = bundleQty === bundle.qty;
-                  const calculatedUnitPrice = basePrice * (1 - bundle.discount);
-                  
-                  return (
-                    <button
-                      key={bundle.qty}
-                      onClick={() => setBundleQty(bundle.qty)}
-                      className={`relative flex flex-col gap-2 rounded-xl border p-4 transition-all duration-300 text-left ${
-                        isSelected
-                          ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 shadow-[0_0_20px_rgba(212,175,55,0.15)]"
-                          : "border-white/[0.05] bg-white/[0.02] hover:border-white/[0.1]"
-                      }`}
-                    >
-                      {/* Inner Ring for Selection */}
-                      <div className="flex justify-between items-start w-full">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
-                            isSelected ? "border-[#D4AF37]" : "border-slate-600"
-                          }`}>
-                            {isSelected && <div className="w-2 h-2 rounded-full bg-[#D4AF37]" />}
-                          </div>
-                          <span className={`font-bold text-sm ${isSelected ? "text-[#D4AF37]" : "text-slate-300"}`}>
-                            {bundle.title}
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                            bundle.qty === 5 ? "text-emerald-400" : "text-slate-500"
-                          }`}>
-                            {bundle.badge}
-                          </span>
-                          <span className={`font-black text-lg ${isSelected ? "text-white" : "text-slate-300"}`}>
-                            ${calculatedUnitPrice.toFixed(2)}<span className="text-xs text-slate-500 font-medium">/ea</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {bundle.features.length > 0 && (
-                        <div className="ml-7 mt-1 flex flex-col gap-1">
-                          {bundle.features.map((feature, i) => (
-                            <div key={i} className="flex items-center gap-2 text-xs text-slate-400">
-                              <CheckCircle2 className={`w-3 h-3 ${isSelected ? "text-[#D4AF37]/80" : "text-slate-600"}`} />
-                              {feature}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="w-full h-[1px] bg-white/[0.06] mb-6" />
-
-              {/* Trading Objectives (collapsible) */}
+            <div className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => onChange(e.target.value.toUpperCase())}
+                placeholder="PROMO CODE"
+                disabled={applied}
+                className="min-w-0 flex-1 rounded-lg border border-white/[0.09] bg-white/[0.02] px-3.5 py-2.5 text-xs font-medium uppercase tracking-wide text-white outline-none placeholder:text-zinc-700 focus:border-white/30"
+              />
               <button
                 type="button"
-                onClick={() => setShowObjectives(!showObjectives)}
-                className="w-full flex items-center justify-between text-xs font-black uppercase tracking-widest text-slate-500 mb-4 hover:text-white transition-colors"
+                onClick={onApply}
+                disabled={!code.trim() || applied}
+                className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <span className="flex items-center gap-2">
-                  <Info className="w-3.5 h-3.5" />
-                  Trading Objectives
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showObjectives ? "rotate-180" : ""}`} />
+                {applied ? "Applied" : "Apply"}
               </button>
-
-              <AnimatePresence>
-                {showObjectives && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="grid grid-cols-2 gap-3 mb-6 text-xs">
-                      <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
-                        <div className="text-slate-500 font-bold uppercase tracking-wider text-[10px] mb-1">Profit Target</div>
-                        <div className="text-white font-bold">{objectives.target}</div>
-                      </div>
-                      <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
-                        <div className="text-slate-500 font-bold uppercase tracking-wider text-[10px] mb-1">Max Daily Loss</div>
-                        <div className="text-white font-bold">{objectives.dailyLoss}</div>
-                      </div>
-                      <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
-                        <div className="text-slate-500 font-bold uppercase tracking-wider text-[10px] mb-1">Max Loss</div>
-                        <div className="text-white font-bold">{objectives.maxLoss}</div>
-                      </div>
-                      <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
-                        <div className="text-slate-500 font-bold uppercase tracking-wider text-[10px] mb-1">Trading Period</div>
-                        <div className="text-white font-bold">{objectives.time}</div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Order Summary Pricing */}
-              <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
-                Order Summary
-              </h2>
-              
-              <div className="flex flex-col gap-3 text-sm font-medium bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
-                <div className="flex justify-between text-slate-400">
-                  <span>{accountSize / 1000}K {platform} Challenge</span>
-                  <span className="text-white">${basePrice.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Bundle Selection</span>
-                  <span className="text-white">{bundleQty} Accounts</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Subtotal</span>
-                  <span className="text-white">${subtotal.toFixed(2)}</span>
-                </div>
-                
-                {bundleDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-400 pt-2 border-t border-white/[0.06]">
-                    <span>Bundle Discount ({activeBundle.discount * 100}%)</span>
-                    <span className="font-bold">-${bundleDiscount.toFixed(2)}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center pt-3 border-t border-white/[0.06]">
-                  <span className="text-white font-bold">Total</span>
-                  <span className="text-white font-black text-base">${total.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-white/[0.06] flex items-center justify-between">
-                <span className="text-base font-bold text-slate-400">Total Due Today</span>
-                <span className="text-3xl font-black text-white tracking-tight">
-                  ${total.toFixed(2)}
-                </span>
-              </div>
             </div>
+            {applied && (
+              <p className="mt-2 text-[11px] text-zinc-600">
+                Code saved — it will be validated and priced by the payment provider at checkout.
+              </p>
+            )}
           </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
-          {/* RIGHT COLUMN: Checkout Form */}
-          {/* RIGHT COLUMN: Checkout Form */}
-      <motion.div 
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
-        className="lg:col-span-7 flex flex-col gap-6"
+/* ============================================================================
+   PAYMENT METHOD TABS
+============================================================================ */
+
+function PaymentMethodTabs({ method, onChange }) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Payment method"
+      className="grid grid-cols-2 gap-2 rounded-xl border border-white/[0.08] bg-white/[0.015] p-1"
+    >
+      {[
+        { id: "card", label: "Card", icon: CreditCard },
+        { id: "crypto", label: "Crypto", icon: Bitcoin },
+      ].map(({ id, label, icon: Icon }) => {
+        const active = method === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(id)}
+            className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-[13px] font-semibold tracking-tight transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 ${
+              active ? "bg-white text-black" : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ============================================================================
+   CARD PAYMENT
+
+   INTEGRATION: replace with the real provider's secure hosted/embedded
+   payment element. ACG must never receive PAN / CVC / raw card number or
+   expiry — do not build custom card-number inputs here.
+============================================================================ */
+
+function CardPaymentPanel() {
+  return (
+    <div
+      role="group"
+      aria-label="Secure payment element"
+      className="rounded-lg border border-white/[0.09] bg-white/[0.015] px-4 py-6 text-center"
+    >
+      <ShieldCheck className="mx-auto mb-2 h-5 w-5 text-zinc-500" strokeWidth={1.5} />
+      <p className="text-xs leading-relaxed text-zinc-500">
+        Secure card payment
+        <br />
+        Payment details are handled securely by our payment provider.
+      </p>
+    </div>
+  );
+}
+
+/* ============================================================================
+   CRYPTO PAYMENT
+============================================================================ */
+
+function CryptoPaymentPanel({ onContinue }) {
+  const coins = ["BTC", "ETH", "USDT", "USDC"];
+  return (
+    <div className="rounded-lg border border-white/[0.09] bg-white/[0.015] px-4 py-5">
+      <div className="mb-3 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
+        Crypto Payment
+      </div>
+      <p className="mb-3 text-xs text-zinc-500">Pay securely using:</p>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {coins.map((coin) => (
+          <span
+            key={coin}
+            className="rounded-md border border-white/[0.08] bg-white/[0.02] px-2.5 py-1 text-[11px] font-mono font-medium text-zinc-300"
+          >
+            {coin}
+          </span>
+        ))}
+      </div>
+      <p className="mb-4 text-xs text-zinc-500">
+        You'll be redirected to our secure crypto payment provider.
+      </p>
+      <button
+        type="button"
+        onClick={onContinue}
+        className="w-full rounded-lg border border-white/[0.12] bg-white/[0.03] py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
       >
-        <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0A0C12]/80 shadow-2xl backdrop-blur-xl p-6 sm:p-8">
-          
-          {/* Billing Info */}
-          <div className="mb-8">
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-white text-[10px]">1</span>
-              Billing Details
-            </h2>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 ml-1">First Name</label>
-                <input type="text" placeholder="John" className="w-full rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-slate-600 transition-colors focus:border-[#2E6BFF]/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-[#2E6BFF]/50" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 ml-1">Last Name</label>
-                <input type="text" placeholder="Doe" className="w-full rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-slate-600 transition-colors focus:border-[#2E6BFF]/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-[#2E6BFF]/50" />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-xs font-bold text-slate-400 ml-1">Email Address</label>
-                <input type="email" placeholder="john.doe@example.com" className="w-full rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-slate-600 transition-colors focus:border-[#2E6BFF]/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-[#2E6BFF]/50" />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-xs font-bold text-slate-400 ml-1">Country</label>
-                <select className="w-full rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-white transition-colors focus:border-[#2E6BFF]/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-[#2E6BFF]/50 appearance-none">
-                  <option className="bg-[#0A0C12]">United States</option>
-                  <option className="bg-[#0A0C12]">United Kingdom</option>
-                  <option className="bg-[#0A0C12]">European Union</option>
-                </select>
-              </div>
-            </div>
-          </div>
+        Continue to Crypto Payment →
+      </button>
+    </div>
+  );
+}
 
-          <div className="w-full h-[1px] bg-white/[0.04] mb-8" />
+/* ============================================================================
+   TERMS
+============================================================================ */
 
-          {/* Payment Method */}
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-white text-[10px]">2</span>
-              Payment Method
-            </h2>
+function TermsAgreement({ checked, onChange }) {
+  return (
+    <label className="group flex cursor-pointer select-none items-start gap-2.5">
+      <span
+        className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 ${
+          checked ? "border-white bg-white" : "border-white/[0.18] bg-white/[0.02]"
+        }`}
+      >
+        {checked && <Check className="h-[10px] w-[10px] text-black" strokeWidth={3.5} />}
+      </span>
 
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              <button
-                onClick={() => setPaymentMethod("card")}
-                className={`flex-1 relative flex items-center justify-center gap-3 rounded-xl border p-4 transition-all duration-300 ${
-                  paymentMethod === "card"
-                    ? "border-[#2E6BFF]/50 bg-[#2E6BFF]/10 text-white"
-                    : "border-white/[0.05] bg-white/[0.02] text-slate-400 hover:border-white/[0.1] hover:text-white"
-                }`}
-              >
-                <CreditCard className={`w-5 h-5 ${paymentMethod === "card" ? "text-[#2E6BFF]" : ""}`} />
-                <span className="font-bold text-sm tracking-wide">Credit Card</span>
-                {paymentMethod === "card" && (
-                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#2E6BFF] shadow-[0_0_8px_rgba(46,107,255,0.8)]" />
-                )}
-              </button>
-              <button
-                onClick={() => setPaymentMethod("crypto")}
-                className={`flex-1 relative flex items-center justify-center gap-3 rounded-xl border p-4 transition-all duration-300 ${
-                  paymentMethod === "crypto"
-                    ? "border-[#ff7a00]/50 bg-[#ff7a00]/10 text-white"
-                    : "border-white/[0.05] bg-white/[0.02] text-slate-400 hover:border-white/[0.1] hover:text-white"
-                }`}
-              >
-                <Bitcoin className={`w-5 h-5 ${paymentMethod === "crypto" ? "text-[#ff7a00]" : ""}`} />
-                <span className="font-bold text-sm tracking-wide">Cryptocurrency</span>
-                {paymentMethod === "crypto" && (
-                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#ff7a00] shadow-[0_0_8px_rgba(255,122,0,0.8)]" />
-                )}
-              </button>
-            </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="sr-only"
+        aria-label="I agree to the Terms & Conditions and Refund Policy"
+      />
 
-            {/* Dynamic Payment Details Area */}
-            <AnimatePresence mode="wait">
-              {paymentMethod === "card" ? (
-                <motion.div
-                  key="card"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4 overflow-hidden"
-                >
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-400 ml-1">Card Number</label>
-                    <div className="relative">
-                      <input type="text" placeholder="0000 0000 0000 0000" className="w-full rounded-xl border border-white/[0.05] bg-white/[0.02] pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 transition-colors focus:border-[#2E6BFF]/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-[#2E6BFF]/50 font-mono" />
-                      <CreditCard className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-400 ml-1">Expiry Date</label>
-                      <input type="text" placeholder="MM/YY" className="w-full rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-slate-600 transition-colors focus:border-[#2E6BFF]/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-[#2E6BFF]/50 font-mono" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-400 ml-1">CVC</label>
-                      <input type="text" placeholder="123" className="w-full rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-slate-600 transition-colors focus:border-[#2E6BFF]/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-[#2E6BFF]/50 font-mono" />
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="crypto"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="rounded-xl border border-[#ff7a00]/20 bg-[#ff7a00]/5 p-5 text-center flex flex-col items-center justify-center gap-3 overflow-hidden"
-                >
-                  <Wallet className="w-8 h-8 text-[#ff7a00] mb-1" />
-                  <p className="text-sm font-medium text-slate-300">
-                    You will be redirected to our secure gateway to complete your transaction in BTC, ETH, USDT, or USDC.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+      <span className="text-xs leading-relaxed text-neutral-500">
+        I agree to the{" "}
+        <a href="/terms" className="text-neutral-300 underline underline-offset-2 hover:text-white">
+          Terms &amp; Conditions
+        </a>{" "}
+        and{" "}
+        <a href="/refund-policy" className="text-neutral-300 underline underline-offset-2 hover:text-white">
+          Refund Policy
+        </a>
+        .
+      </span>
+    </label>
+  );
+}
 
-          {/* TOS & Submit */}
-          <div className="mt-8 space-y-6">
-            <label className="flex items-start gap-3 cursor-pointer group">
-              <div className="relative flex items-center justify-center w-5 h-5 mt-0.5 rounded border border-white/[0.1] bg-white/[0.02] group-hover:border-white/[0.2] transition-colors shrink-0">
-                <input type="checkbox" className="opacity-0 absolute inset-0 cursor-pointer peer" required />
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6BFF] opacity-0 peer-checked:opacity-100 transition-opacity" />
-              </div>
-              <span className="text-xs font-medium text-slate-400 leading-relaxed group-hover:text-slate-300 transition-colors">
-                I agree to the <span className="text-white underline underline-offset-2 hover:text-[#2E6BFF]">Terms of Service</span>, <span className="text-white underline underline-offset-2 hover:text-[#2E6BFF]">Refund Policy</span>, and confirm I have read the trading guidelines.
-              </span>
-            </label>
+/* ============================================================================
+   CHECKOUT CTA
+============================================================================ */
 
-            <button
-              type="button"
-              className="w-full relative overflow-hidden rounded-xl px-8 py-4.5 text-sm font-black uppercase tracking-widest text-white transition-all active:scale-[0.98] text-center shadow-lg bg-[#2E6BFF] shadow-[0_4px_20px_rgba(46,107,255,0.2)] hover:bg-[#4C7DFF] hover:shadow-[0_4px_30px_rgba(46,107,255,0.4)] flex items-center justify-center gap-2 group"
-            >
-              Pay ${total.toFixed(2)}
-              <div className="w-1.5 h-1.5 rounded-full bg-white opacity-50 group-hover:animate-ping absolute right-6" />
-            </button>
+function CheckoutCTA({ label, status, disabled, onClick }) {
+  const processing = status === STATUS.PROCESSING;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || processing}
+      aria-live="polite"
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-[13.5px] font-semibold uppercase tracking-wide text-black transition-all active:scale-[0.99] hover:bg-neutral-200 disabled:opacity-40 disabled:hover:bg-white focus:outline-none focus-visible:ring-1 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0C12]"
+    >
+      {processing ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+          Securely processing...
+        </>
+      ) : (
+        label
+      )}
+    </button>
+  );
+}
 
-            <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
-              <AlertCircle className="w-3 h-3" />
-              Prices are exclusive of local taxes
-            </div>
-          </div>
-          
+/* ============================================================================
+   TRUST INFO
+============================================================================ */
+
+function TrustInfo() {
+  return (
+    <div className="mt-4 space-y-1.5 text-xs text-zinc-500">
+      <div className="flex items-center gap-1.5">
+        <Lock className="h-3 w-3" strokeWidth={2} />
+        Secure payment
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Check className="h-3 w-3 text-zinc-500" strokeWidth={2} />
+        Challenge activated after payment
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Check className="h-3 w-3 text-zinc-500" strokeWidth={2} />
+        MT5 account created after activation
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Check className="h-3 w-3 text-zinc-500" strokeWidth={2} />
+        Access to your trading dashboard
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   PAYMENT SECTION
+============================================================================ */
+
+function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
+  const [method, setMethod] = useState("card");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [status, setStatus] = useState(STATUS.IDLE);
+  const [notice, setNotice] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [promoApplied, setPromoApplied] = useState(false);
+
+  const ctaLabel = `Start My ${formatAccountSize(plan.accountSize)} Challenge — ${formatMoney(
+    plan.price ?? 0,
+    plan.currency
+  )} →`;
+
+  // Fixed regex — the previous version (/\S+@\S+\.\S+/) allowed things like
+  // "a@b." with no valid TLD and rejected valid addresses containing
+  // whitespace-adjacent edge cases inconsistently. This anchors the match
+  // and disallows whitespace/@ inside the local and domain parts.
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  const canSubmit = emailValid && termsAccepted && status !== STATUS.PROCESSING;
+
+  const handlePromoApply = () => {
+    if (!promoCode.trim()) return;
+
+    /*
+      INTEGRATION: validate the coupon server-side — never calculate or
+      authorize a discount purely on the client.
+
+        POST /api/checkout/validate-coupon
+        { code: promoCode, challengeId: plan.accountId }
+        -> { valid, discount, finalAmount }
+
+      Until that call exists, marking the code "applied" here is cosmetic
+      only and must NOT change the displayed price.
+    */
+    setPromoApplied(true);
+  };
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    setNotice("");
+
+    if (method === "crypto") {
+      setNotice("Crypto checkout isn't connected yet in this environment.");
+      return;
+    }
+
+    /*
+      INTEGRATION: single payment entry point.
+
+      1. POST { challengeId/accountId, email, promoCode, paymentMethod } to
+         the ACG backend.
+      2. Backend re-validates price, currency, coupon, and platform, then
+         creates a payment session with the real provider.
+      3. Frontend hands off to the provider's hosted/embedded checkout.
+      4. Provider confirms payment -> webhook -> backend verifies -> order
+         marked PAID.
+      5. Backend creates/links the customer account (from `email`), creates
+         the challenge, then creates the MT5 account.
+      6. Frontend polls/subscribes for that real activation status.
+
+      This button click must never mark a payment as successful by itself.
+    */
+    setStatus(STATUS.PROCESSING);
+
+    // Placeholder only — remove once the real payment session call exists.
+    window.setTimeout(() => {
+      setStatus(STATUS.IDLE);
+      setNotice(
+        "Payment processing will connect to the live payment provider once integrated. No charge has been made."
+      );
+    }, 900);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-6 sm:p-7"
+    >
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-widest text-zinc-500">Payment</div>
+      <p className="mb-6 text-xs text-zinc-500">Complete your payment to activate your challenge.</p>
+
+      <div className="space-y-5">
+        <EmailField email={email} onChange={onEmailChange} />
+
+        {/* Existing-customer path — not a login wall, just an escape hatch */}
+        <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.015] px-3.5 py-2.5 sm:hidden">
+          <div className="text-xs text-zinc-500">Already have an ACG account?</div>
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="text-xs font-semibold text-zinc-300 transition-colors hover:text-white focus:outline-none"
+          >
+            Sign in
+          </button>
         </div>
-      </motion.div>
+
+        <div className="space-y-3">
+          <div className="text-[11px] font-medium uppercase tracking-widest text-zinc-500">Payment Method</div>
+          <PaymentMethodTabs method={method} onChange={setMethod} />
+
+          <AnimatePresence mode="wait">
+            {method === "card" ? (
+              <motion.div key="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                <CardPaymentPanel />
+              </motion.div>
+            ) : (
+              <motion.div key="crypto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                <CryptoPaymentPanel onContinue={() => setNotice("Crypto checkout isn't connected yet in this environment.")} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <PromoCode code={promoCode} onChange={setPromoCode} onApply={handlePromoApply} applied={promoApplied} />
+
+        <TermsAgreement checked={termsAccepted} onChange={setTermsAccepted} />
+
+        {notice && (
+          <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500" />
+            <span>{notice}</span>
+          </div>
+        )}
+
+        <CheckoutCTA label={ctaLabel} status={status} disabled={!canSubmit} onClick={handleSubmit} />
+
+        <TrustInfo />
+      </div>
+    </motion.div>
+  );
+}
+
+/* ============================================================================
+   PAYMENT PAGE
+
+   IMPORTANT: authentication is intentionally NOT required here — there is
+   no `useAuth()` call in this file. The checkout works for guests and
+   existing customers alike; an existing customer who wants to sign in gets
+   a plain "Sign in" affordance (see CheckoutHeader / PaymentSection) that
+   should route to the existing Auth screen, not block checkout.
+============================================================================ */
+
+export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => {} }) {
+  const [email, setEmail] = useState("");
+
+  if (!plan) return null;
+
+  return (
+    <section className="relative min-h-screen bg-[#05060A] font-sans text-zinc-300 selection:bg-white/20">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute left-1/2 top-[-10%] h-[40%] w-[70%] -translate-x-1/2 rounded-full bg-white opacity-[0.02] blur-[160px]" />
+      </div>
+
+      <div className="relative z-10 mx-auto w-full max-w-[1240px] px-5 sm:px-8">
+        <CheckoutHeader onSignIn={onSignIn} />
+        <CheckoutHero onBack={onBack} />
+
+        <div className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-2">
+          <ChallengeSummary plan={plan} />
+          <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} />
+        </div>
+
+        <div className="pb-10 text-center text-[11px] text-zinc-600">
+          ACG Funded · <a href="/terms" className="hover:text-zinc-400">Terms</a> ·{" "}
+          <a href="/support" className="hover:text-zinc-400">Support</a>
         </div>
       </div>
     </section>
