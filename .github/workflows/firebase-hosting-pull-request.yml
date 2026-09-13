@@ -1,15 +1,16 @@
-name: Deploy to Firebase Hosting
+name: Deploy to Firebase Hosting on PR
 
 on:
-  push:
-    branches:
-      - main
+  pull_request
 
 permissions:
+  checks: write
   contents: read
+  pull-requests: write
 
 jobs:
-  deploy:
+  build_and_preview:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
 
     steps:
@@ -20,5 +21,7 @@ jobs:
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ACG_FUNDED }}
           projectId: acg-funded
+          channelId: pr-${{ github.event.pull_request.number }}
