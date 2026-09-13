@@ -768,8 +768,8 @@ export function calculatePrice(
    */
 
   const rawSubtotal =
-    rawBasePrice *
-    finalMultiplier;
+  basePrice *
+  finalMultiplier;
 
 
   const subtotal =

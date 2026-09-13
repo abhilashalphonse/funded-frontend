@@ -11,8 +11,6 @@ import {
   RULE_BOUNDS,
   PROFIT_SPLIT_OPTIONS,
   PAYOUT_FREQUENCY_OPTIONS,
-  NEWS_TRADING_ADJUSTMENT,
-  WEEKEND_HOLDING_ADJUSTMENT,
 } from '../../utils/challengeRules.js';
 import { calculatePrice, validateChallengeConfiguration } from '../../utils/pricingEngine.js';
 import { CHALLENGE_PRESETS } from '../../utils/challengePresets.js';
@@ -86,79 +84,55 @@ function ChallengeHeader() {
 
 function PathCard({ step, active, onSelect }) {
   const isTwoStep = step === STEP_TYPES.TWO_STEP;
-  const rules = DEFAULT_RULES[step];
-  const price = useMemo(
-  () =>
-    calculatePrice(
-      {
-        step,
-        accountSize: RECOMMENDED_ACCOUNT_SIZE,
-        rules,
-      },
-      DEFAULT_COMMERCIAL_CONFIG
-    ),
-  [step, rules]
-);
-
-  const specLines = isTwoStep
-    ? [
-        [`Phase 1 Target`, `${rules.phase1ProfitTarget}%`],
-        [`Phase 2 Target`, `${rules.phase2ProfitTarget}%`],
-        [`Daily Loss`, `${rules.dailyLoss}%`],
-        [`Maximum Loss`, `${rules.maxLoss}%`],
-      ]
-    : [
-        [`Profit Target`, `${rules.profitTarget}%`],
-        [`Daily Loss`, `${rules.dailyLoss}%`],
-        [`Maximum Loss`, `${rules.maxLoss}%`],
-        [`Min. Trading Days`, `${rules.minTradingDays}`],
-      ];
 
   return (
     <button
       type="button"
       onClick={() => onSelect(step)}
       aria-pressed={active}
-      className={`text-left rounded-xl border p-6 transition-colors duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 ${
-        active ? 'border-white/40 bg-[#0A0C12]' : 'border-white/[0.08] bg-[#0A0C12] hover:border-white/20'
+      className={`text-left rounded-xl border p-5 sm:p-6 transition-all duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 ${
+        active
+          ? 'border-white/40 bg-white/[0.05] shadow-[0_0_0_1px_rgba(255,255,255,0.05)]'
+          : 'border-white/[0.08] bg-[#0A0C12] hover:border-white/20 hover:bg-white/[0.02]'
       }`}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <div>
-          <div className="text-lg font-medium text-white">{isTwoStep ? '2-Step' : '1-Step'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">{formatAccountSize(RECOMMENDED_ACCOUNT_SIZE)} example</div>
+          <div className="text-lg font-medium text-white">
+            {isTwoStep ? '2-Step' : '1-Step'}
+          </div>
+
+          <div className="text-xs text-gray-500 mt-1">
+            {isTwoStep
+              ? 'Standard 2-phase evaluation'
+              : 'Fast-track single evaluation'}
+          </div>
         </div>
-        <span className="text-[11px] font-medium text-gray-300 px-2.5 py-1 rounded-full border border-white/[0.1] bg-white/[0.03] whitespace-nowrap">
-          {isTwoStep ? 'Most Popular' : 'Fast Track'}
+
+        <span
+          className={`h-6 w-6 rounded-full flex items-center justify-center border ${
+            active
+              ? 'bg-white border-white'
+              : 'border-white/20'
+          }`}
+        >
+          {active && (
+            <Check
+              className="w-3.5 h-3.5 text-[#05060A]"
+              strokeWidth={3}
+            />
+          )}
         </span>
       </div>
 
-      <ul className="space-y-1.5 mb-5">
-        {specLines.map(([label, value]) => (
-          <li key={label} className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">{label}</span>
-            <span className="text-gray-200 font-mono">{value}</span>
-          </li>
-        ))}
-        <li className="flex items-center justify-between text-sm">
-          <span className="text-gray-500">Profit Split</span>
-          <span className="text-gray-200 font-mono">{DEFAULT_COMMERCIAL_CONFIG.profitSplit}%</span>
-        </li>
-        <li className="flex items-center justify-between text-sm">
-          <span className="text-gray-500">Payout</span>
-          <span className="text-gray-200 font-mono">{DEFAULT_COMMERCIAL_CONFIG.payoutFrequency}</span>
-        </li>
-      </ul>
+      <div className="text-xs text-gray-400">
+        {isTwoStep
+          ? 'Two evaluation phases with a verification stage.'
+          : 'One evaluation phase for a faster path to funded.'}
+      </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
-        <span className="text-2xl font-medium tracking-tight text-white">{formatEUR(price.finalPrice)}</span>
-        <span
-          className={`h-6 w-6 rounded-full flex items-center justify-center border ${
-            active ? 'bg-white border-white' : 'border-white/20'
-          }`}
-        >
-          {active && <Check className="w-3.5 h-3.5 text-[#05060A]" strokeWidth={3} />}
-        </span>
+      <div className="mt-4 text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+        {isTwoStep ? 'Best value' : 'Fast track'}
       </div>
     </button>
   );
@@ -166,10 +140,27 @@ function PathCard({ step, active, onSelect }) {
 
 function PathSelector({ step, onChange }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 max-w-2xl mx-auto w-full">
-      <PathCard step={STEP_TYPES.TWO_STEP} active={step === STEP_TYPES.TWO_STEP} onSelect={onChange} />
-      <PathCard step={STEP_TYPES.ONE_STEP} active={step === STEP_TYPES.ONE_STEP} onSelect={onChange} />
-    </div>
+    <section className="mb-12">
+      <div className="text-center mb-4">
+        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Choose your evaluation
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto w-full">
+        <PathCard
+          step={STEP_TYPES.TWO_STEP}
+          active={step === STEP_TYPES.TWO_STEP}
+          onSelect={onChange}
+        />
+
+        <PathCard
+          step={STEP_TYPES.ONE_STEP}
+          active={step === STEP_TYPES.ONE_STEP}
+          onSelect={onChange}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -228,9 +219,14 @@ function AccountSizeSelector({ step, value, onChange }) {
 
   return (
     <div className="flex flex-col items-center mb-14">
-      <label htmlFor="account-size-input" className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-        Account Size
-      </label>
+      <div className="text-center mb-4">
+  <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+    Choose your account size
+  </div>
+  <div className="text-xs text-gray-600 mt-1">
+    Start with the account size that fits your strategy
+  </div>
+</div>
 
       <input
         id="account-size-input"
@@ -256,17 +252,17 @@ function AccountSizeSelector({ step, value, onChange }) {
               type="button"
               onClick={() => onChange(anchor)}
               className={`relative px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 ${
-                active
-                  ? 'border-white bg-white text-[#05060A]'
-                  : recommended
-                  ? 'border-white/30 text-white hover:border-white/50'
-                  : 'border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20'
-              }`}
+  active
+    ? 'border-white bg-white text-[#05060A]'
+    : 'border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20'
+}`}
             >
               {formatAccountSize(anchor)}
-              {recommended && !active && (
-                <span className="ml-1.5 text-[9px] text-gray-500 align-middle">recommended</span>
-              )}
+              {recommended && (
+  <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-gray-500 bg-[#05060A] px-1.5">
+    recommended
+  </span>
+)}
             </button>
           );
         })}
@@ -755,6 +751,10 @@ export default function BuildChallenge() {
   }, [validation]);
 
   const pricing = useMemo(() => {
+  if (!validation.valid) {
+    return null;
+  }
+
   const challengeDefinition = {
     step,
     accountSize,
@@ -775,20 +775,12 @@ export default function BuildChallenge() {
     weekendHolding: advanced.weekendHolding,
   };
 
-  try {
-  return calculatePrice(challengeDefinition, commercialConfig);
-} catch (error) {
-  console.error('ACG pricing calculation failed:', error);
-
-  return {
-    basePrice: 0,
-    customizationPrice: 0,
-    subtotal: 0,
-    promotionDiscount: 0,
-    finalPrice: 0,
-  };
-}
+  return calculatePrice(
+    challengeDefinition,
+    commercialConfig
+  );
 }, [
+  validation.valid,
   step,
   accountSize,
   rules.profitTarget,
@@ -802,6 +794,16 @@ export default function BuildChallenge() {
   advanced.newsTrading,
   advanced.weekendHolding,
 ]);
+console.log('PHASE 2 PRICING DEBUG', {
+  phase2ProfitTarget: rules.phase2ProfitTarget,
+  rawBasePrice: pricing?.rawBasePrice,
+  adjustmentTotal: pricing?.adjustmentTotal,
+  rawMultiplier: pricing?.rawMultiplier,
+  multiplier: pricing?.multiplier,
+  rawSubtotal: pricing?.rawSubtotal,
+  subtotal: pricing?.subtotal,
+  finalPrice: pricing?.finalPrice,
+});
 
   const handleStart = () => {
     if (!validation.valid) return;
@@ -833,10 +835,12 @@ export default function BuildChallenge() {
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 sm:py-24">
         <ChallengeHeader />
-        <PathSelector step={step} onChange={handleStepChange} />
-        <PresetSelector activePresetId={activePresetId} onSelect={handlePresetSelect} />
-        <AccountSizeSelector step={step} value={accountSize} onChange={handleAccountSizeChange} />
-
+<PathSelector step={step} onChange={handleStepChange} />
+<AccountSizeSelector
+  step={step}
+  value={accountSize}
+  onChange={handleAccountSizeChange}
+/>
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
           <div>
             <RuleConfigurator step={step} rules={rules} onRuleChange={handleRuleChange} fieldErrors={fieldErrors} />

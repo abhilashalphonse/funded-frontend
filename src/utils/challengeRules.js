@@ -408,15 +408,15 @@ const TWO_STEP_ADJUSTMENTS = {
    * 6% is the default Phase 2 target.
    */
   phase2ProfitTarget: {
-    5: -0.07,
-    6: 0,
-    7: 0.07,
-    8: 0.14,
-    9: 0.21,
-    10: 0.28,
-    11: 0.35,
-    12: 0.42,
-  },
+  5: 0.20,
+  6: 0,
+  7: -0.06,
+  8: -0.11,
+  9: -0.16,
+  10: -0.20,
+  11: -0.24,
+  12: -0.28,
+},
 
   dailyLoss: {
     2: -0.12,
@@ -501,7 +501,7 @@ export const WEEKEND_HOLDING_ADJUSTMENT = 0.05;
  * Prevent extreme configurations from becoming commercially
  * nonsensical.
  */
-export const PRICE_MULTIPLIER_FLOOR = 0.72;
+export const PRICE_MULTIPLIER_FLOOR = 0.40;
 
 export const PRICE_MULTIPLIER_CEILING = 1.95;
 
