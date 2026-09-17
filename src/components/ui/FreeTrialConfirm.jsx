@@ -69,7 +69,7 @@ export default function FreeTrialConfirm({
     setCreating(true);
     setError("");
     try {
-      const trial = await createFreeTrial(definition);
+      const trial = await createFreeTrial(definition, plan?.commercialConfig);
       setCreatedTrial(trial);
       setEligibility({ eligible: false, maxActiveTrials: 1, activeTrial: trial });
       onCreated(trial);
