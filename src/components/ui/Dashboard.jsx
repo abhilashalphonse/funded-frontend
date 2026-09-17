@@ -14,7 +14,7 @@ import { useAuth } from "../../AuthContext";
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 const pageDetails = {
-  overview: { title: 'Account #509421', description: 'Your live evaluation account', action: 'Open WebTrader' },
+  overview: { title: 'Trading Account', description: 'Your evaluation account', action: 'Open ACG Trader' },
   analytics: { title: 'Advanced Metrics', description: 'Performance and risk analysis', action: 'Export report' },
   calendar: { title: 'Economic Calendar', description: 'Market events and trading restrictions', action: 'View schedule' },
   traders: { title: 'Traders', description: 'Explore active funded peers', action: 'Browse all traders' },
@@ -376,7 +376,7 @@ const CalendarSection = () => {
     </div>
   );
 };
-const ProfileSection = ({ userName, userInitials }) => {
+const ProfileSection = ({ userName, userInitials, userEmail, activeChallenge }) => {
   return (
     <div className="space-y-8 animate-fade-in">
       <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -387,7 +387,7 @@ const ProfileSection = ({ userName, userInitials }) => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">{userName}</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Trader ID: <span className="font-mono text-gray-300">#ACG-98421</span></p>
+            <p className="text-xs text-gray-400 mt-0.5">Account: <span className="font-mono text-gray-300">{activeChallenge?.accountId || "No active challenge"}</span></p>
             <div className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.06] text-white text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border border-white/[0.15]">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
               Verified Account
@@ -417,7 +417,7 @@ const ProfileSection = ({ userName, userInitials }) => {
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs text-gray-400 font-medium">Email Address</label>
-                <input type="email" defaultValue="abhilash@example.com" className="w-full bg-white/[0.05] border border-white/[0.08] focus:border-white/40 focus:ring-1 focus:ring-white/40 rounded-xl px-3.5 py-2 text-sm text-white transition outline-none" />
+                <input type="email" defaultValue={userEmail || ""} readOnly className="w-full bg-white/[0.03] border border-white/[0.08] text-gray-400 rounded-xl px-3.5 py-2 text-sm outline-none" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-gray-400 font-medium">Country</label>
@@ -939,7 +939,7 @@ export default function Dashboard({ onBack = () => {} }) {
   };
 
   const renderTabContent = () => {
-    const propsPayload = { userName, userInitials, setActiveTab };
+    const propsPayload = { userName, userInitials, userEmail: user?.email || "", activeChallenge, setActiveTab };
 
     switch (activeTab) {
       case 'overview':
