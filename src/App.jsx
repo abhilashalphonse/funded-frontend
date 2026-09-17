@@ -6,6 +6,9 @@ import Auth from "./components/ui/Auth.jsx";
 import Dashboard from "./components/ui/Dashboard.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
 import FreeTrialConfirm from "./components/ui/FreeTrialConfirm.jsx";
+import FreeTrialResult from "./components/ui/FreeTrialResult.jsx";
+import { DEFAULT_COMMERCIAL_CONFIG } from "./utils/challengeRules.js";
+import { calculatePrice } from "./utils/pricingEngine.js";
 
 const PENDING_TRIAL_KEY = "acg.pendingFreeTrialPlan";
 const PENDING_TRIAL_TTL_MS = 24 * 60 * 60 * 1000;
@@ -42,6 +45,7 @@ function readPendingTrial() {
 function App() {
   const [screen, setScreen] = useState("homepage");
   const [selectedPlan, setSelectedPlan] = useState(() => readPendingTrial());
+  const [selectedTrialResult, setSelectedTrialResult] = useState(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -84,6 +88,29 @@ function App() {
     setScreen("homepage");
   };
 
+  const handleViewTrialResult = (trial) => {
+    setSelectedTrialResult(trial);
+    setScreen("freeTrialResult");
+  };
+
+  const handleStartChallengeFromTrial = (trial) => {
+    const commercialConfig = trial?.sourceCommercialConfig || DEFAULT_COMMERCIAL_CONFIG;
+    const challengeDefinition = trial?.challengeDefinition;
+
+    if (!challengeDefinition) return;
+
+    const plan = {
+      challengeDefinition,
+      commercialConfig,
+      pricingPreview: calculatePrice(challengeDefinition, commercialConfig),
+      sourceTrialId: trial.accountId,
+      conversionSource: "FREE_TRIAL",
+    };
+
+    setSelectedPlan(plan);
+    setScreen("payment");
+  };
+
   if (screen === "freeTrialConfirm" && user && selectedPlan?.challengeDefinition) {
     return (
       <FreeTrialConfirm
@@ -95,8 +122,23 @@ function App() {
     );
   }
 
+  if (screen === "freeTrialResult" && selectedTrialResult) {
+    return (
+      <FreeTrialResult
+        trial={selectedTrialResult}
+        onBack={() => setScreen("dashboard")}
+        onStartChallenge={handleStartChallengeFromTrial}
+      />
+    );
+  }
+
   if (screen === "dashboard" || (screen === "auth" && user && !readPendingTrial())) {
-    return <Dashboard onBack={() => setScreen("homepage")} />;
+    return (
+      <Dashboard
+        onBack={() => setScreen("homepage")}
+        onViewTrialResult={handleViewTrialResult}
+      />
+    );
   }
 
   if (screen === "auth") {
