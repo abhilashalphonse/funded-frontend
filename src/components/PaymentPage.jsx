@@ -196,9 +196,81 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
   </motion.div>;
 }
 
+function PaymentReturn({ onBack, onSignIn }) {
+  const [state, setState] = useState({ status: "PROCESSING", message: "Checking your payment…", paymentId: null });
+
+  useEffect(() => {
+    const paymentId = new URLSearchParams(window.location.search).get("payment");
+    if (!paymentId) {
+      setState({ status: "ERROR", message: "Payment reference is missing.", paymentId: null });
+      return undefined;
+    }
+
+    let active = true;
+    const check = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/payments/${encodeURIComponent(paymentId)}/status`);
+        const payload = await response.json().catch(() => ({}));
+        if (!active) return;
+        if (!response.ok) throw new Error(payload?.message || "Unable to check payment status.");
+
+        const payment = payload?.data || {};
+        if (payment.status === "PAID" && payment.activation?.status === "ACTIVE" && payment.accountId) {
+          setState({ status: "ACTIVE", message: "Your ACG Trader challenge is active.", paymentId });
+          return;
+        }
+        if (payment.status === "PAID" && payment.activation?.status === "FAILED") {
+          setState({ status: "ACTIVATION_FAILED", message: "Payment is confirmed, but account activation needs attention.", paymentId });
+          return;
+        }
+        if (payment.status === "PAID") {
+          setState({ status: "ACTIVATING", message: "Payment confirmed. Activating your ACG Trader challenge…", paymentId });
+          return;
+        }
+        if (["FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"].includes(payment.status)) {
+          setState({ status: "ERROR", message: `Payment status: ${payment.status}.`, paymentId });
+          return;
+        }
+        setState({ status: "PROCESSING", message: "Waiting for payment confirmation…", paymentId });
+      } catch (error) {
+        if (active) setState({ status: "ERROR", message: error?.message || "Unable to check payment status.", paymentId });
+      }
+    };
+
+    void check();
+    const interval = window.setInterval(check, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const complete = state.status === "ACTIVE";
+  return (
+    <section className="grid min-h-screen place-items-center bg-[#05060A] px-5 font-sans text-zinc-300">
+      <div className="w-full max-w-lg rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-7">
+        {complete
+          ? <Check className="mb-4 h-7 w-7 text-emerald-400" />
+          : state.status === "ERROR" || state.status === "ACTIVATION_FAILED"
+            ? <AlertCircle className="mb-4 h-7 w-7 text-amber-400" />
+            : <Loader2 className="mb-4 h-7 w-7 animate-spin text-white" />}
+        <h1 className="text-2xl font-semibold text-white">{complete ? "Challenge active" : "Payment status"}</h1>
+        <p className="mt-2 text-sm text-zinc-400">{state.message}</p>
+        {state.paymentId && <p className="mt-3 text-[10px] text-zinc-600">Payment ID: {state.paymentId}</p>}
+        <div className="mt-6 flex gap-3">
+          {complete && <button type="button" onClick={onSignIn} className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black">Go to dashboard</button>}
+          <button type="button" onClick={onBack} className="rounded-lg border border-white/[0.1] px-4 py-2.5 text-sm text-zinc-300">Homepage</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => {} }) {
   const [email, setEmail] = useState("");
   const hasPlan = useMemo(() => Boolean(plan?.challengeDefinition && plan?.commercialConfig), [plan]);
+  const returningPayment = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment");
+  if (!hasPlan && returningPayment) return <PaymentReturn onBack={onBack} onSignIn={onSignIn} />;
   if (!hasPlan) return null;
 
   return <section className="relative min-h-screen bg-[#05060A] font-sans text-zinc-300">
