@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { motion, Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } from "lucide-react";
+import { motion } from "framer-motion";
+import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
