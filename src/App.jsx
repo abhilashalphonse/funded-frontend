@@ -1,22 +1,24 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "./AuthContext.jsx";
 import { customerApi } from "./api/customer.js";
 
 import Homepage from "./components/ui/Homepage.jsx";
 import Auth from "./components/ui/Auth.jsx";
-import Dashboard from "./components/ui/Dashboard.jsx";
+import ActiveChallengeDashboard from "./components/ui/ActiveChallengeDashboard.jsx";
 import OnboardingDashboard from "./components/ui/OnboardingDashboard.jsx";
 import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import DemoTrading from "./components/ui/DemoTrading.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
+import PaymentReturn from "./components/PaymentReturn.jsx";
 
 function WorkspaceLoading() {
   return <div className="grid min-h-screen place-items-center bg-black text-white"><div className="flex items-center gap-2 text-sm text-zinc-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading your ACG workspace...</div></div>;
 }
 
 function App() {
-  const [screen, setScreen] = useState("homepage");
+  const paymentReturnId = useMemo(() => new URLSearchParams(window.location.search).get("payment"), []);
+  const [screen, setScreen] = useState(paymentReturnId ? "payment-return" : "homepage");
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [workspace, setWorkspace] = useState(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
@@ -24,7 +26,7 @@ function App() {
   const [demoAccount, setDemoAccount] = useState(null);
   const { user } = useAuth();
 
-  const refreshWorkspace = async () => {
+  const refreshWorkspace = useCallback(async () => {
     if (!user) {
       setWorkspace(null);
       setDemoAccount(null);
@@ -43,7 +45,7 @@ function App() {
     } finally {
       setWorkspaceLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -52,7 +54,7 @@ function App() {
       return;
     }
     void refreshWorkspace();
-  }, [user?.id]);
+  }, [user?.id, refreshWorkspace]);
 
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);
@@ -87,6 +89,16 @@ function App() {
     } : current);
   };
 
+  const finishPaymentReturn = useCallback(async () => {
+    if (user) await refreshWorkspace();
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setScreen(user ? "dashboard" : "auth");
+  }, [refreshWorkspace, user]);
+
+  if (screen === "payment-return" && paymentReturnId) {
+    return <PaymentReturn paymentId={paymentReturnId} onActivated={refreshWorkspace} onContinue={finishPaymentReturn} />;
+  }
+
   if (screen === "demo" && user && demoAccount) {
     return <DemoTrading account={demoAccount} onAccountChange={handleDemoAccountChange} onBack={() => setScreen("dashboard")} onStartChallenge={openChallengeBuilder} />;
   }
@@ -110,7 +122,7 @@ function App() {
       </>;
     }
 
-    return <Dashboard account={workspace.activeChallenge} onBack={() => setScreen("homepage")} />;
+    return <ActiveChallengeDashboard account={workspace.activeChallenge} onBack={() => setScreen("homepage")} onRefresh={refreshWorkspace} />;
   }
 
   if (screen === "auth") {
