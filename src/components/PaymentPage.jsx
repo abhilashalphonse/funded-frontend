@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
+import { useAuth } from "../AuthContext.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", ACTIVATING: "ACTIVATING", ACTIVE: "ACTIVE", ACTIVATION_FAILED: "ACTIVATION_FAILED" };
@@ -97,7 +98,7 @@ function Terms({ checked, onChange }) {
   </label>;
 }
 
-function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
+function PaymentSection({ plan, email, onEmailChange, onSignIn, getAccessToken }) {
   const [method, setMethod] = useState("BTC");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [status, setStatus] = useState(STATUS.IDLE);
@@ -152,9 +153,13 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
     setStatus(STATUS.PROCESSING);
     setNotice("");
     try {
+      const token = await getAccessToken?.().catch(() => null);
       const response = await fetch(`${API_URL}/api/payments/crypto/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ email, challengeDefinition: definition, commercialConfig: commercial, paymentMethod: method }),
       });
       const data = await response.json().catch(() => ({}));
@@ -267,7 +272,12 @@ function PaymentReturn({ onBack, onSignIn }) {
 }
 
 export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => {} }) {
-  const [email, setEmail] = useState("");
+  const { user, getAccessToken } = useAuth();
+  const [email, setEmail] = useState(user?.email || "");
+
+  useEffect(() => {
+    if (user?.email) setEmail(current => current || user.email);
+  }, [user?.email]);
   const hasPlan = useMemo(() => Boolean(plan?.challengeDefinition && plan?.commercialConfig), [plan]);
   const returningPayment = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment");
   if (!hasPlan && returningPayment) return <PaymentReturn onBack={onBack} onSignIn={onSignIn} />;
@@ -284,7 +294,7 @@ export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => 
       </div>
       <div className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-2">
         <ChallengeSummary plan={plan} />
-        <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} />
+        <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} getAccessToken={getAccessToken} />
       </div>
       <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="/terms">Terms</a> · <a href="/support">Support</a></div>
     </div>
