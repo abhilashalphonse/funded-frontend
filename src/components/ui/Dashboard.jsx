@@ -7,9 +7,10 @@ import {
   Shield, Bell, Globe, Check, Search, ArrowUpRight, Percent, DollarSign,
   BookOpen, Play, Lock, Award, BarChart3, Download, Receipt, Plus, Wallet, 
   ExternalLink, Activity, TrendingUp, AlertTriangle, CheckCircle2, Zap,
-   Layers, ShieldCheck, Flame, AlertCircle, LogOut
+   Layers, ShieldCheck, Flame, AlertCircle, LogOut, Loader2
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
+import { cancelFreeTrial, createFreeTrialTradingSession, getActiveFreeTrial, getFreeTrialHistory } from "../../services/freeTrialApi.js";
 
 const pageDetails = {
   overview: { title: 'Account #509421', description: 'Your live evaluation account', action: 'Open WebTrader' },
@@ -41,9 +42,195 @@ const PageHeader = ({ activeTab }) => {
 };
 
 
-const OverviewSection = () => {
+
+const clampPercent = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+const formatUSD = (value) => `${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+function daysRemaining(expiresAt) {
+  if (!expiresAt) return 0;
+  return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000));
+}
+
+function FreeTrialActiveCard({ trial, launching, cancelling, onContinue, onCancel }) {
+  if (!trial) return null;
+
+  const initial = Number(trial.initialDeposit || trial.accountSize || 0);
+  const profit = Number(trial.projections?.profit || 0);
+  const phaseRule = trial.rules?.phases?.find(item => Number(item.phase) === Number(trial.currentPhase || 1)) || trial.rules?.phases?.[0];
+  const targetPct = Number(phaseRule?.profitTarget || 0);
+  const targetAmount = initial * targetPct / 100;
+  const progress = targetAmount > 0 ? clampPercent((Math.max(0, profit) / targetAmount) * 100) : 0;
+  const tradingDays = Number(trial.projections?.tradingDays || 0);
+  const minimumTradingDays = Number(trial.rules?.minimumTradingDays || 0);
+  const dailyLimit = initial * Number(trial.rules?.dailyDrawdown || 0) / 100;
+  const maxLimit = initial * Number(trial.rules?.maxDrawdown || 0) / 100;
+  const dailyRemaining = Math.max(0, dailyLimit - Number(trial.projections?.dailyLoss || 0));
+  const maxRemaining = Math.max(0, maxLimit - Number(trial.projections?.totalLoss || 0));
+
+  return (
+    <section className="rounded-xl border border-white/[0.12] bg-[#0A0A0A] overflow-hidden">
+      <div className="flex flex-col gap-4 border-b border-[#222222] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded border border-white/[0.14] bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">
+              Free Trial
+            </span>
+            <span className="flex items-center gap-1.5 text-[11px] text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Active
+            </span>
+          </div>
+          <h2 className="text-xl font-semibold tracking-tight text-white">
+            {formatUSD(trial.accountSize).replace(".00", "")} · {trial.challengeType === "TWO_STEP" ? "2-Step" : "1-Step"}
+          </h2>
+          <p className="mt-1 text-[12px] text-[#777777]">
+            {daysRemaining(trial.trial?.expiresAt)} days remaining · Account {trial.accountId}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => onContinue(trial)}
+            disabled={launching}
+            className="flex h-9 items-center justify-center gap-2 rounded-md bg-white px-4 text-[12px] font-semibold text-black transition-colors hover:bg-[#EBEBEB] disabled:opacity-50"
+          >
+            {launching && <Loader2 size={14} className="animate-spin" />}
+            {launching ? "Opening ACG Trader…" : "Continue Trading"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onCancel(trial)}
+            disabled={cancelling}
+            className="flex h-9 items-center justify-center gap-2 rounded-md border border-[#2A2A2A] px-4 text-[12px] font-medium text-[#888888] transition-colors hover:border-[#444444] hover:text-white disabled:opacity-50"
+          >
+            {cancelling && <Loader2 size={14} className="animate-spin" />}
+            {cancelling ? "Cancelling…" : "Cancel Trial"}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-px bg-[#222222] sm:grid-cols-4">
+        <div className="bg-[#0A0A0A] p-5">
+          <div className="text-[11px] uppercase tracking-wider text-[#666666]">Profit</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-white">{formatUSD(profit)}</div>
+          <div className="mt-2 text-[11px] text-[#777777]">Target {formatUSD(targetAmount)}</div>
+        </div>
+        <div className="bg-[#0A0A0A] p-5">
+          <div className="text-[11px] uppercase tracking-wider text-[#666666]">Trading Days</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-white">{tradingDays} / {minimumTradingDays}</div>
+          <div className="mt-2 text-[11px] text-[#777777]">Minimum requirement</div>
+        </div>
+        <div className="bg-[#0A0A0A] p-5">
+          <div className="text-[11px] uppercase tracking-wider text-[#666666]">Daily Loss Remaining</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-white">{formatUSD(dailyRemaining)}</div>
+          <div className="mt-2 text-[11px] text-[#777777]">Limit {formatUSD(dailyLimit)}</div>
+        </div>
+        <div className="bg-[#0A0A0A] p-5">
+          <div className="text-[11px] uppercase tracking-wider text-[#666666]">Max Loss Remaining</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-white">{formatUSD(maxRemaining)}</div>
+          <div className="mt-2 text-[11px] text-[#777777]">Limit {formatUSD(maxLimit)}</div>
+        </div>
+      </div>
+
+      <div className="p-5">
+        <div className="flex items-center justify-between text-[12px]">
+          <span className="text-[#888888]">Profit target progress</span>
+          <span className="font-mono text-white">{Math.round(progress)}%</span>
+        </div>
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#242424]">
+          <div className="h-full bg-white transition-[width]" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="mt-4 flex items-center justify-between text-[11px] text-[#666666]">
+          <span>{targetPct}% target</span>
+          <span>{daysRemaining(trial.trial?.expiresAt)} days left</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FreeTrialHistory({ trials }) {
+  if (!trials?.length) return null;
+
+  return (
+    <section className="rounded-xl border border-[#222222] bg-[#0A0A0A] overflow-hidden">
+      <div className="border-b border-[#222222] px-5 py-4">
+        <h2 className="text-[14px] font-medium text-white">Free Trial History</h2>
+        <p className="mt-1 text-[11px] text-[#666666]">Your previous simulated evaluations remain visible here.</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] text-left">
+          <thead className="border-b border-[#222222] bg-[#080808] text-[10px] uppercase tracking-wider text-[#666666]">
+            <tr>
+              <th className="px-5 py-3 font-medium">Challenge</th>
+              <th className="px-4 py-3 font-medium">Result</th>
+              <th className="px-4 py-3 font-medium">Profit</th>
+              <th className="px-4 py-3 font-medium">Trading Days</th>
+              <th className="px-5 py-3 text-right font-medium">Completed</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#1F1F1F] text-[12px]">
+            {trials.map(trial => (
+              <tr key={trial.accountId} className="hover:bg-white/[0.015]">
+                <td className="px-5 py-4">
+                  <div className="font-medium text-white">{formatUSD(trial.accountSize).replace(".00", "")}</div>
+                  <div className="mt-0.5 text-[10px] text-[#666666]">{trial.challengeType === "TWO_STEP" ? "2-Step" : "1-Step"} · {trial.accountId}</div>
+                </td>
+                <td className="px-4 py-4">
+                  <span className="rounded border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#CCCCCC]">
+                    {trial.trial?.result || trial.status}
+                  </span>
+                </td>
+                <td className="px-4 py-4 font-mono text-[#D8D8D8]">{formatUSD(trial.projections?.profit || 0)}</td>
+                <td className="px-4 py-4 font-mono text-[#888888]">{Number(trial.projections?.tradingDays || 0)}</td>
+                <td className="px-5 py-4 text-right text-[#777777]">
+                  {trial.trial?.completedAt ? new Date(trial.trial.completedAt).toLocaleDateString() : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+const OverviewSection = ({ freeTrial, freeTrialHistory, freeTrialLoading, freeTrialError, launchingTrial, cancellingTrial, onContinueTrial, onCancelTrial }) => {
   return (
     <div className="animate-in fade-in duration-500 space-y-6">
+      {freeTrialLoading && (
+        <div className="flex items-center gap-2 rounded-xl border border-[#222222] bg-[#0A0A0A] px-5 py-4 text-[12px] text-[#888888]">
+          <Loader2 size={14} className="animate-spin" />
+          Loading your Free Trial…
+        </div>
+      )}
+
+      {freeTrialError && (
+        <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/[0.04] px-5 py-4 text-[12px] text-red-300">
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+          <span>{freeTrialError}</span>
+        </div>
+      )}
+
+      {!freeTrialLoading && freeTrial && (
+        <FreeTrialActiveCard
+          trial={freeTrial}
+          launching={launchingTrial}
+          cancelling={cancellingTrial}
+          onContinue={onContinueTrial}
+          onCancel={onCancelTrial}
+        />
+      )}
+
+      {!freeTrialLoading && !freeTrial && !freeTrialError && (
+        <div className="rounded-xl border border-[#222222] bg-[#0A0A0A] px-5 py-4">
+          <div className="text-[13px] font-medium text-white">No active Free Trial</div>
+          <p className="mt-1 text-[11px] text-[#666666]">Start a Free Trial from the challenge builder whenever you want to practice.</p>
+        </div>
+      )}
+
+      <FreeTrialHistory trials={freeTrialHistory} />
             
             {/* Core Metrics Grid - Absolute minimalism, tabular numbers */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -911,17 +1098,87 @@ export default function Dashboard({ onBack = () => {} }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [isOpen, setIsOpen] = useState(false);
+  const [freeTrial, setFreeTrial] = useState(null);
+  const [freeTrialHistory, setFreeTrialHistory] = useState([]);
+  const [freeTrialLoading, setFreeTrialLoading] = useState(true);
+  const [freeTrialError, setFreeTrialError] = useState("");
+  const [launchingTrial, setLaunchingTrial] = useState(false);
+  const [cancellingTrial, setCancellingTrial] = useState(false);
 
   const userInitials = "AA";
   const userName = "Abhilash";
   const traderCount = "264,000+"; // Kept if you need it elsewhere
+
+  const loadFreeTrials = async () => {
+    setFreeTrialLoading(true);
+    setFreeTrialError("");
+    try {
+      const [active, history] = await Promise.all([
+        getActiveFreeTrial(),
+        getFreeTrialHistory(),
+      ]);
+      setFreeTrial(active || null);
+      setFreeTrialHistory(Array.isArray(history) ? history : []);
+    } catch (error) {
+      setFreeTrialError(error.message || "Unable to load Free Trial data.");
+    } finally {
+      setFreeTrialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFreeTrials();
+  }, []);
+
+  const handleContinueTrial = async (trial) => {
+    if (!trial?.accountId || launchingTrial) return;
+    setLaunchingTrial(true);
+    setFreeTrialError("");
+    try {
+      const session = await createFreeTrialTradingSession(trial.accountId);
+      if (!session?.launchUrl) throw new Error("ACG Trader launch URL was not returned.");
+      window.location.assign(session.launchUrl);
+    } catch (error) {
+      setFreeTrialError(error.message || "Unable to open ACG Trader.");
+      setLaunchingTrial(false);
+    }
+  };
+
+  const handleCancelTrial = async (trial) => {
+    if (!trial?.accountId || cancellingTrial) return;
+    const confirmed = window.confirm("Cancel this Free Trial? Trading will be disabled and you can start another trial immediately.");
+    if (!confirmed) return;
+
+    setCancellingTrial(true);
+    setFreeTrialError("");
+    try {
+      await cancelFreeTrial(trial.accountId);
+      await loadFreeTrials();
+    } catch (error) {
+      setFreeTrialError(error.message || "Unable to cancel Free Trial.");
+    } finally {
+      setCancellingTrial(false);
+    }
+  };
 
   const renderTabContent = () => {
     const propsPayload = { userName, userInitials, setActiveTab };
 
     switch (activeTab) {
       case 'overview':
-        return <OverviewSection {...propsPayload} />;
+        return (
+          <OverviewSection
+            {...propsPayload}
+            freeTrial={freeTrial}
+            freeTrialHistory={freeTrialHistory}
+            freeTrialLoading={freeTrialLoading}
+            freeTrialError={freeTrialError}
+            launchingTrial={launchingTrial}
+            cancellingTrial={cancellingTrial}
+            onContinueTrial={handleContinueTrial}
+            onCancelTrial={handleCancelTrial}
+          />
+        );
       case 'analytics':
         return <AnalyticsSection />;
       case 'calendar':
