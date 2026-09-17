@@ -2,12 +2,9 @@ import React from 'react';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import AcgJourney from './AcgJourney';
 
-const Hero = () => {
+const Hero = ({ onStartChallenge = () => {}, onStartFreeTrial = () => {} }) => {
   return (
     <div className="relative min-h-screen bg-[#05060A] text-white overflow-hidden flex flex-col items-center pt-16 pb-12 font-sans selection:bg-white/20 selection:text-white">
-
-      {/* --- BACKGROUND EFFECTS (Strictly Monochromatic) --- */}
-      {/* 1. Ultra-faint Grid Pattern */}
       <div
         className="absolute inset-0 z-0 opacity-40 pointer-events-none"
         style={{
@@ -21,20 +18,19 @@ const Hero = () => {
         }}
       />
 
-      {/* 2. Pure White/Silver Ambient Light (No Colors) */}
       <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white/[0.04] blur-[100px] rounded-full pointer-events-none z-0" />
 
-      {/* --- MAIN CONTENT --- */}
       <div className="relative z-10 w-full max-w-[1000px] mx-auto px-6 flex flex-col items-center text-center mt-6 sm:mt-8">
-
-        {/* Minimalist Pill Badge */}
-        <div className="animate-fade-in-up flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:bg-white/[0.02] transition-colors cursor-pointer">
+        <button
+          type="button"
+          onClick={onStartFreeTrial}
+          className="animate-fade-in-up flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:text-white hover:bg-white/[0.03] transition-colors"
+        >
           <div className="w-1.5 h-1.5 rounded-full bg-white/[0.8] animate-pulse" />
-          <span className="tracking-wide">How about a Free Trial?</span>
+          <span className="tracking-wide">14-day Free Trial · No payment required</span>
           <ArrowRight className="w-3.5 h-3.5 opacity-50" strokeWidth={1.5} />
-        </div>
+        </button>
 
-        {/* High-Contrast Headline (Linear/Vercel Style Typography) */}
         <h1 className="animate-fade-in-up [animation-delay:100ms] text-5xl sm:text-7xl font-medium tracking-tighter mb-6 leading-[1.05]">
           <span className="text-white">Prove your edge.</span>
           <br />
@@ -43,32 +39,38 @@ const Hero = () => {
           </span>
         </h1>
 
-        {/* Subheadline */}
         <p className="animate-fade-in-up [animation-delay:200ms] max-w-xl mx-auto text-lg text-gray-400 mb-10 leading-relaxed font-light">
-          Trade up to $200,000 in funded capital. Follow clear risk rules, and earn rewards when you perform.
+          Experience the ACG evaluation environment free for 14 days, or start your real challenge when you're ready.
         </p>
 
-        {/* Call to Actions */}
         <div className="animate-fade-in-up [animation-delay:300ms] flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          {/* Primary CTA: Stark White */}
-          <button className="w-full sm:w-auto h-11 px-6 rounded-md bg-white text-[#05060A] font-medium text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5">
-            Start Your Challenge
+          <button
+            type="button"
+            onClick={onStartFreeTrial}
+            className="w-full sm:w-auto h-11 px-6 rounded-md bg-white text-[#05060A] font-medium text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5"
+          >
+            Start Free Trial
             <ChevronRight className="w-4 h-4 opacity-70" strokeWidth={2} />
           </button>
 
-          {/* Secondary CTA: Surface Background */}
-          <button className="w-full sm:w-auto h-11 px-6 rounded-md border border-white/[0.08] bg-[#0A0C12] text-gray-300 text-sm font-medium hover:text-white hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset]">
-            See How It Works
+          <button
+            type="button"
+            onClick={onStartChallenge}
+            className="w-full sm:w-auto h-11 px-6 rounded-md border border-white/[0.08] bg-[#0A0C12] text-gray-300 text-sm font-medium hover:text-white hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset]"
+          >
+            Start Challenge
           </button>
         </div>
+
+        <p className="animate-fade-in-up [animation-delay:400ms] mt-4 text-[11px] text-gray-600">
+          Free Trial is simulated and does not grant a funded account or payout entitlement.
+        </p>
       </div>
 
-      {/* --- STRUCTURAL MOCKUP (Linear/Vercel Aesthetic) --- */}
       <div className="relative z-10 w-full max-w-5xl mx-auto mt-14 sm:mt-16 px-4 sm:px-6 animate-fade-in-up [animation-delay:500ms]">
         <AcgJourney />
       </div>
 
-      {/* Keyframe Animations */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes fade-in-up {
           0% { opacity: 0; transform: translateY(15px); }
