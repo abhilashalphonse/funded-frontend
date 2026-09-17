@@ -28,6 +28,7 @@ async function request(path, options = {}) {
 export const customerApi = {
   workspace: () => request('/api/customer/workspace'),
   accounts: () => request('/api/customer/accounts'),
+  createTradingLaunch: (accountId) => request(`/api/customer/accounts/${encodeURIComponent(accountId)}/trading-launch`, { method: 'POST', body: '{}' }),
   createDemoAccount: () => request('/api/customer/demo-account', { method: 'POST', body: '{}' }),
   placeDemoOrder: (accountId, order) => request(`/api/customer/demo-account/${encodeURIComponent(accountId)}/orders`, {
     method: 'POST',
