@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
 import { useAuth } from "../AuthContext.jsx";
+import { trackAcquisitionEvent } from "../services/analytics.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", PAID: "PAID" };
@@ -189,6 +190,15 @@ export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => 
   useEffect(() => {
     if (isTrialConversion && user?.email) setEmail(user.email);
   }, [isTrialConversion, user?.email]);
+
+  useEffect(() => {
+    if (!isTrialConversion || !plan?.sourceTrialId) return;
+    void trackAcquisitionEvent("trial_checkout_started", {
+      sourceTrialId: plan.sourceTrialId,
+      accountSize: Number(plan.challengeDefinition?.accountSize || 0),
+      step: plan.challengeDefinition?.step || "",
+    });
+  }, [isTrialConversion, plan?.sourceTrialId]);
   if (!hasPlan) return null;
 
   return <section className="relative min-h-screen bg-[#05060A] font-sans text-zinc-300">
