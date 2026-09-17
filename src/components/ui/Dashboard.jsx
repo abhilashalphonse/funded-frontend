@@ -150,7 +150,7 @@ function FreeTrialActiveCard({ trial, launching, cancelling, onContinue, onCance
   );
 }
 
-function FreeTrialHistory({ trials }) {
+function FreeTrialHistory({ trials, onViewResult }) {
   if (!trials?.length) return null;
 
   return (
@@ -167,7 +167,8 @@ function FreeTrialHistory({ trials }) {
               <th className="px-4 py-3 font-medium">Result</th>
               <th className="px-4 py-3 font-medium">Profit</th>
               <th className="px-4 py-3 font-medium">Trading Days</th>
-              <th className="px-5 py-3 text-right font-medium">Completed</th>
+              <th className="px-4 py-3 font-medium">Completed</th>
+              <th className="px-5 py-3 text-right font-medium">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#1F1F1F] text-[12px]">
@@ -184,8 +185,21 @@ function FreeTrialHistory({ trials }) {
                 </td>
                 <td className="px-4 py-4 font-mono text-[#D8D8D8]">{formatUSD(trial.projections?.profit || 0)}</td>
                 <td className="px-4 py-4 font-mono text-[#888888]">{Number(trial.projections?.tradingDays || 0)}</td>
-                <td className="px-5 py-4 text-right text-[#777777]">
+                <td className="px-4 py-4 text-[#777777]">
                   {trial.trial?.completedAt ? new Date(trial.trial.completedAt).toLocaleDateString() : "—"}
+                </td>
+                <td className="px-5 py-4 text-right">
+                  {["PASSED", "BREACHED", "EXPIRED"].includes(trial.trial?.result || trial.status) ? (
+                    <button
+                      type="button"
+                      onClick={() => onViewResult(trial)}
+                      className="text-[11px] font-medium text-[#CCCCCC] transition-colors hover:text-white"
+                    >
+                      View Result
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-[#555555]">—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -196,7 +210,7 @@ function FreeTrialHistory({ trials }) {
   );
 }
 
-const OverviewSection = ({ freeTrial, freeTrialHistory, freeTrialLoading, freeTrialError, launchingTrial, cancellingTrial, onContinueTrial, onCancelTrial }) => {
+const OverviewSection = ({ freeTrial, freeTrialHistory, freeTrialLoading, freeTrialError, launchingTrial, cancellingTrial, onContinueTrial, onCancelTrial, onViewTrialResult }) => {
   return (
     <div className="animate-in fade-in duration-500 space-y-6">
       {freeTrialLoading && (
@@ -230,7 +244,7 @@ const OverviewSection = ({ freeTrial, freeTrialHistory, freeTrialLoading, freeTr
         </div>
       )}
 
-      <FreeTrialHistory trials={freeTrialHistory} />
+      <FreeTrialHistory trials={freeTrialHistory} onViewResult={onViewTrialResult} />
             
             {/* Core Metrics Grid - Absolute minimalism, tabular numbers */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1093,7 +1107,7 @@ const navItems = [
  
 
 
-export default function Dashboard({ onBack = () => {} }) {
+export default function Dashboard({ onBack = () => {}, onViewTrialResult = () => {} }) {
   const { signOut } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1177,6 +1191,7 @@ export default function Dashboard({ onBack = () => {} }) {
             cancellingTrial={cancellingTrial}
             onContinueTrial={handleContinueTrial}
             onCancelTrial={handleCancelTrial}
+            onViewTrialResult={onViewTrialResult}
           />
         );
       case 'analytics':
