@@ -67,3 +67,10 @@ export function cancelFreeTrial(accountId) {
     method: "POST",
   });
 }
+
+
+export function createFreeTrialTradingSession(accountId) {
+  return request(`/${encodeURIComponent(accountId)}/trading-session`, {
+    method: "POST",
+  });
+}
