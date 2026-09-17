@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
 
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 const pageDetails = {
   overview: { title: 'Account #509421', description: 'Your live evaluation account', action: 'Open WebTrader' },
   analytics: { title: 'Advanced Metrics', description: 'Performance and risk analysis', action: 'Export report' },
@@ -22,8 +24,13 @@ const pageDetails = {
   profile: { title: 'Profile Settings', description: 'Manage your account preferences', action: 'Save changes' },
 };
 
-const PageHeader = ({ activeTab }) => {
+const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching, launchError }) => {
   const page = pageDetails[activeTab];
+  const isOverview = activeTab === "overview";
+  const title = isOverview && activeChallenge?.accountId ? `Account #${activeChallenge.accountId}` : page.title;
+  const description = isOverview && activeChallenge
+    ? `${activeChallenge.challengeType === "TWO_STEP" ? "2-Step" : "1-Step"} evaluation · Phase ${activeChallenge.currentPhase || 1}`
+    : page.description;
 
   return (
     <header className="mb-8 flex flex-col gap-5 border-b border-[#222222] pb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -32,10 +39,18 @@ const PageHeader = ({ activeTab }) => {
           <span className="rounded border border-[#222222] bg-[#0A0A0A] px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-[#888888]">Phase 1 Evaluation</span>
           <span className="flex items-center gap-1.5 text-[12px] text-[#888888]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Live Connection</span>
         </div>
-        <h1 className="text-[28px] font-medium leading-none tracking-tight text-white sm:text-[32px]">{page.title}</h1>
-        <p className="mt-2 text-[13px] text-[#888888]">{page.description}</p>
+        <h1 className="text-[28px] font-medium leading-none tracking-tight text-white sm:text-[32px]">{title}</h1>
+        <p className="mt-2 text-[13px] text-[#888888]">{description}</p>
+        {isOverview && launchError && <p className="mt-2 text-[12px] text-red-400">{launchError}</p>}
       </div>
-      <button className="h-8 w-fit rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20">{page.action}</button>
+      <button
+        type="button"
+        onClick={isOverview ? onOpenTrader : undefined}
+        disabled={isOverview && (!activeChallenge || traderLaunching)}
+        className="h-8 w-fit rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {isOverview ? (traderLaunching ? "Opening ACG Trader…" : activeChallenge ? "Open ACG Trader" : "No active challenge") : page.action}
+      </button>
     </header>
   );
 };
@@ -907,14 +922,65 @@ const navItems = [
 
 
 export default function Dashboard({ onBack = () => {} }) {
-  const { signOut } = useAuth();
+  const { user, signOut, getAccessToken } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [isOpen, setIsOpen] = useState(false);
+  const [workspace, setWorkspace] = useState(null);
+  const [workspaceError, setWorkspaceError] = useState("");
+  const [traderLaunching, setTraderLaunching] = useState(false);
+  const [launchError, setLaunchError] = useState("");
 
-  const userInitials = "AA";
-  const userName = "Abhilash";
+  const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Trader";
+  const userInitials = userName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "TR";
   const traderCount = "264,000+"; // Kept if you need it elsewhere
+  const activeChallenge = workspace?.activeChallenge || null;
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadWorkspace = async () => {
+      try {
+        setWorkspaceError("");
+        const token = await getAccessToken();
+        if (!token) throw new Error("Your ACG Funded session has expired.");
+        const response = await fetch(`${API_URL}/api/customer/workspace`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.message || "Unable to load your trading workspace.");
+        if (!cancelled) setWorkspace(payload?.data || null);
+      } catch (error) {
+        if (!cancelled) setWorkspaceError(error?.message || "Unable to load your trading workspace.");
+      }
+    };
+    void loadWorkspace();
+    return () => { cancelled = true; };
+  }, [getAccessToken]);
+
+  const handleOpenTrader = async () => {
+    if (!activeChallenge?.accountId || traderLaunching) return;
+    setTraderLaunching(true);
+    setLaunchError("");
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Your ACG Funded session has expired.");
+      const response = await fetch(
+        `${API_URL}/api/customer/accounts/${encodeURIComponent(activeChallenge.accountId)}/trading-launch`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.data?.launchUrl) {
+        throw new Error(payload?.message || "Unable to open ACG Trader.");
+      }
+      window.location.assign(payload.data.launchUrl);
+    } catch (error) {
+      setLaunchError(error?.message || "Unable to open ACG Trader.");
+      setTraderLaunching(false);
+    }
+  };
 
   const renderTabContent = () => {
     const propsPayload = { userName, userInitials, setActiveTab };
@@ -1101,7 +1167,18 @@ export default function Dashboard({ onBack = () => {} }) {
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 overflow-y-auto w-full">
           <div className="dashboard-surface mx-auto w-full max-w-[1040px] px-5 py-8 sm:px-6 sm:py-12">
-            <PageHeader activeTab={activeTab} />
+            {workspaceError && activeTab === "overview" && (
+              <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-[12px] text-red-300">
+                {workspaceError}
+              </div>
+            )}
+            <PageHeader
+              activeTab={activeTab}
+              activeChallenge={activeChallenge}
+              onOpenTrader={handleOpenTrader}
+              traderLaunching={traderLaunching}
+              launchError={launchError}
+            />
             {renderTabContent()}
           </div>
         </main>
