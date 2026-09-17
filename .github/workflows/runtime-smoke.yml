@@ -1,0 +1,47 @@
+name: Runtime Smoke Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build frontend
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: public-anon-placeholder
+          VITE_API_URL: http://127.0.0.1:3000
+        run: npm run build
+      - name: Serve production bundle and smoke test
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/funded-frontend.log 2>&1 &
+          echo $! > /tmp/funded-frontend.pid
+          for i in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /tmp/index.html; then
+              grep -q '<div id="root"></div>' /tmp/index.html || true
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/funded-frontend.pid)" 2>/dev/null; then
+              echo "Frontend preview exited before becoming healthy"
+              cat /tmp/funded-frontend.log
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "Frontend preview did not become healthy"
+          cat /tmp/funded-frontend.log
+          exit 1
+      - name: Print frontend log
+        if: always()
+        run: cat /tmp/funded-frontend.log 2>/dev/null || true
