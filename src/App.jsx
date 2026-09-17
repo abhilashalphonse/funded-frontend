@@ -8,13 +8,33 @@ import PaymentPage from "./components/PaymentPage.jsx";
 import FreeTrialConfirm from "./components/ui/FreeTrialConfirm.jsx";
 
 const PENDING_TRIAL_KEY = "acg.pendingFreeTrialPlan";
+const PENDING_TRIAL_TTL_MS = 24 * 60 * 60 * 1000;
+
+function clearPendingTrial() {
+  localStorage.removeItem(PENDING_TRIAL_KEY);
+}
+
+function savePendingTrial(plan) {
+  localStorage.setItem(PENDING_TRIAL_KEY, JSON.stringify({
+    plan,
+    expiresAt: Date.now() + PENDING_TRIAL_TTL_MS,
+  }));
+}
 
 function readPendingTrial() {
   try {
-    const raw = sessionStorage.getItem(PENDING_TRIAL_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const raw = localStorage.getItem(PENDING_TRIAL_KEY);
+    if (!raw) return null;
+
+    const stored = JSON.parse(raw);
+    if (!stored?.plan?.challengeDefinition || Number(stored.expiresAt) <= Date.now()) {
+      clearPendingTrial();
+      return null;
+    }
+
+    return stored.plan;
   } catch {
-    sessionStorage.removeItem(PENDING_TRIAL_KEY);
+    clearPendingTrial();
     return null;
   }
 }
@@ -41,7 +61,7 @@ function App() {
 
   const handleSelectFreeTrial = (plan) => {
     setSelectedPlan(plan);
-    sessionStorage.setItem(PENDING_TRIAL_KEY, JSON.stringify(plan));
+    savePendingTrial(plan);
 
     if (user) {
       setScreen("freeTrialConfirm");
@@ -51,16 +71,16 @@ function App() {
   };
 
   const handleTrialCreated = () => {
-    sessionStorage.removeItem(PENDING_TRIAL_KEY);
+    clearPendingTrial();
   };
 
   const handleTrialBack = () => {
-    sessionStorage.removeItem(PENDING_TRIAL_KEY);
+    clearPendingTrial();
     setScreen("homepage");
   };
 
   const handleAuthBack = () => {
-    sessionStorage.removeItem(PENDING_TRIAL_KEY);
+    clearPendingTrial();
     setScreen("homepage");
   };
 
