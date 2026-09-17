@@ -44,9 +44,14 @@ const signUp = (email, password, metadata) =>
       options: { redirectTo: window.location.origin },
     });
   const signOut = () => supabase.auth.signOut();
+  const getAccessToken = async () => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return session?.access_token || null;
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut }}> 
+    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut, getAccessToken }}> 
       {!loading && children}
     </AuthContext.Provider>
   );
