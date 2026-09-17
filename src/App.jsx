@@ -100,7 +100,7 @@ function App() {
   }
 
   if (screen === "auth") {
-    return <Auth onBack={handleAuthBack} />;
+    return <Auth onBack={handleAuthBack} intent={readPendingTrial() ? "free-trial" : "default"} />;
   }
 
   if (screen === "payment") {
