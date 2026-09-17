@@ -9,6 +9,7 @@ import FreeTrialConfirm from "./components/ui/FreeTrialConfirm.jsx";
 import FreeTrialResult from "./components/ui/FreeTrialResult.jsx";
 import { DEFAULT_COMMERCIAL_CONFIG } from "./utils/challengeRules.js";
 import { calculatePrice } from "./utils/pricingEngine.js";
+import AdminAcquisitionFunnel from "./components/admin/AdminAcquisitionFunnel.jsx";
 
 const PENDING_TRIAL_KEY = "acg.pendingFreeTrialPlan";
 const PENDING_TRIAL_TTL_MS = 24 * 60 * 60 * 1000;
@@ -43,6 +44,10 @@ function readPendingTrial() {
 }
 
 function App() {
+  const adminAcquisitionView =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("admin") === "acquisition";
+
   const [screen, setScreen] = useState("homepage");
   const [selectedPlan, setSelectedPlan] = useState(() => readPendingTrial());
   const [selectedTrialResult, setSelectedTrialResult] = useState(null);
@@ -110,6 +115,10 @@ function App() {
     setSelectedPlan(plan);
     setScreen("payment");
   };
+
+  if (adminAcquisitionView) {
+    return user ? <AdminAcquisitionFunnel /> : <Auth onBack={() => { window.location.href = "/"; }} />;
+  }
 
   if (screen === "freeTrialConfirm" && user && selectedPlan?.challengeDefinition) {
     return (
