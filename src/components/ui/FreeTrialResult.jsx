@@ -109,10 +109,11 @@ export default function FreeTrialResult({
             <button
               type="button"
               onClick={() => onStartChallenge(trial)}
-              className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-semibold text-black transition-colors hover:bg-zinc-200"
+              disabled={Boolean(trial.conversion?.convertedToPaid)}
+              className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-semibold text-black transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Start This Challenge
-              <ArrowRight className="h-4 w-4" />
+              {trial.conversion?.convertedToPaid ? "Challenge Already Started" : "Start This Challenge"}
+              {!trial.conversion?.convertedToPaid && <ArrowRight className="h-4 w-4" />}
             </button>
           </div>
 
