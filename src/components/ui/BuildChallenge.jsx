@@ -600,7 +600,7 @@ function PriceBreakdown({ pricing }) {
    ChallengeSummary — checkout-preview sidebar
    ============================================================================ */
 
-function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid, validationErrors, onStart }) {
+function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid, validationErrors, onStart, onStartFreeTrial }) {
   const stepLabel = step === STEP_TYPES.ONE_STEP ? '1-Step' : '2-Step';
 
   return (
@@ -653,6 +653,19 @@ function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid
         Start Your Challenge
         <ArrowRight className="w-4 h-4 opacity-70" strokeWidth={2} />
       </button>
+
+      <button
+        type="button"
+        onClick={onStartFreeTrial}
+        disabled={!isValid}
+        className="mt-2.5 w-full h-11 rounded-md border border-white/[0.1] bg-white/[0.02] text-gray-300 font-medium text-sm hover:text-white hover:bg-white/[0.05] disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+      >
+        Try This Challenge Free
+      </button>
+
+      <p className="mt-3 text-center text-[11px] leading-relaxed text-gray-600">
+        14-day simulated trial · 5% target · 2 minimum trading days · no payment required
+      </p>
     </aside>
   );
 }
@@ -679,7 +692,7 @@ function SummaryLine({ label, value }) {
    intentionally out of scope for this component.
    ============================================================================ */
 
-export default function BuildChallenge({ onSelectPlan }) {
+export default function BuildChallenge({ onSelectPlan, onSelectFreeTrial }) {
   const [step, setStep] = useState(STEP_TYPES.TWO_STEP);
   const [accountSize, setAccountSize] = useState(RECOMMENDED_ACCOUNT_SIZE);
   const [rules, setRules] = useState(DEFAULT_RULES[STEP_TYPES.TWO_STEP]);
@@ -796,26 +809,28 @@ export default function BuildChallenge({ onSelectPlan }) {
 ]);
 
 
-  const handleStart = () => {
-  if (!validation.valid) return;
-
-  const challenge = {
+  const buildSelectedPlan = () => ({
     challengeDefinition: {
       step,
       accountSize,
-      rules,
+      rules: { ...rules },
     },
-    commercialConfig: advanced,
+    commercialConfig: { ...advanced },
     pricingPreview: pricing,
+  });
+
+  const handleStart = () => {
+    if (!validation.valid) return;
+    onSelectPlan(buildSelectedPlan());
   };
 
-  console.log('Start challenge with config:', challenge);
-
-  onSelectPlan(challenge);
-};
+  const handleStartFreeTrial = () => {
+    if (!validation.valid) return;
+    onSelectFreeTrial(buildSelectedPlan());
+  };
 
   return (
-    <div className="relative min-h-screen bg-[#05060A] text-white font-sans selection:bg-white/20 selection:text-white">
+    <div id="challenge-builder" className="relative min-h-screen bg-[#05060A] text-white font-sans selection:bg-white/20 selection:text-white">
       <div
         className="absolute inset-0 z-0 opacity-40 pointer-events-none"
         style={{
@@ -852,6 +867,7 @@ export default function BuildChallenge({ onSelectPlan }) {
             isValid={validation.valid}
             validationErrors={validation.errors}
             onStart={handleStart}
+            onStartFreeTrial={handleStartFreeTrial}
           />
         </div>
       </div>
