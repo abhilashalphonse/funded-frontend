@@ -179,7 +179,7 @@ function TrustLine() {
 /*  Login                                                               */
 /* ------------------------------------------------------------------ */
 
-function LoginForm({ onSwitchToSignup }) {
+function LoginForm({ onSwitchToSignup, intent = "default" }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [email, setEmail] = useState("");
@@ -219,7 +219,7 @@ function LoginForm({ onSwitchToSignup }) {
     <>
       <Wordmark />
       <h1 className="mt-6 text-center text-[19px] font-semibold tracking-tight text-white">
-        Log in to ACG
+        {intent === "free-trial" ? "Sign in to start your Free Trial" : "Log in to ACG"}
       </h1>
       <p className="mt-1.5 text-center text-[13px] text-neutral-500">
         Don&apos;t have a profile?{" "}
@@ -290,7 +290,7 @@ function LoginForm({ onSwitchToSignup }) {
 /*  Signup                                                              */
 /* ------------------------------------------------------------------ */
 
-function SignupForm({ onSwitchToLogin }) {
+function SignupForm({ onSwitchToLogin, intent = "default" }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [title, setTitle] = useState("");
@@ -367,7 +367,11 @@ function SignupForm({ onSwitchToLogin }) {
       <h1 className="mt-6 text-center text-[19px] font-semibold tracking-tight text-white">
         Create your account
       </h1>
-      <p className="mt-1.5 text-center text-[13px] text-neutral-500">Get funded in minutes, not weeks.</p>
+      <p className="mt-1.5 text-center text-[13px] text-neutral-500">
+        {intent === "free-trial"
+          ? "Create your profile to continue to your 14-day Free Trial."
+          : "Get funded in minutes, not weeks."}
+      </p>
 
       {error && (
         <div className="mt-5 rounded-lg border border-white/[0.14] bg-white/[0.03] px-3.5 py-2.5 text-[12.5px] font-medium text-neutral-200">
@@ -470,7 +474,9 @@ function SignupForm({ onSwitchToLogin }) {
           </CheckboxRow>
         </div>
 
-        <PrimaryButton loading={loading}>{loading ? "Creating account…" : "Get funded"}</PrimaryButton>
+        <PrimaryButton loading={loading}>
+          {loading ? "Creating account…" : intent === "free-trial" ? "Create account & continue" : "Get funded"}
+        </PrimaryButton>
       </form>
 
       <div className="my-6 flex items-center gap-3">
@@ -495,7 +501,7 @@ function SignupForm({ onSwitchToLogin }) {
 /*  Root                                                                */
 /* ------------------------------------------------------------------ */
 
-export default function Auth({ onBack = () => {} }) {
+export default function Auth({ onBack = () => {}, intent = "default" }) {
   const [view, setView] = useState("login");
 
   return (
@@ -510,9 +516,9 @@ export default function Auth({ onBack = () => {} }) {
       <div className="relative flex min-h-screen flex-col items-center justify-center px-5 py-20">
         <Card wide={view === "signup"}>
           {view === "login" ? (
-            <LoginForm onSwitchToSignup={() => setView("signup")} />
+            <LoginForm onSwitchToSignup={() => setView("signup")} intent={intent} />
           ) : (
-            <SignupForm onSwitchToLogin={() => setView("login")} />
+            <SignupForm onSwitchToLogin={() => setView("login")} intent={intent} />
           )}
         </Card>
         <TrustLine />
