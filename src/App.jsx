@@ -7,7 +7,10 @@ import Dashboard from "./components/ui/Dashboard.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
 
 function App() {
-  const [screen, setScreen] = useState("homepage");
+  const [screen, setScreen] = useState(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment")) return "payment";
+    return "homepage";
+  });
   const [selectedPlan, setSelectedPlan] = useState(null);
   const { user } = useAuth();
 
@@ -30,8 +33,14 @@ function App() {
     return (
       <PaymentPage
         plan={selectedPlan}
-        onBack={() => setScreen("homepage")}
-        onSignIn={() => setScreen("auth")}
+        onBack={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setScreen("homepage");
+        }}
+        onSignIn={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setScreen(user ? "dashboard" : "auth");
+        }}
       />
     );
   }
