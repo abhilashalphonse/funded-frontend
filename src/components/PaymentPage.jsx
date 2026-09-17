@@ -4,7 +4,7 @@ import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } 
 import logo from "../assets/ACG.png";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
-const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", PAID: "PAID" };
+const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", ACTIVATING: "ACTIVATING", ACTIVE: "ACTIVE", ACTIVATION_FAILED: "ACTIVATION_FAILED" };
 
 const formatAccountSize = (size) => Number.isFinite(size) ? `$${Math.round(size / 1000)}K` : "";
 const formatMoney = (amount, currency = { symbol: "€" }) => {
@@ -40,7 +40,7 @@ function ChallengeSummary({ plan }) {
 
       <div className="mt-6 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
         <span className="h-2 w-2 rounded-full bg-emerald-500" />
-        <div><div className="text-sm font-semibold text-white">MT5</div><div className="text-xs text-zinc-500">MetaTrader 5</div></div>
+        <div><div className="text-sm font-semibold text-white">ACG Trader</div><div className="text-xs text-zinc-500">ACG trading platform</div></div>
       </div>
 
       <div className="mt-6 border-t border-white/[0.06] pt-5">
@@ -122,9 +122,24 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
         const response = await fetch(`${API_URL}/api/payments/${returnedPaymentId}/status`);
         const data = await response.json();
         if (!active) return;
-        if (data?.data?.status === "PAID") { setStatus(STATUS.PAID); setNotice("Payment confirmed. Your challenge is being activated."); }
-        else if (["FAILED", "EXPIRED", "UNDERPAID"].includes(data?.data?.status)) { setStatus(STATUS.IDLE); setNotice(`Payment status: ${data.data.status}.`); }
-        else setNotice("Payment received by the provider. Waiting for confirmation...");
+        if (data?.data?.status === "PAID") {
+          const activationStatus = data?.data?.activation?.status;
+          if (activationStatus === "ACTIVE" && data?.data?.accountId) {
+            setStatus(STATUS.ACTIVE);
+            setNotice("Payment confirmed and your ACG Trader challenge is active.");
+          } else if (activationStatus === "FAILED") {
+            setStatus(STATUS.ACTIVATION_FAILED);
+            setNotice("Payment confirmed, but trading-account activation needs to be retried.");
+          } else {
+            setStatus(STATUS.ACTIVATING);
+            setNotice("Payment confirmed. Activating your ACG Trader challenge...");
+          }
+        } else if (["FAILED", "EXPIRED", "UNDERPAID"].includes(data?.data?.status)) {
+          setStatus(STATUS.IDLE);
+          setNotice(`Payment status: ${data.data.status}.`);
+        } else {
+          setNotice("Payment received by the provider. Waiting for confirmation...");
+        }
       } catch { if (active) setNotice("Unable to check payment status. Please refresh in a moment."); }
     };
     check();
@@ -152,8 +167,16 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
     }
   };
 
-  if (status === STATUS.PAID) {
-    return <div className="rounded-2xl border border-emerald-500/20 bg-[#0A0C12] p-7"><Check className="mb-3 h-6 w-6 text-emerald-400" /><h2 className="text-xl font-semibold text-white">Payment confirmed</h2><p className="mt-2 text-sm text-zinc-500">Your challenge is being activated. We'll send your trading access to {email}.</p></div>;
+  if (status === STATUS.ACTIVE) {
+    return <div className="rounded-2xl border border-emerald-500/20 bg-[#0A0C12] p-7"><Check className="mb-3 h-6 w-6 text-emerald-400" /><h2 className="text-xl font-semibold text-white">Challenge active</h2><p className="mt-2 text-sm text-zinc-500">Payment is confirmed and your ACG Trader account is ready. Trading access is linked to {email}.</p></div>;
+  }
+
+  if (status === STATUS.ACTIVATING) {
+    return <div className="rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-7"><Loader2 className="mb-3 h-6 w-6 animate-spin text-white" /><h2 className="text-xl font-semibold text-white">Activating challenge</h2><p className="mt-2 text-sm text-zinc-500">Payment is confirmed. We're provisioning your ACG Trader account now.</p></div>;
+  }
+
+  if (status === STATUS.ACTIVATION_FAILED) {
+    return <div className="rounded-2xl border border-amber-500/20 bg-[#0A0C12] p-7"><AlertCircle className="mb-3 h-6 w-6 text-amber-400" /><h2 className="text-xl font-semibold text-white">Payment confirmed</h2><p className="mt-2 text-sm text-zinc-500">Your payment is safe, but account activation did not complete. The backend will retry provisioning; if it persists, contact support with payment ID {paymentId}.</p></div>;
   }
 
   return <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-6 sm:p-7">
@@ -168,7 +191,7 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
         {status === STATUS.PROCESSING ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating secure payment...</> : `Pay ${formatMoney(amount, { symbol: "€" })} with ${method === "BTC" ? "BTC" : "USDT TRC20"} →`}
       </button>
       {paymentId && <p className="text-center text-[10px] text-zinc-700">Payment ID: {paymentId}</p>}
-      <div className="space-y-1.5 text-xs text-zinc-500"><div className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> Secure crypto payment</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> Challenge activated after confirmation</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> MT5 access after activation</div></div>
+      <div className="space-y-1.5 text-xs text-zinc-500"><div className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> Secure crypto payment</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> Challenge activated after confirmation</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> ACG Trader access after activation</div></div>
     </div>
   </motion.div>;
 }
