@@ -1,8 +1,13 @@
 import React from 'react';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import AcgJourney from './AcgJourney';
+import { trackAcquisitionEvent } from '../../services/analytics.js';
 
 const Hero = ({ onStartChallenge = () => {}, onStartFreeTrial = () => {} }) => {
+  const handleFreeTrialClick = () => {
+    void trackAcquisitionEvent("free_trial_cta_clicked", { surface: "hero" });
+    onStartFreeTrial();
+  };
   return (
     <div className="relative min-h-screen bg-[#05060A] text-white overflow-hidden flex flex-col items-center pt-16 pb-12 font-sans selection:bg-white/20 selection:text-white">
       <div
@@ -23,7 +28,7 @@ const Hero = ({ onStartChallenge = () => {}, onStartFreeTrial = () => {} }) => {
       <div className="relative z-10 w-full max-w-[1000px] mx-auto px-6 flex flex-col items-center text-center mt-6 sm:mt-8">
         <button
           type="button"
-          onClick={onStartFreeTrial}
+          onClick={handleFreeTrialClick}
           className="animate-fade-in-up flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:text-white hover:bg-white/[0.03] transition-colors"
         >
           <div className="w-1.5 h-1.5 rounded-full bg-white/[0.8] animate-pulse" />
@@ -46,7 +51,7 @@ const Hero = ({ onStartChallenge = () => {}, onStartFreeTrial = () => {} }) => {
         <div className="animate-fade-in-up [animation-delay:300ms] flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <button
             type="button"
-            onClick={onStartFreeTrial}
+            onClick={handleFreeTrialClick}
             className="w-full sm:w-auto h-11 px-6 rounded-md bg-white text-[#05060A] font-medium text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5"
           >
             Start Free Trial
