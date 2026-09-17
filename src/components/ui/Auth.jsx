@@ -3,6 +3,7 @@ import { useAuth } from "../../AuthContext";
 // import acg from "../assets/ACG.png";
 import { Eye, EyeOff, ChevronDown, Check, ArrowLeft } from "lucide-react";
 import Logo from '../../assets/ACG.png';
+import { trackAcquisitionEvent } from '../../services/analytics.js';
 
 /* ------------------------------------------------------------------ */
 /*  Why this pass looks different                                      */
@@ -341,6 +342,10 @@ function SignupForm({ onSwitchToLogin, intent = "default" }) {
       const { error: signUpError } = await signUp(email, password, metadata);
       if (signUpError) throw signUpError;
 
+      void trackAcquisitionEvent("registration_completed", {
+        method: "email",
+        intent,
+      });
       setSuccessMsg("Registration successful! Check your email inbox to verify your account.");
     } catch (err) {
       setError(err.message || "An error occurred during registration.");
