@@ -36,8 +36,10 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
     <header className="mb-8 flex flex-col gap-5 border-b border-[#222222] pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <div className="mb-3 flex items-center gap-2">
-          <span className="rounded border border-[#222222] bg-[#0A0A0A] px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-[#888888]">Phase 1 Evaluation</span>
-          <span className="flex items-center gap-1.5 text-[12px] text-[#888888]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Live Connection</span>
+          <span className="rounded border border-[#222222] bg-[#0A0A0A] px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-[#888888]">
+            {activeChallenge ? `Phase ${activeChallenge.currentPhase || 1} · ${activeChallenge.status}` : "No active challenge"}
+          </span>
+          <span className="flex items-center gap-1.5 text-[12px] text-[#888888]"><span className={`h-1.5 w-1.5 rounded-full ${activeChallenge?.provisioning?.status === "ACTIVE" ? "bg-emerald-500" : "bg-zinc-600"}`} />{activeChallenge?.provisioning?.status === "ACTIVE" ? "Live Connection" : "Not Connected"}</span>
         </div>
         <h1 className="text-[28px] font-medium leading-none tracking-tight text-white sm:text-[32px]">{title}</h1>
         <p className="mt-2 text-[13px] text-[#888888]">{description}</p>
@@ -56,251 +58,201 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
 };
 
 
-const OverviewSection = () => {
+const money = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(number);
+};
+
+const pct = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  return `${number.toFixed(1)}%`;
+};
+
+const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 0));
+
+const OverviewSection = ({ account }) => {
+  if (!account) {
+    return (
+      <div className="rounded-xl border border-[#222222] bg-[#0A0A0A] p-6 text-sm text-[#888888]">
+        No active challenge is available on this account yet.
+      </div>
+    );
+  }
+
+  const initial = Number(account.accountSize || 0);
+  const balance = Number(account.balance || 0);
+  const equity = Number(account.equity || 0);
+  const floating = Number(account.floatingProfit || 0);
+  const dailyLoss = Number(account.projections?.dailyLoss || 0);
+  const totalLoss = Number(account.projections?.totalLoss || 0);
+  const profit = Number(account.projections?.profit ?? (balance - initial));
+  const tradingDays = Number(account.projections?.tradingDays || 0);
+  const dailyLossPctLimit = Number(account.rules?.dailyDrawdown || 0);
+  const maxLossPctLimit = Number(account.rules?.maxDrawdown || 0);
+  const minTradingDays = Number(account.rules?.minimumTradingDays || 0);
+  const phaseRule = (account.rules?.phases || []).find(item => Number(item.phase) === Number(account.currentPhase || 1));
+  const profitTargetPct = Number(phaseRule?.profitTarget || 0);
+  const profitTargetAmount = initial * profitTargetPct / 100;
+  const dailyLossLimit = initial * dailyLossPctLimit / 100;
+  const maxLossLimit = initial * maxLossPctLimit / 100;
+  const dailyUsagePct = dailyLossLimit > 0 ? dailyLoss / dailyLossLimit * 100 : 0;
+  const maxUsagePct = maxLossLimit > 0 ? totalLoss / maxLossLimit * 100 : 0;
+  const profitProgressPct = profitTargetAmount > 0 ? Math.max(0, profit) / profitTargetAmount * 100 : 0;
+  const tradingDaysPct = minTradingDays > 0 ? tradingDays / minTradingDays * 100 : 100;
+
   return (
     <div className="animate-in fade-in duration-500 space-y-6">
-            
-            {/* Core Metrics Grid - Absolute minimalism, tabular numbers */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              
-              {/* Balance Card */}
-              <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
-                <div className="text-[13px] text-[#888888] mb-4">Current Balance</div>
-                <div className="text-[32px] font-semibold tracking-tighter text-white tabular-nums leading-none">
-                  $104,250<span className="text-[#888888]">.00</span>
-                </div>
-                <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between text-[13px]">
-                  <span className="text-[#888888]">Initial</span>
-                  <span className="text-[#EDEDED] tabular-nums">$100,000.00</span>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <MetricCard label="Current Balance" value={money(balance)} footerLabel="Initial" footerValue={money(initial)} />
+        <MetricCard label="Current Equity" value={money(equity)} footerLabel="Floating P&L" footerValue={money(floating)} />
+        <RiskCard label="Daily Drawdown" value={money(dailyLoss)} usage={dailyUsagePct} limit={money(dailyLossLimit)} limitPct={dailyLossPctLimit} />
+        <RiskCard label="Max Overall Loss" value={money(totalLoss)} usage={maxUsagePct} limit={money(maxLossLimit)} limitPct={maxLossPctLimit} />
+      </div>
 
-              {/* Equity Card */}
-              <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
-                <div className="text-[13px] text-[#888888] mb-4">Floating Equity</div>
-                <div className="text-[32px] font-semibold tracking-tighter text-white tabular-nums leading-none">
-                  $105,110<span className="text-[#888888]">.00</span>
-                </div>
-                <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between text-[13px]">
-                  <span className="text-[#888888]">Active PnL</span>
-                  <span className="text-emerald-400 tabular-nums flex items-center gap-1">
-                    <ArrowUpRight size={14} /> $860.00
-                  </span>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+        <div className="lg:col-span-2">
+          <h2 className="text-[14px] font-medium text-white mb-4">Trading Objectives</h2>
+          <div className="border border-[#222222] rounded-xl bg-[#0A0A0A] overflow-hidden">
+            <ObjectiveRow
+              title={`Profit Target (${profitTargetPct || 0}%)`}
+              current={money(Math.max(0, profit))}
+              target={money(profitTargetAmount)}
+              progress={profitProgressPct}
+            />
+            <ObjectiveRow
+              title="Minimum Trading Days"
+              current={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
+              target={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
+              progress={tradingDaysPct}
+            />
+          </div>
+        </div>
 
-              {/* Drawdown Card */}
-              <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="text-[13px] text-[#888888]">Daily Drawdown</div>
-                  <div className="text-[12px] text-[#888888] font-mono">23%</div>
-                </div>
-                <div className="text-[32px] font-semibold tracking-tighter text-white tabular-nums leading-none mb-4">
-                  $1,150<span className="text-[#888888]">.00</span>
-                </div>
-                {/* 1px Progress Bar */}
-                <div className="w-full h-[1px] bg-[#333333]">
-                  <div className="h-full bg-white w-[23%]" />
-                </div>
-                <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between text-[13px]">
-                  <span className="text-[#888888]">Hard Limit</span>
-                  <span className="text-[#EDEDED] tabular-nums">$5,000.00</span>
-                </div>
-              </div>
+        <div>
+          <h2 className="text-[14px] font-medium text-white mb-4">Account State</h2>
+          <div className="border border-[#222222] rounded-xl bg-[#0A0A0A] overflow-hidden divide-y divide-[#222222]">
+            <StateRow label="Status" value={account.status || "—"} />
+            <StateRow label="Phase" value={String(account.currentPhase || 1)} />
+            <StateRow label="Platform" value={account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—")} />
+            <StateRow label="Provisioning" value={account.provisioning?.status || "—"} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-              {/* Max Loss Card */}
-              <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
-                <div className="text-[13px] text-[#888888] mb-4">Max Overall Loss</div>
-                <div className="text-[32px] font-semibold tracking-tighter text-white tabular-nums leading-none">
-                  $0<span className="text-[#888888]">.00</span>
-                </div>
-                <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between text-[13px]">
-                  <span className="text-[#888888]">Status</span>
-                  <span className="text-[#EDEDED] flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-white" /> Optimal
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* List/Table Section - Stripe/Linear Issue Tracker Style */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
-              
-              <div className="lg:col-span-2">
-                <h2 className="text-[14px] font-medium text-white mb-4">Trading Objectives</h2>
-                <div className="border border-[#222222] rounded-xl bg-[#0A0A0A] overflow-hidden">
-                  
-                  {/* Row 1 */}
-                  <div className="flex items-center justify-between p-4 border-b border-[#222222]">
-                    <div>
-                      <div className="text-[13px] text-[#EDEDED] mb-1">Profit Target (8%)</div>
-                      <div className="text-[13px] text-[#888888] font-mono tabular-nums">
-                        $4,250.00 / $8,000.00
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 w-[160px]">
-                      <div className="flex-1 h-[1px] bg-[#333333]">
-                        <div className="h-full bg-white w-[53%]" />
-                      </div>
-                      <span className="text-[12px] text-[#888888] font-mono w-8 text-right">53%</span>
-                    </div>
-                  </div>
-
-                  {/* Row 2 */}
-                  <div className="flex items-center justify-between p-4">
-                    <div>
-                      <div className="text-[13px] text-[#EDEDED] mb-1">Minimum Trading Days</div>
-                      <div className="text-[13px] text-[#888888] font-mono tabular-nums">
-                        4 / 5 Days
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[12px] text-[#888888]">
-                      <Clock size={12} />
-                      Pending
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Economic Calendar - Extreme Minimalism */}
-              <div>
-                <h2 className="text-[14px] font-medium text-white mb-4 flex items-center justify-between">
-                  Economic Events
-                  <span className="text-[12px] text-[#888888] font-normal">Today</span>
-                </h2>
-                
-                <div className="space-y-1">
-                  {/* Event 1 */}
-                  <div className="flex items-start justify-between p-3 rounded-lg hover:bg-[#111111] transition-colors group cursor-default">
-                    <div className="flex gap-3">
-                      <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                      <div>
-                        <div className="text-[13px] text-[#EDEDED]">Core Retail Sales</div>
-                        <div className="text-[12px] text-[#888888] mt-0.5">USD • High Impact</div>
-                      </div>
-                    </div>
-                    <div className="text-[12px] text-[#888888] font-mono group-hover:text-[#EDEDED] transition-colors">
-                      13:30
-                    </div>
-                  </div>
-
-                  {/* Event 2 */}
-                  <div className="flex items-start justify-between p-3 rounded-lg hover:bg-[#111111] transition-colors group cursor-default">
-                    <div className="flex gap-3">
-                      <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                      <div>
-                        <div className="text-[13px] text-[#EDEDED]">Lagarde Speaks</div>
-                        <div className="text-[12px] text-[#888888] mt-0.5">EUR • Med Impact</div>
-                      </div>
-                    </div>
-                    <div className="text-[12px] text-[#888888] font-mono group-hover:text-[#EDEDED] transition-colors">
-                      14:45
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
+function MetricCard({ label, value, footerLabel, footerValue }) {
+  return (
+    <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
+      <div className="text-[13px] text-[#888888] mb-4">{label}</div>
+      <div className="text-[28px] font-semibold tracking-tighter text-white tabular-nums leading-none">{value}</div>
+      <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between gap-3 text-[13px]">
+        <span className="text-[#888888]">{footerLabel}</span>
+        <span className="text-[#EDEDED] tabular-nums text-right">{footerValue}</span>
+      </div>
     </div>
   );
 }
-const AnalyticsSection = () => {
-  const performanceStats = [
-    { metric: "Win Rate", value: "68.4%", industryAvg: "54.0%", status: "Optimal", type: "success" },
-    { metric: "Profit Factor", value: "2.41", industryAvg: "1.65", status: "Strong", type: "success" },
-    { metric: "Average Winning Trade", value: "+$1,840.00", industryAvg: "+$1,200.00", status: "Above Avg", type: "neutral" },
-    { metric: "Average Losing Trade", value: "-$760.00", industryAvg: "-$850.00", status: "Controlled", type: "success" },
-    { metric: "Max Consecutive Wins", value: "9 Trades", industryAvg: "5 Trades", status: "Exceptional", type: "success" },
+
+function RiskCard({ label, value, usage, limit, limitPct }) {
+  const progress = clampPercent(usage);
+  return (
+    <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-[13px] text-[#888888]">{label}</div>
+        <div className="text-[12px] text-[#888888] font-mono">{pct(progress)} used</div>
+      </div>
+      <div className="text-[28px] font-semibold tracking-tighter text-white tabular-nums leading-none mb-4">{value}</div>
+      <div className="w-full h-[1px] bg-[#333333]">
+        <div className="h-full bg-white" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between text-[13px]">
+        <span className="text-[#888888]">Hard Limit ({limitPct || 0}%)</span>
+        <span className="text-[#EDEDED] tabular-nums">{limit}</span>
+      </div>
+    </div>
+  );
+}
+
+function ObjectiveRow({ title, current, target, progress }) {
+  const safe = clampPercent(progress);
+  return (
+    <div className="flex items-center justify-between gap-5 p-4 border-b border-[#222222] last:border-b-0">
+      <div>
+        <div className="text-[13px] text-[#EDEDED] mb-1">{title}</div>
+        <div className="text-[13px] text-[#888888] font-mono tabular-nums">{current} / {target}</div>
+      </div>
+      <div className="flex items-center gap-4 w-[160px]">
+        <div className="flex-1 h-[1px] bg-[#333333]"><div className="h-full bg-white" style={{ width: `${safe}%` }} /></div>
+        <span className="text-[12px] text-[#888888] font-mono w-10 text-right">{Math.round(safe)}%</span>
+      </div>
+    </div>
+  );
+}
+
+function StateRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3.5 text-[13px]">
+      <span className="text-[#888888]">{label}</span>
+      <span className="text-[#EDEDED] font-mono">{value}</span>
+    </div>
+  );
+}
+
+const AnalyticsSection = ({ account }) => {
+  if (!account) {
+    return <div className="rounded-xl border border-[#222222] bg-[#0A0A0A] p-6 text-sm text-[#888888]">No account analytics are available yet.</div>;
+  }
+
+  const totalTrades = Number(account.totalTrades || 0);
+  const winningTrades = Number(account.winningTrades || 0);
+  const losingTrades = Number(account.losingTrades || 0);
+  const winRate = totalTrades > 0 ? winningTrades / totalTrades * 100 : 0;
+  const initial = Number(account.accountSize || 0);
+  const balance = Number(account.balance || 0);
+  const equity = Number(account.equity || 0);
+  const profit = Number(account.projections?.profit ?? (balance - initial));
+  const returnPct = initial > 0 ? profit / initial * 100 : 0;
+  const dailyLoss = Number(account.projections?.dailyLoss || 0);
+  const totalLoss = Number(account.projections?.totalLoss || 0);
+
+  const rows = [
+    ["Total trades", totalTrades.toLocaleString("en-US")],
+    ["Winning trades", winningTrades.toLocaleString("en-US")],
+    ["Losing trades", losingTrades.toLocaleString("en-US")],
+    ["Win rate", pct(winRate)],
+    ["Realized challenge P&L", money(profit)],
+    ["Return on starting balance", pct(returnPct)],
+    ["Current balance", money(balance)],
+    ["Current equity", money(equity)],
+    ["Current daily drawdown", money(dailyLoss)],
+    ["Current max drawdown", money(totalLoss)],
+    ["Trading days", String(Number(account.projections?.tradingDays || 0))],
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Top 3 High-Level Analytics Highlights */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-4">
-        {/* Sharpe Ratio Card */}
-        <div className="bg-[#0A0C12] border border-white/[0.08] rounded-2xl p-5 text-center space-y-3 order-2 md:order-1 relative md:h-[220px] flex flex-col justify-center">
-          <div className="absolute top-4 left-4 text-gray-500 font-black text-xs uppercase tracking-wider">Risk Eff.</div>
-          <div className="w-12 h-12 rounded-full bg-white/[0.06] mx-auto border border-white/[0.12] flex items-center justify-center text-sm font-bold text-white">
-            <ShieldCheck size={20} />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-white">Sharpe Ratio</h4>
-            <p className="text-[11px] text-gray-400 font-mono mt-0.5">Risk-Adjusted Return Metric</p>
-          </div>
-          <div className="text-sm font-black text-white font-mono">2.84</div>
-          <span className="text-[10px] text-gray-500 font-medium bg-white/[0.02] px-2 py-0.5 rounded-full mx-auto border border-white/[0.08]">Excellent Grade</span>
-        </div>
-
-        {/* Profit Factor Card - Main Highlight */}
-        <div className="bg-[#0A0C12] border-2 border-white/[0.08] rounded-2xl p-6 text-center space-y-3 order-1 md:order-2 md:h-[250px] flex flex-col justify-center relative shadow-xl shadow-white/[0.04]">
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white text-black text-[10px] uppercase font-black px-3 py-0.5 rounded-full tracking-wider flex items-center gap-1">
-            <Activity size={10} /> Live Efficiency
-          </div>
-          <div className="w-16 h-16 rounded-full bg-white/[0.06] mx-auto border-2 border-white/40 flex items-center justify-center text-base font-bold text-white">
-            <Percent size={22} className="text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-black text-white">Current Win Rate</h3>
-            <p className="text-xs text-gray-400 font-mono mt-0.5">Calculated across 84 trades</p>
-          </div>
-          <div className="text-xl font-black text-white font-mono tracking-tight">68.40%</div>
-          <span className="text-[10px] text-white font-bold bg-white/[0.06] px-2 py-0.5 rounded-full mx-auto border border-white/[0.15]">Target: &gt;50%</span>
-        </div>
-
-        {/* Profit Factor Metric */}
-        <div className="bg-[#0A0C12] border border-white/[0.08] rounded-2xl p-5 text-center space-y-3 order-3 relative md:h-[220px] flex flex-col justify-center">
-          <div className="absolute top-4 left-4 text-gray-600 font-black text-xs uppercase tracking-wider">Multiplication</div>
-          <div className="w-12 h-12 rounded-full bg-white/[0.06] mx-auto border border-white/[0.12] flex items-center justify-center text-sm font-bold text-white">
-            <Layers size={20} className="text-gray-400" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-white">Profit Factor</h4>
-            <p className="text-[11px] text-gray-400 font-mono mt-0.5">Gross Profits / Gross Losses</p>
-          </div>
-          <div className="text-sm font-black text-white font-mono">2.41</div>
-          <span className="text-[10px] text-gray-500 font-medium bg-white/[0.02] px-2 py-0.5 rounded-full mx-auto border border-white/[0.08]">Breakeven: 1.0</span>
-        </div>
+    <div className="space-y-6 animate-fade-in">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <MetricCard label="Win Rate" value={pct(winRate)} footerLabel="Trades" footerValue={String(totalTrades)} />
+        <MetricCard label="Challenge P&L" value={money(profit)} footerLabel="Return" footerValue={pct(returnPct)} />
+        <MetricCard label="Equity" value={money(equity)} footerLabel="Balance" footerValue={money(balance)} />
       </section>
 
-      {/* Deep Metrics Table Grid */}
-      <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">Advanced Performance Matrix</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Comprehensive structural breakdown of historical simulated account execution.</p>
-          </div>
+      <section className="bg-[#0A0A0A] rounded-xl border border-[#222222] overflow-hidden">
+        <div className="p-5 border-b border-[#222222]">
+          <h2 className="text-sm font-medium text-white">Account Analytics</h2>
+          <p className="text-xs text-[#888888] mt-1">Only metrics currently reported by the ACG Funded state engine are shown.</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
-                <th className="py-3 px-6">Performance Statistic</th>
-                <th className="py-3 px-4 text-center">Your Account Matrix</th>
-                <th className="py-3 px-4 text-center">Global Benchmark Baseline</th>
-                <th className="py-3 px-6 text-right">Status Evaluation</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.06] text-xs text-gray-300">
-              {performanceStats.map((row, idx) => (
-                <tr key={idx} className="hover:bg-white/[0.02] transition group">
-                  <td className="py-4 px-6 font-semibold text-white">{row.metric}</td>
-                  <td className="py-4 px-4 text-center font-bold text-white font-mono">{row.value}</td>
-                  <td className="py-4 px-4 text-center text-gray-500 font-mono">{row.industryAvg}</td>
-                  <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        row.type === 'success' 
-                          ? 'text-white bg-white/[0.06] border-white/[0.15]' 
-                          : 'text-gray-400 bg-white/[0.02] border-white/[0.08]'
-                      }`}>
-                        {row.status}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="divide-y divide-[#222222]">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between gap-4 px-5 py-3.5">
+              <span className="text-[13px] text-[#888888]">{label}</span>
+              <span className="text-[13px] text-white font-mono tabular-nums text-right">{value}</span>
+            </div>
+          ))}
         </div>
       </section>
     </div>
@@ -954,7 +906,11 @@ export default function Dashboard({ onBack = () => {} }) {
       }
     };
     void loadWorkspace();
-    return () => { cancelled = true; };
+    const interval = window.setInterval(loadWorkspace, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [getAccessToken]);
 
   const handleOpenTrader = async () => {
@@ -987,9 +943,9 @@ export default function Dashboard({ onBack = () => {} }) {
 
     switch (activeTab) {
       case 'overview':
-        return <OverviewSection {...propsPayload} />;
+        return <OverviewSection {...propsPayload} account={activeChallenge} />;
       case 'analytics':
-        return <AnalyticsSection />;
+        return <AnalyticsSection account={activeChallenge} />;
       case 'calendar':
         return <CalendarSection />;
       case 'traders':
