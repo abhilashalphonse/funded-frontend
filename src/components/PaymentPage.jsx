@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
+import { useAuth } from "../AuthContext.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", PAID: "PAID" };
@@ -66,11 +67,11 @@ function Row({ label, value }) {
   return <div className="flex items-center justify-between border-b border-white/[0.05] py-2.5 last:border-0"><span className="text-xs text-zinc-500">{label}</span><span className="text-sm font-medium text-white">{value}</span></div>;
 }
 
-function EmailField({ email, onChange }) {
+function EmailField({ email, onChange, locked = false }) {
   return <div className="space-y-1.5">
     <label className="text-[11px] uppercase tracking-widest text-zinc-500" htmlFor="checkout-email">Email</label>
     <div className="relative"><Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
-      <input id="checkout-email" type="email" autoComplete="email" value={email} onChange={(e) => onChange(e.target.value)} placeholder="you@example.com" className="w-full rounded-lg border border-white/[0.09] bg-white/[0.02] py-2.5 pl-10 pr-3.5 text-[13.5px] text-white outline-none placeholder:text-zinc-600 focus:border-white/30" />
+      <input id="checkout-email" type="email" autoComplete="email" value={email} onChange={(e) => onChange(e.target.value)} readOnly={locked} placeholder="you@example.com" className="w-full rounded-lg border border-white/[0.09] bg-white/[0.02] py-2.5 pl-10 pr-3.5 text-[13.5px] text-white outline-none placeholder:text-zinc-600 focus:border-white/30 read-only:cursor-not-allowed read-only:text-zinc-400" />
     </div>
     <p className="text-[11px] text-zinc-600">We'll use this email to create and deliver access to your ACG account.</p>
   </div>;
@@ -97,7 +98,7 @@ function Terms({ checked, onChange }) {
   </label>;
 }
 
-function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
+function PaymentSection({ plan, email, onEmailChange, onSignIn, lockEmail = false }) {
   const [method, setMethod] = useState("BTC");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [status, setStatus] = useState(STATUS.IDLE);
@@ -140,7 +141,13 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
       const response = await fetch(`${API_URL}/api/payments/crypto/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, challengeDefinition: definition, commercialConfig: commercial, paymentMethod: method }),
+        body: JSON.stringify({
+          email,
+          challengeDefinition: definition,
+          commercialConfig: commercial,
+          paymentMethod: method,
+          ...(plan.sourceTrialId ? { sourceTrialId: plan.sourceTrialId } : {}),
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.data?.checkoutUrl) throw new Error(data?.message || "Unable to create crypto payment.");
@@ -160,7 +167,7 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
     <div className="mb-1 text-[11px] uppercase tracking-widest text-zinc-500">Payment</div>
     <p className="mb-6 text-xs text-zinc-500">Complete your payment to activate your challenge.</p>
     <div className="space-y-5">
-      <EmailField email={email} onChange={onEmailChange} />
+      <EmailField email={email} onChange={onEmailChange} locked={lockEmail} />
       <CryptoPaymentPanel method={method} onMethodChange={setMethod} />
       <Terms checked={termsAccepted} onChange={setTermsAccepted} />
       {notice && <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{notice}</span></div>}
@@ -174,8 +181,14 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn }) {
 }
 
 export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => {} }) {
-  const [email, setEmail] = useState("");
+  const { user } = useAuth();
+  const isTrialConversion = Boolean(plan?.sourceTrialId);
+  const [email, setEmail] = useState(() => isTrialConversion ? (user?.email || "") : "");
   const hasPlan = useMemo(() => Boolean(plan?.challengeDefinition && plan?.commercialConfig), [plan]);
+
+  useEffect(() => {
+    if (isTrialConversion && user?.email) setEmail(user.email);
+  }, [isTrialConversion, user?.email]);
   if (!hasPlan) return null;
 
   return <section className="relative min-h-screen bg-[#05060A] font-sans text-zinc-300">
@@ -184,12 +197,16 @@ export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => 
       <div className="mb-8 sm:mb-10">
         <button type="button" onClick={onBack} className="mb-5 flex items-center gap-1.5 text-[12.5px] text-neutral-500 hover:text-white"><ChevronLeft className="h-3.5 w-3.5" /> Change challenge</button>
         <div className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Challenge Activation</div>
-        <h1 className="mt-3 text-[28px] font-semibold tracking-tight text-white sm:text-4xl">Complete your challenge</h1>
-        <p className="mt-1.5 text-sm text-zinc-500">You're one step away from trading.</p>
+        <h1 className="mt-3 text-[28px] font-semibold tracking-tight text-white sm:text-4xl">
+          {isTrialConversion ? "Start your real challenge" : "Complete your challenge"}
+        </h1>
+        <p className="mt-1.5 text-sm text-zinc-500">
+          {isTrialConversion ? "Your Free Trial configuration has been carried into checkout." : "You're one step away from trading."}
+        </p>
       </div>
       <div className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-2">
         <ChallengeSummary plan={plan} />
-        <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} />
+        <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} lockEmail={isTrialConversion} />
       </div>
       <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="/terms">Terms</a> · <a href="/support">Support</a></div>
     </div>
