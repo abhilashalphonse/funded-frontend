@@ -14,6 +14,7 @@ import {
 } from '../../utils/challengeRules.js';
 import { calculatePrice, validateChallengeConfiguration } from '../../utils/pricingEngine.js';
 import { CHALLENGE_PRESETS } from '../../utils/challengePresets.js';
+import { trackAcquisitionEvent } from '../../services/analytics.js';
 
 /* ============================================================================
    HELPERS
@@ -826,6 +827,11 @@ export default function BuildChallenge({ onSelectPlan, onSelectFreeTrial }) {
 
   const handleStartFreeTrial = () => {
     if (!validation.valid) return;
+    void trackAcquisitionEvent("free_trial_cta_clicked", {
+      surface: "challenge_builder",
+      step,
+      accountSize,
+    });
     onSelectFreeTrial(buildSelectedPlan());
   };
 
