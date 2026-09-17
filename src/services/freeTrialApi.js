@@ -52,11 +52,12 @@ export function getFreeTrialHistory() {
   return request("/history");
 }
 
-export function createFreeTrial(challengeDefinition, platform) {
+export function createFreeTrial(challengeDefinition, commercialConfig, platform) {
   return request("", {
     method: "POST",
     body: JSON.stringify({
       challengeDefinition,
+      commercialConfig,
       ...(platform ? { platform } : {}),
     }),
   });
