@@ -408,7 +408,7 @@ function SignupForm({ onSwitchToLogin }) {
       )}
 
       <form className="mt-6 flex flex-col gap-3.5" onSubmit={handleSignup}>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="First name" htmlFor="firstName">
             <input id="firstName" type="text" placeholder="Jane" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClasses} required />
           </Field>
@@ -417,7 +417,7 @@ function SignupForm({ onSwitchToLogin }) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-[35%_1fr] gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[35%_1fr]">
           <Field label="Title" htmlFor="title">
             <SelectField id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="—" options={titles} />
           </Field>
@@ -435,15 +435,15 @@ function SignupForm({ onSwitchToLogin }) {
         </Field>
 
         <Field label="Phone number" htmlFor="phone">
-          <div className="flex gap-2">
-            <div className="w-[36%]">
+          <div className="grid grid-cols-[7.5rem_1fr] gap-2">
+            <div className="min-w-0">
               <SelectField id="phoneCountry" value={phoneCountry} onChange={(e) => setPhoneCountry(e.target.value)} placeholder="Code" options={phoneCodes} />
             </div>
             <input id="phone" type="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClasses + " flex-1"} required />
           </div>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Password" htmlFor="signupPassword">
             <div className="relative">
               <input
@@ -534,7 +534,7 @@ export default function Auth({ onBack = () => {}, initialView = "login" }) {
       <Atmosphere />
       <BackButton onBack={onBack} />
 
-      <div className="relative flex min-h-screen flex-col items-center justify-center px-5 py-20">
+      <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-16 sm:px-5 sm:py-20">
         <Card wide={view === "signup"}>
           {view === "login" ? (
             <LoginForm onSwitchToSignup={() => setView("signup")} />
