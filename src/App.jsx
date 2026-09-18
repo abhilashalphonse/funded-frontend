@@ -6,6 +6,7 @@ import Auth from "./components/ui/Auth.jsx";
 import Dashboard from "./components/ui/Dashboard.jsx";
 import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
+import { captureAttribution, getAnalyticsSessionId, trackEvent } from "./utils/analytics.js";
 
 function App() {
   const [screen, setScreen] = useState(() => {
@@ -31,6 +32,18 @@ function App() {
     return window.sessionStorage.getItem("acg:postAuthScreen");
   });
   const { user, getAccessToken } = useAuth();
+
+  useEffect(() => {
+    captureAttribution();
+  }, []);
+
+  useEffect(() => {
+    if (!user || typeof window === "undefined") return;
+    if (window.sessionStorage.getItem("acg:authMode") === "signup") {
+      window.sessionStorage.removeItem("acg:authMode");
+      void trackEvent("signup_completed", { method: "oauth" }, { getAccessToken });
+    }
+  }, [user, getAccessToken]);
 
   // Challenge Builder / pricing grid hands a plan object over here; we stash
   // it and move straight to the checkout/activation step.
@@ -63,7 +76,10 @@ function App() {
       if (!token) throw new Error("Your session has expired. Please sign in again.");
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/customer/trial-readiness`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-acg-session-id": getAnalyticsSessionId(),
+        },
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.data?.ready) {
@@ -134,6 +150,7 @@ function App() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "x-acg-session-id": getAnalyticsSessionId(),
         },
         body: JSON.stringify({
           challengeDefinition: plan.challengeDefinition,
