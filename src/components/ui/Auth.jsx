@@ -18,8 +18,21 @@ const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Inter
 
 const titles = ["Mr.", "Mrs.", "Ms.", "Mx."];
 const countries = [
-  "United States", "United Kingdom", "Germany", "France", "Italy",
-  "India", "Australia", "Czech Republic", "United Arab Emirates", "Malta",
+  "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Bulgaria", "Canada",
+  "Chile", "Colombia", "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia",
+  "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "India", "Indonesia",
+  "Ireland", "Italy", "Japan", "Latvia", "Lithuania", "Luxembourg", "Malaysia", "Malta",
+  "Mexico", "Netherlands", "New Zealand", "Norway", "Philippines", "Poland", "Portugal",
+  "Romania", "Singapore", "Slovakia", "Slovenia", "South Africa", "South Korea", "Spain",
+  "Sweden", "Switzerland", "Thailand", "United Arab Emirates", "United Kingdom", "United States",
+  "Vietnam",
+];
+
+const phoneCodes = [
+  "+1", "+27", "+30", "+31", "+32", "+33", "+34", "+36", "+39", "+40", "+41", "+43",
+  "+44", "+45", "+46", "+47", "+48", "+49", "+51", "+52", "+54", "+55", "+60", "+61",
+  "+63", "+64", "+65", "+81", "+82", "+84", "+91", "+351", "+352", "+353", "+354", "+356",
+  "+357", "+358", "+359", "+370", "+371", "+372", "+385", "+420", "+421", "+971",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -155,17 +168,6 @@ const GoogleMark = (
     <path d="M12 5.98c1.47 0 2.79.5 3.82 1.5l2.87-2.87A9.96 9.96 0 0 0 12 2a10 10 0 0 0-8.94 5.47l3.35 2.58C7.2 7.73 9.4 5.98 12 5.98z" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
   </svg>
 );
-const FacebookMark = (
-  <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <circle cx="12" cy="12" r="9.3" />
-    <path d="M13.6 21.7v-7.4h2.3l.35-2.7h-2.65v-1.7c0-.78.22-1.32 1.34-1.32h1.43V6.14c-.25-.03-1.1-.1-2.1-.1-2.08 0-3.5 1.27-3.5 3.6v2h-2.35v2.7h2.35v7.35" fill="none" />
-  </svg>
-);
-const AppleMark = (
-  <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M16.36 1.43c0 1.14-.44 2.2-1.15 3.03-.83.94-2.14 1.66-3.36 1.56-.15-1.09.42-2.24 1.15-3.02.82-.9 2.22-1.58 3.36-1.57zM20.7 17.2c-.4.94-.6 1.36-1.11 2.2-.72 1.17-1.73 2.63-2.99 2.64-1.11.01-1.4-.73-2.9-.72-1.5.01-1.81.74-2.93.73-1.26-.01-2.22-1.33-2.94-2.5-2.02-3.27-2.23-7.1-.98-9.14.88-1.44 2.28-2.29 3.6-2.29 1.34 0 2.18.75 3.29.75 1.07 0 1.72-.75 3.29-.75 1.17 0 2.41.64 3.29 1.74-2.89 1.58-2.42 5.7.38 6.9-.34 1.1-.5 1.3-.71 1.44z" />
-  </svg>
-);
 
 function TrustLine() {
   return (
@@ -230,8 +232,6 @@ function LoginForm({ onSwitchToSignup }) {
 
       <div className="mt-6 flex flex-col gap-2">
         <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleLogin} disabled={loading} />
-        <SocialButton icon={AppleMark} label="Continue with Apple" />
-        <SocialButton icon={FacebookMark} label="Continue with Facebook" />
       </div>
 
       <div className="my-6 flex items-center gap-3">
@@ -410,7 +410,7 @@ function SignupForm({ onSwitchToLogin }) {
         <Field label="Phone number" htmlFor="phone">
           <div className="flex gap-2">
             <div className="w-[36%]">
-              <SelectField id="phoneCountry" value={phoneCountry} onChange={(e) => setPhoneCountry(e.target.value)} placeholder="Code" options={countries} />
+              <SelectField id="phoneCountry" value={phoneCountry} onChange={(e) => setPhoneCountry(e.target.value)} placeholder="Code" options={phoneCodes} />
             </div>
             <input id="phone" type="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClasses + " flex-1"} required />
           </div>
@@ -495,8 +495,8 @@ function SignupForm({ onSwitchToLogin }) {
 /*  Root                                                                */
 /* ------------------------------------------------------------------ */
 
-export default function Auth({ onBack = () => {} }) {
-  const [view, setView] = useState("login");
+export default function Auth({ onBack = () => {}, initialView = "login" }) {
+  const [view, setView] = useState(initialView);
 
   return (
     <div className="relative min-h-screen w-full bg-black font-sans text-white antialiased">
