@@ -106,6 +106,16 @@ function App() {
     }
   }, [user, pendingTrialIntent, postAuthScreen, selectedPlan, handleOpenTrialBuilder]);
 
+  const handleAuthBack = () => {
+    setPendingTrialIntent(false);
+    setPostAuthScreen(null);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem("acg:pendingTrial");
+      window.sessionStorage.removeItem("acg:postAuthScreen");
+    }
+    setScreen("homepage");
+  };
+
   const handleStartTrial = async (plan) => {
     if (trialCreating) return;
     setTrialCreating(true);
@@ -152,11 +162,11 @@ function App() {
   }
 
   if (screen === "dashboard" && !user) {
-    return <Auth onBack={() => setScreen("homepage")} initialView={pendingTrialIntent ? "signup" : "login"} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} />;
   }
 
   if (screen === "auth") {
-    return <Auth onBack={() => setScreen("homepage")} initialView={pendingTrialIntent ? "signup" : "login"} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} />;
   }
 
   if (screen === "builder") {
