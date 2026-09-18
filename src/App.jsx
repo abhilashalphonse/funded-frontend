@@ -113,6 +113,15 @@ function App() {
       return;
     }
 
+    if (postAuthScreen === "dashboard") {
+      setPostAuthScreen(null);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("acg:postAuthScreen");
+      }
+      setScreen("dashboard");
+      return;
+    }
+
     if (postAuthScreen === "payment" && selectedPlan) {
       setPostAuthScreen(null);
       if (typeof window !== "undefined") {
@@ -211,6 +220,22 @@ function App() {
           window.history.replaceState({}, document.title, window.location.pathname);
           setBuilderMode("paid");
           setScreen("builder");
+        }}
+        onHome={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setScreen("homepage");
+        }}
+        onDashboard={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          if (user) {
+            setScreen("dashboard");
+            return;
+          }
+          setPostAuthScreen("dashboard");
+          if (typeof window !== "undefined") {
+            window.sessionStorage.setItem("acg:postAuthScreen", "dashboard");
+          }
+          setScreen("auth");
         }}
         onSignIn={() => {
           window.history.replaceState({}, document.title, window.location.pathname);
