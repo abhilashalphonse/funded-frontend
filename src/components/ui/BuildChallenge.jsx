@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Minus, Plus, ChevronDown, ArrowRight, Check, AlertCircle } from 'lucide-react';
+import { Minus, Plus, ChevronDown, ChevronLeft, ArrowRight, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 import {
   STEP_TYPES,
@@ -64,9 +64,19 @@ function SegmentedControl({ options, value, onChange, size = 'md', ariaLabel }) 
    ChallengeHeader
    ============================================================================ */
 
-function ChallengeHeader() {
+function ChallengeHeader({ onBack }) {
   return (
-    <div className="flex flex-col items-center text-center mb-10">
+    <div className="relative flex flex-col items-center text-center mb-10">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="absolute left-0 top-0 inline-flex items-center gap-1.5 text-sm text-gray-400 transition hover:text-white"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back
+        </button>
+      )}
       <h1 className="text-4xl sm:text-5xl font-medium tracking-tighter text-white mb-3 leading-[1.1]">
         Build Your Challenge
       </h1>
@@ -600,7 +610,7 @@ function PriceBreakdown({ pricing }) {
    ChallengeSummary — checkout-preview sidebar
    ============================================================================ */
 
-function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid, validationErrors, onStart }) {
+function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid, validationErrors, onStart, actionLabel, actionLoading, notice }) {
   const stepLabel = step === STEP_TYPES.ONE_STEP ? '1-Step' : '2-Step';
 
   return (
@@ -644,14 +654,22 @@ function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid
         </div>
       )}
 
+      {notice && (
+        <div className="mb-3 rounded-md border border-red-500/20 bg-red-500/[0.06] px-3 py-2.5 text-xs text-red-300">
+          {notice}
+        </div>
+      )}
+
       <button
         type="button"
         onClick={onStart}
-        disabled={!isValid}
+        disabled={!isValid || actionLoading}
         className="w-full h-11 rounded-md bg-white text-[#05060A] font-medium text-sm hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-white transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0C12]"
       >
-        Start Your Challenge
-        <ArrowRight className="w-4 h-4 opacity-70" strokeWidth={2} />
+        {actionLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating trial...</> : <>
+          {actionLabel || "Start Your Challenge"}
+          <ArrowRight className="w-4 h-4 opacity-70" strokeWidth={2} />
+        </>}
       </button>
     </aside>
   );
@@ -679,7 +697,7 @@ function SummaryLine({ label, value }) {
    intentionally out of scope for this component.
    ============================================================================ */
 
-export default function BuildChallenge({ onSelectPlan }) {
+export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "Start Your Challenge", actionLoading = false, notice = "" }) {
   const [step, setStep] = useState(STEP_TYPES.TWO_STEP);
   const [accountSize, setAccountSize] = useState(RECOMMENDED_ACCOUNT_SIZE);
   const [rules, setRules] = useState(DEFAULT_RULES[STEP_TYPES.TWO_STEP]);
@@ -830,7 +848,7 @@ export default function BuildChallenge({ onSelectPlan }) {
       />
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 sm:py-24">
-        <ChallengeHeader />
+        <ChallengeHeader onBack={onBack} />
 <PathSelector step={step} onChange={handleStepChange} />
 <AccountSizeSelector
   step={step}
@@ -852,6 +870,9 @@ export default function BuildChallenge({ onSelectPlan }) {
             isValid={validation.valid}
             validationErrors={validation.errors}
             onStart={handleStart}
+            actionLabel={actionLabel}
+            actionLoading={actionLoading}
+            notice={notice}
           />
         </div>
       </div>
