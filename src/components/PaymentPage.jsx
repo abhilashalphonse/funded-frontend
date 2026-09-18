@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
 import { useAuth } from "../AuthContext.jsx";
+import { getAnalyticsSessionId, getAttribution } from "../utils/analytics.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", ACTIVATING: "ACTIVATING", ACTIVE: "ACTIVE", ACTIVATION_FAILED: "ACTIVATION_FAILED" };
@@ -158,9 +159,17 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn, getAccessToken }
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-acg-session-id": getAnalyticsSessionId(),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ email, challengeDefinition: definition, commercialConfig: commercial, paymentMethod: method }),
+        body: JSON.stringify({
+          email,
+          challengeDefinition: definition,
+          commercialConfig: commercial,
+          paymentMethod: method,
+          analyticsSessionId: getAnalyticsSessionId(),
+          attribution: getAttribution(),
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.data?.checkoutUrl) throw new Error(data?.message || "Unable to create crypto payment.");
