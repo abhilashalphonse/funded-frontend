@@ -54,6 +54,7 @@ function ChallengeSummary({ plan }) {
         <Row label="Daily Loss" value={`${rules.dailyLoss}%`} />
         <Row label="Max Loss" value={`${rules.maxLoss}%`} />
         <Row label="Minimum Trading Days" value={rules.minTradingDays} />
+        <Row label="Profit Split" value={`${plan.commercialConfig?.profitSplit ?? 80}%`} />
       </div>
 
       <div className="mt-6 border-t border-white/[0.06] pt-5">
