@@ -16,6 +16,7 @@ function App() {
   const [builderMode, setBuilderMode] = useState("paid");
   const [trialError, setTrialError] = useState("");
   const [trialCreating, setTrialCreating] = useState(false);
+  const [trialChecking, setTrialChecking] = useState(false);
   const { user, getAccessToken } = useAuth();
 
   // Challenge Builder / pricing grid hands a plan object over here; we stash
@@ -23,6 +24,34 @@ function App() {
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);
     setScreen("payment");
+  };
+
+  const handleOpenTrialBuilder = async () => {
+    if (trialChecking) return;
+    setTrialChecking(true);
+    setTrialError("");
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Your session has expired. Please sign in again.");
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/customer/trial-readiness`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.data?.ready) {
+        const checks = payload?.data?.checks || {};
+        const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
+        const suffix = failed.length ? ` Failed checks: ${failed.join(", ")}.` : "";
+        throw new Error((payload?.message || payload?.data?.error || "ACG Trader is not ready for free trials.") + suffix);
+      }
+
+      setBuilderMode("trial");
+      setScreen("builder");
+    } catch (error) {
+      setTrialError(error?.message || "Unable to verify ACG Trader readiness.");
+    } finally {
+      setTrialChecking(false);
+    }
   };
 
   const handleStartTrial = async (plan) => {
@@ -63,11 +92,9 @@ function App() {
           setTrialError("");
           setScreen("builder");
         }}
-        onFreeTrial={() => {
-          setBuilderMode("trial");
-          setTrialError("");
-          setScreen("builder");
-        }}
+        onFreeTrial={handleOpenTrialBuilder}
+        trialChecking={trialChecking}
+        trialError={trialError}
       />
     );
   }
