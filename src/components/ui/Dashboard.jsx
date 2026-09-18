@@ -75,7 +75,7 @@ const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number
 const OverviewSection = ({ account }) => {
   if (!account) {
     return (
-      <div className="rounded-xl border border-[#222222] bg-[#0A0A0A] p-6 text-sm text-[#888888]">
+      <div className="rounded-2xl border border-white/[0.08] bg-[#090b0f] p-8 text-sm text-[#8b93a1] shadow-[0_24px_80px_rgba(0,0,0,.22)]">
         No active challenge is available on this account yet.
       </div>
     );
@@ -89,11 +89,16 @@ const OverviewSection = ({ account }) => {
   const totalLoss = Number(account.projections?.totalLoss || 0);
   const profit = Number(account.projections?.profit ?? (balance - initial));
   const tradingDays = Number(account.projections?.tradingDays || 0);
+  const totalTrades = Number(account.totalTrades || 0);
+  const winningTrades = Number(account.winningTrades || 0);
+  const losingTrades = Number(account.losingTrades || 0);
+
   const dailyLossPctLimit = Number(account.rules?.dailyDrawdown || 0);
   const maxLossPctLimit = Number(account.rules?.maxDrawdown || 0);
   const minTradingDays = Number(account.rules?.minimumTradingDays || 0);
   const phaseRule = (account.rules?.phases || []).find(item => Number(item.phase) === Number(account.currentPhase || 1));
   const profitTargetPct = Number(phaseRule?.profitTarget || 0);
+
   const profitTargetAmount = initial * profitTargetPct / 100;
   const dailyLossLimit = initial * dailyLossPctLimit / 100;
   const maxLossLimit = initial * maxLossPctLimit / 100;
@@ -101,103 +106,274 @@ const OverviewSection = ({ account }) => {
   const maxUsagePct = maxLossLimit > 0 ? totalLoss / maxLossLimit * 100 : 0;
   const profitProgressPct = profitTargetAmount > 0 ? Math.max(0, profit) / profitTargetAmount * 100 : 0;
   const tradingDaysPct = minTradingDays > 0 ? tradingDays / minTradingDays * 100 : 100;
+  const winRate = totalTrades > 0 ? winningTrades / totalTrades * 100 : 0;
+  const returnPct = initial > 0 ? profit / initial * 100 : 0;
+  const freeMargin = Number(account.marginFree || 0);
+  const usedMargin = Number(account.margin || 0);
+
+  const platformName = account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—");
+  const connectionActive = account.provisioning?.status === "ACTIVE";
+  const status = String(account.status || "—").toUpperCase();
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <MetricCard label="Current Balance" value={money(balance)} footerLabel="Initial" footerValue={money(initial)} />
-        <MetricCard label="Current Equity" value={money(equity)} footerLabel="Floating P&L" footerValue={money(floating)} />
-        <RiskCard label="Daily Drawdown" value={money(dailyLoss)} usage={dailyUsagePct} limit={money(dailyLossLimit)} limitPct={dailyLossPctLimit} />
-        <RiskCard label="Max Overall Loss" value={money(totalLoss)} usage={maxUsagePct} limit={money(maxLossLimit)} limitPct={maxLossPctLimit} />
-      </div>
+    <div className="animate-in fade-in duration-500 space-y-7">
+      <section className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_32%),linear-gradient(145deg,#0d1118,#07090d_72%)] p-5 sm:p-6 shadow-[0_30px_100px_rgba(0,0,0,.28)]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_bottom,black,transparent_72%)]" />
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.09] bg-white/[0.035] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#cbd5df]">
+                <span className={`h-1.5 w-1.5 rounded-full ${connectionActive ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.7)]" : "bg-zinc-600"}`} />
+                {connectionActive ? "Live connection" : "Not connected"}
+              </span>
+              <span className="rounded-full border border-white/[0.09] bg-white/[0.035] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7f8c9b]">
+                {status}
+              </span>
+              <span className="rounded-full border border-white/[0.09] bg-white/[0.035] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7f8c9b]">
+                Phase {account.currentPhase || 1}
+              </span>
+            </div>
+            <div className="mt-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#637285]">Trading account</p>
+              <h2 className="mt-2 text-[26px] font-semibold tracking-[-0.045em] text-white sm:text-[34px]">
+                {account.accountId || "Evaluation Account"}
+              </h2>
+              <p className="mt-2 text-[12px] text-[#7d8b9b]">
+                {account.challengeType === "TWO_STEP" ? "2-Step Evaluation" : "1-Step Evaluation"} · {platformName}
+              </p>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-        <div className="lg:col-span-2">
-          <h2 className="text-[14px] font-medium text-white mb-4">Trading Objectives</h2>
-          <div className="border border-[#222222] rounded-xl bg-[#0A0A0A] overflow-hidden">
-            <ObjectiveRow
-              title={`Profit Target (${profitTargetPct || 0}%)`}
-              current={money(Math.max(0, profit))}
-              target={money(profitTargetAmount)}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[540px]">
+            <HeroStat label="Balance" value={money(balance)} />
+            <HeroStat label="Equity" value={money(equity)} />
+            <HeroStat label="Floating P&L" value={money(floating)} tone={floating > 0 ? "positive" : floating < 0 ? "negative" : "neutral"} />
+            <HeroStat label="Return" value={pct(returnPct)} tone={returnPct > 0 ? "positive" : returnPct < 0 ? "negative" : "neutral"} />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <ModernMetricCard
+          icon={Wallet}
+          label="Current Balance"
+          value={money(balance)}
+          helper="Starting balance"
+          helperValue={money(initial)}
+        />
+        <ModernMetricCard
+          icon={Activity}
+          label="Current Equity"
+          value={money(equity)}
+          helper="Free margin"
+          helperValue={money(freeMargin)}
+        />
+        <ModernRiskCard
+          icon={ShieldCheck}
+          label="Daily Drawdown"
+          value={money(dailyLoss)}
+          usage={dailyUsagePct}
+          limit={dailyLossLimit}
+          limitPct={dailyLossPctLimit}
+        />
+        <ModernRiskCard
+          icon={Shield}
+          label="Maximum Loss"
+          value={money(totalLoss)}
+          usage={maxUsagePct}
+          limit={maxLossLimit}
+          limitPct={maxLossPctLimit}
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_.9fr]">
+        <div className="overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#090c11] shadow-[0_24px_70px_rgba(0,0,0,.18)]">
+          <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+            <div>
+              <h3 className="text-[13px] font-semibold text-white">Challenge progress</h3>
+              <p className="mt-1 text-[10px] text-[#667487]">Live evaluation objectives from your active challenge.</p>
+            </div>
+            <div className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[#8ba4bb]">
+              <TrendingUp size={15} />
+            </div>
+          </div>
+
+          <div className="divide-y divide-white/[0.065]">
+            <ModernObjectiveRow
+              label={`Profit Target (${profitTargetPct || 0}%)`}
+              current={Math.max(0, profit)}
+              target={profitTargetAmount}
               progress={profitProgressPct}
+              currentLabel={money(Math.max(0, profit))}
+              targetLabel={money(profitTargetAmount)}
             />
-            <ObjectiveRow
-              title="Minimum Trading Days"
-              current={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
-              target={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
+            <ModernObjectiveRow
+              label="Minimum Trading Days"
+              current={tradingDays}
+              target={minTradingDays}
               progress={tradingDaysPct}
+              currentLabel={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
+              targetLabel={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
             />
           </div>
         </div>
 
-        <div>
-          <h2 className="text-[14px] font-medium text-white mb-4">Account State</h2>
-          <div className="border border-[#222222] rounded-xl bg-[#0A0A0A] overflow-hidden divide-y divide-[#222222]">
-            <StateRow label="Status" value={account.status || "—"} />
-            <StateRow label="Phase" value={String(account.currentPhase || 1)} />
-            <StateRow label="Platform" value={account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—")} />
-            <StateRow label="Provisioning" value={account.provisioning?.status || "—"} />
+        <div className="rounded-[22px] border border-white/[0.08] bg-[#090c11] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-[13px] font-semibold text-white">Risk state</h3>
+              <p className="mt-1 text-[10px] text-[#667487]">Current protection and margin status.</p>
+            </div>
+            <div className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[#8ba4bb]">
+              <ShieldCheck size={15} />
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <MiniState label="Used margin" value={money(usedMargin)} />
+            <MiniState label="Free margin" value={money(freeMargin)} />
+            <MiniState label="Daily room left" value={money(Math.max(0, dailyLossLimit - dailyLoss))} />
+            <MiniState label="Max-loss room" value={money(Math.max(0, maxLossLimit - totalLoss))} />
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1fr]">
+        <div className="rounded-[22px] border border-white/[0.08] bg-[#090c11] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-[13px] font-semibold text-white">Performance snapshot</h3>
+              <p className="mt-1 text-[10px] text-[#667487]">Realized challenge statistics.</p>
+            </div>
+            <BarChart3 size={16} className="text-[#72869a]" />
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <PerformanceStat label="Trades" value={String(totalTrades)} />
+            <PerformanceStat label="Wins" value={String(winningTrades)} />
+            <PerformanceStat label="Losses" value={String(losingTrades)} />
+            <PerformanceStat label="Win rate" value={pct(winRate)} />
+          </div>
+        </div>
+
+        <div className="rounded-[22px] border border-white/[0.08] bg-[#090c11] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-[13px] font-semibold text-white">Account state</h3>
+              <p className="mt-1 text-[10px] text-[#667487]">Provisioning and platform details.</p>
+            </div>
+            <Zap size={16} className="text-[#72869a]" />
+          </div>
+
+          <div className="mt-4 divide-y divide-white/[0.065]">
+            <ModernStateRow label="Status" value={status} />
+            <ModernStateRow label="Phase" value={`Phase ${account.currentPhase || 1}`} />
+            <ModernStateRow label="Platform" value={platformName} />
+            <ModernStateRow label="Provisioning" value={account.provisioning?.status || "—"} />
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
 
-function MetricCard({ label, value, footerLabel, footerValue }) {
+function HeroStat({ label, value, tone = "neutral" }) {
+  const toneClass = tone === "positive" ? "text-emerald-400" : tone === "negative" ? "text-rose-400" : "text-white";
   return (
-    <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
-      <div className="text-[13px] text-[#888888] mb-4">{label}</div>
-      <div className="text-[28px] font-semibold tracking-tighter text-white tabular-nums leading-none">{value}</div>
-      <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between gap-3 text-[13px]">
-        <span className="text-[#888888]">{footerLabel}</span>
-        <span className="text-[#EDEDED] tabular-nums text-right">{footerValue}</span>
+    <div className="rounded-2xl border border-white/[0.075] bg-black/20 px-3 py-3.5 backdrop-blur-sm">
+      <span className="block text-[8px] font-bold uppercase tracking-[0.12em] text-[#657487]">{label}</span>
+      <strong className={`mt-1.5 block truncate text-[13px] font-semibold tabular-nums ${toneClass}`}>{value}</strong>
+    </div>
+  );
+}
+
+function ModernMetricCard({ icon: Icon, label, value, helper, helperValue }) {
+  return (
+    <div className="rounded-[20px] border border-white/[0.08] bg-[#090c11] p-4 shadow-[0_18px_55px_rgba(0,0,0,.16)]">
+      <div className="flex items-center justify-between">
+        <div className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[#8096aa]">
+          <Icon size={15} />
+        </div>
+        <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-[#5e6c7d]">{label}</span>
+      </div>
+      <strong className="mt-5 block text-[24px] font-semibold tracking-[-0.04em] text-white tabular-nums">{value}</strong>
+      <div className="mt-4 flex items-center justify-between border-t border-white/[0.065] pt-3 text-[9px]">
+        <span className="text-[#657487]">{helper}</span>
+        <span className="font-mono text-[#aeb9c5]">{helperValue}</span>
       </div>
     </div>
   );
 }
 
-function RiskCard({ label, value, usage, limit, limitPct }) {
-  const progress = clampPercent(usage);
+function ModernRiskCard({ icon: Icon, label, value, usage, limit, limitPct }) {
+  const safeUsage = clampPercent(usage);
+  const tone = safeUsage >= 80 ? "bg-rose-400" : safeUsage >= 50 ? "bg-amber-400" : "bg-emerald-400";
   return (
-    <div className="p-6 rounded-xl border border-[#222222] bg-[#0A0A0A]">
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-[13px] text-[#888888]">{label}</div>
-        <div className="text-[12px] text-[#888888] font-mono">{pct(progress)} used</div>
+    <div className="rounded-[20px] border border-white/[0.08] bg-[#090c11] p-4 shadow-[0_18px_55px_rgba(0,0,0,.16)]">
+      <div className="flex items-center justify-between">
+        <div className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[#8096aa]">
+          <Icon size={15} />
+        </div>
+        <span className="text-[9px] font-mono text-[#758396]">{safeUsage.toFixed(1)}% used</span>
       </div>
-      <div className="text-[28px] font-semibold tracking-tighter text-white tabular-nums leading-none mb-4">{value}</div>
-      <div className="w-full h-[1px] bg-[#333333]">
-        <div className="h-full bg-white" style={{ width: `${progress}%` }} />
+      <div className="mt-5 flex items-end justify-between gap-3">
+        <div>
+          <span className="block text-[8px] font-bold uppercase tracking-[0.12em] text-[#5e6c7d]">{label}</span>
+          <strong className="mt-1.5 block text-[24px] font-semibold tracking-[-0.04em] text-white tabular-nums">{value}</strong>
+        </div>
       </div>
-      <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between text-[13px]">
-        <span className="text-[#888888]">Hard Limit ({limitPct || 0}%)</span>
-        <span className="text-[#EDEDED] tabular-nums">{limit}</span>
+      <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${safeUsage}%` }} />
+      </div>
+      <div className="mt-3 flex items-center justify-between text-[9px]">
+        <span className="text-[#657487]">Hard limit ({limitPct || 0}%)</span>
+        <span className="font-mono text-[#aeb9c5]">{money(limit)}</span>
       </div>
     </div>
   );
 }
 
-function ObjectiveRow({ title, current, target, progress }) {
+function ModernObjectiveRow({ label, progress, currentLabel, targetLabel }) {
   const safe = clampPercent(progress);
   return (
-    <div className="flex items-center justify-between gap-5 p-4 border-b border-[#222222] last:border-b-0">
-      <div>
-        <div className="text-[13px] text-[#EDEDED] mb-1">{title}</div>
-        <div className="text-[13px] text-[#888888] font-mono tabular-nums">{current} / {target}</div>
+    <div className="px-5 py-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <span className="block text-[11px] font-medium text-[#e7edf3]">{label}</span>
+          <span className="mt-1 block text-[9px] font-mono text-[#677688]">{currentLabel} / {targetLabel}</span>
+        </div>
+        <strong className="text-[11px] font-mono text-[#aeb9c5]">{Math.round(safe)}%</strong>
       </div>
-      <div className="flex items-center gap-4 w-[160px]">
-        <div className="flex-1 h-[1px] bg-[#333333]"><div className="h-full bg-white" style={{ width: `${safe}%` }} /></div>
-        <span className="text-[12px] text-[#888888] font-mono w-10 text-right">{Math.round(safe)}%</span>
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+        <div className="h-full rounded-full bg-white" style={{ width: `${safe}%` }} />
       </div>
     </div>
   );
 }
 
-function StateRow({ label, value }) {
+function MiniState({ label, value }) {
   return (
-    <div className="flex items-center justify-between px-4 py-3.5 text-[13px]">
-      <span className="text-[#888888]">{label}</span>
-      <span className="text-[#EDEDED] font-mono">{value}</span>
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3">
+      <span className="block text-[8px] font-bold uppercase tracking-[0.11em] text-[#5f6e80]">{label}</span>
+      <strong className="mt-1.5 block text-[11px] font-mono text-[#dce4ec]">{value}</strong>
+    </div>
+  );
+}
+
+function PerformanceStat({ label, value }) {
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3">
+      <span className="block text-[8px] font-bold uppercase tracking-[0.11em] text-[#5f6e80]">{label}</span>
+      <strong className="mt-2 block text-[18px] font-semibold tracking-[-0.03em] text-white">{value}</strong>
+    </div>
+  );
+}
+
+function ModernStateRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between py-3 text-[10px]">
+      <span className="text-[#667487]">{label}</span>
+      <span className="font-mono text-[#d7dfe7]">{value}</span>
     </div>
   );
 }
