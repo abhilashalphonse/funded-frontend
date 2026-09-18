@@ -873,7 +873,7 @@ const navItems = [
  
 
 
-export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}, onFreeTrial = () => {} }) {
+export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}, onFreeTrial = () => {}, trialChecking = false, trialError = "" }) {
   const { user, signOut, getAccessToken } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1080,10 +1080,16 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                   setIsSidebarOpen(false);
                   onFreeTrial();
                 }}
-                className="w-full h-8 border border-[#333333] bg-[#0A0A0A] hover:bg-[#111111] text-white text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                disabled={trialChecking}
+                className="w-full h-8 border border-[#333333] bg-[#0A0A0A] hover:bg-[#111111] text-white text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50"
               >
-                Free Trial
+                {trialChecking ? "Checking Trader…" : "Free Trial"}
               </button>
+              {trialError && (
+                <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[11px] leading-relaxed text-amber-300">
+                  {trialError}
+                </div>
+              )}
             </div>
 
             <div> 
