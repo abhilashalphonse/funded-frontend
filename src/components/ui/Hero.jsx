@@ -28,14 +28,14 @@ const Hero = ({ onGetStarted = () => {}, onFreeTrial = () => {}, onSeeHowItWorks
       <div className="relative z-10 w-full max-w-[1000px] mx-auto px-6 flex flex-col items-center text-center mt-6 sm:mt-8">
 
         {/* Minimalist Pill Badge */}
-        <button type="button" onClick={onFreeTrial} className="animate-fade-in-up flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:bg-white/[0.02] transition-colors cursor-pointer">
+        <button type="button" onClick={onFreeTrial} className="animate-fade-in-up flex min-h-11 items-center gap-2 px-4 py-2 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:bg-white/[0.02] transition-colors cursor-pointer">
           <div className="w-1.5 h-1.5 rounded-full bg-white/[0.8] animate-pulse" />
           <span className="tracking-wide">How about a Free Trial?</span>
           <ArrowRight className="w-3.5 h-3.5 opacity-50" strokeWidth={1.5} />
         </button>
 
         {/* High-Contrast Headline (Linear/Vercel Style Typography) */}
-        <h1 className="animate-fade-in-up [animation-delay:100ms] text-5xl sm:text-7xl font-medium tracking-tighter mb-6 leading-[1.05]">
+        <h1 className="animate-fade-in-up [animation-delay:100ms] text-4xl sm:text-7xl font-medium tracking-tighter mb-6 leading-[1.05]">
           <span className="text-white">Prove your edge.</span>
           <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-400 to-gray-600">
