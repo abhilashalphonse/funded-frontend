@@ -653,7 +653,7 @@ export default function ChallengeSection({ onSelectPlan }) {
                   {PERKS.map(({ label, icon: Icon, isBranded }) => (
                     <div
                       key={label}
-                      className="group flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/[0.08] bg-[#0A0A0B] text-zinc-400 text-xs font-medium transition-all duration-200 hover:border-white/[0.18] hover:text-white cursor-pointer select-none"
+                      className="group flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/[0.08] bg-[#0A0A0B] text-zinc-400 text-xs font-medium transition-all duration-200 select-none"
                     >
                       <Icon className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover:text-zinc-300" strokeWidth={ICON_STROKE} />
                       <span className="tracking-wide">
@@ -699,7 +699,7 @@ export default function ChallengeSection({ onSelectPlan }) {
                   {PERKS.map(({ label, icon: Icon, isBranded }) => (
                     <div
                       key={label}
-                      className="group flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/[0.08] bg-[#0A0A0B] text-zinc-400 text-xs font-medium transition-all duration-200 hover:border-white/[0.18] hover:text-white cursor-pointer select-none"
+                      className="group flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/[0.08] bg-[#0A0A0B] text-zinc-400 text-xs font-medium transition-all duration-200 select-none"
                     >
                       <Icon className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover:text-zinc-300" strokeWidth={ICON_STROKE} />
                       <span className="tracking-wide">
