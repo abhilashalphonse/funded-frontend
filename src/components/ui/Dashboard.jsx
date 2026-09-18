@@ -574,8 +574,8 @@ const CalendarSection = () => {
   );
 };
 const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, activeChallenge }) => {
-  const fullName = String(userMetadata?.full_name || userMetadata?.name || userName || "").trim();
-  const nameParts = fullName.split(/\s+/).filter(Boolean);
+  const profileName = String(userMetadata?.full_name || userMetadata?.name || "").trim();
+  const nameParts = profileName.split(/\s+/).filter(Boolean);
   const firstName = userMetadata?.first_name || nameParts[0] || "";
   const lastName = userMetadata?.last_name || nameParts.slice(1).join(" ") || "";
   const country = userMetadata?.country || userMetadata?.country_name || "";
