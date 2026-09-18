@@ -641,11 +641,15 @@ function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid
       </ul>
 
       <div className="rounded-lg border border-white/[0.06] bg-white/[0.01] px-4 py-4 mb-3">
-        <div className="text-2xl font-medium tracking-tight text-white">{formatEUR(pricing.finalPrice)}</div>
-        <div className="text-xs text-gray-500 mt-0.5">One-time fee</div>
+        <div className="text-2xl font-medium tracking-tight text-white">
+          {actionLabel === "Start Free Trial" ? "Free" : formatEUR(pricing.finalPrice)}
+        </div>
+        <div className="text-xs text-gray-500 mt-0.5">
+          {actionLabel === "Start Free Trial" ? "No payment required" : "One-time fee"}
+        </div>
       </div>
 
-      <PriceBreakdown pricing={pricing} />
+      {actionLabel !== "Start Free Trial" && <PriceBreakdown pricing={pricing} />}
 
       {!isValid && (
         <div className="flex items-start gap-2 mb-4 px-3 py-2.5 rounded-md border border-red-500/20 bg-red-500/[0.06] text-xs text-red-300">
