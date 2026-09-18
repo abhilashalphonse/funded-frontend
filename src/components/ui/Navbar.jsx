@@ -88,7 +88,7 @@ export default function Navbar({
         <button
           type="button"
           aria-label="Toggle navigation menu"
-          className="md:hidden text-white/70 hover:text-white transition-colors"
+          className="md:hidden flex h-11 w-11 items-center justify-center rounded-md text-white/70 hover:bg-white/[0.04] hover:text-white transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -96,7 +96,7 @@ export default function Navbar({
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-14 left-0 w-full bg-[#05060A]/95 backdrop-blur-lg border-b border-white/[0.08] p-6 flex flex-col gap-6 animate-in slide-in-from-top-2 fade-in">
+        <div className="md:hidden absolute top-14 left-0 max-h-[calc(100vh-3.5rem)] w-full overflow-y-auto bg-[#05060A]/95 backdrop-blur-lg border-b border-white/[0.08] p-6 flex flex-col gap-6 animate-in slide-in-from-top-2 fade-in">
           {['Challenges', 'How It Works', 'Support'].map((link) => (
             <a
               key={link}
