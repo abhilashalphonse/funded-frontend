@@ -873,7 +873,7 @@ const navItems = [
  
 
 
-export default function Dashboard({ onBack = () => {} }) {
+export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {} }) {
   const { user, signOut, getAccessToken } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1067,8 +1067,8 @@ export default function Dashboard({ onBack = () => {} }) {
             {/* Vercel-style Action Button */}
             <button 
               onClick={() => {
-                setActiveTab('overview');
                 setIsSidebarOpen(false);
+                onNewChallenge();
               }}
               className="w-full h-8 bg-white hover:bg-[#EBEBEB] text-black text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
             >
