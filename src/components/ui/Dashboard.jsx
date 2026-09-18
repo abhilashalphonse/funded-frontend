@@ -100,7 +100,7 @@ const money = (value) => {
 const pct = (value) => {
   const number = Number(value);
   if (!Number.isFinite(number)) return "—";
-  return `${number.toFixed(1)}%`;
+  return `${number.toFixed(2)}%`;
 };
 
 const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 0));
