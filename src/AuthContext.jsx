@@ -44,6 +44,10 @@ const signUp = useCallback((email, password, metadata) =>
       options: { redirectTo: window.location.origin },
     }), []);
   const signOut = useCallback(() => supabase.auth.signOut(), []);
+  const resetPassword = useCallback((email) =>
+    supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    }), []);
   const getAccessToken = useCallback(async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) throw error;
@@ -51,8 +55,8 @@ const signUp = useCallback((email, password, metadata) =>
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signUp, signIn, signInWithGoogle, signOut, getAccessToken }),
-    [user, loading, signUp, signIn, signInWithGoogle, signOut, getAccessToken]
+    () => ({ user, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword, getAccessToken }),
+    [user, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword, getAccessToken]
   );
 
   return (
