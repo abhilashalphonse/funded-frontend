@@ -10,6 +10,7 @@ import {
    Layers, ShieldCheck, Flame, AlertCircle, LogOut
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
+import { getAnalyticsSessionId } from "../../utils/analytics.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
