@@ -23,7 +23,7 @@ export default function Support() {
   ];
 
   return (
-    <section id="support" className="bg-black text-[#EDEDED] py-24 md:py-32 px-4 sm:px-8 lg:px-16 font-sans overflow-hidden relative min-h-screen flex items-center selection:bg-white/20 selection:text-white">
+    <section id="support" className="bg-black text-[#EDEDED] py-16 md:py-24 px-4 sm:px-8 lg:px-16 font-sans overflow-hidden relative selection:bg-white/20 selection:text-white">
       
       {/* Vercel-style subtle radial spotlight (pure white/gray, no colors) */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.04),transparent_70%)] pointer-events-none select-none" />
@@ -33,10 +33,10 @@ export default function Support() {
         {/* Main Interface: Pure black with an ultra-thin gray border */}
         <div className="relative rounded-2xl bg-[#050505] border border-white/[0.08] overflow-hidden shadow-2xl">
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[600px] divide-y lg:divide-y-0 lg:divide-x divide-white/[0.08]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 lg:min-h-[560px] divide-y lg:divide-y-0 lg:divide-x divide-white/[0.08]">
             
             {/* LEFT COLUMN: Support Routing */}
-            <div className="lg:col-span-5 p-8 sm:p-12 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(255,255,255,0.01)_0%,transparent_100%)]">
+            <div className="lg:col-span-5 p-6 sm:p-10 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(255,255,255,0.01)_0%,transparent_100%)]">
               
               <div className="space-y-8">
                 {/* Linear-style Status Pill */}
@@ -84,7 +84,7 @@ export default function Support() {
               </div>
 
               {/* Static Contact */}
-              <div className="grid grid-cols-2 gap-4 pt-12 mt-8">
+              <div className="grid grid-cols-1 gap-4 pt-8 mt-6 sm:grid-cols-2 sm:pt-12 sm:mt-8">
                 <div className="space-y-1.5">
                   <span className="flex items-center gap-1.5 text-[10px] text-[#666666] uppercase font-medium tracking-wider">
                     <Mail strokeWidth={1.5} className="w-3 h-3" /> Email
@@ -106,7 +106,7 @@ export default function Support() {
             </div>
 
             {/* RIGHT COLUMN: Infrastructure Nodes */}
-            <div className="lg:col-span-7 bg-[#020202] p-8 sm:p-12 flex flex-col justify-between">
+            <div className="lg:col-span-7 bg-[#020202] p-6 sm:p-10 flex flex-col justify-between">
               
               <div className="space-y-6">
                 <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
@@ -119,11 +119,11 @@ export default function Support() {
                 </div>
 
                 {/* Nodes Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3">
                   {localizationHubs.map((hub, i) => (
                     <div
                       key={i}
-                      className="group p-4 rounded-xl border border-white/[0.06] bg-[#070707] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 cursor-default flex flex-col justify-between min-h-[100px]"
+                      className="group p-3.5 sm:p-4 rounded-xl border border-white/[0.06] bg-[#070707] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 cursor-default flex flex-col justify-between min-h-[100px]"
                     >
                       <div className="flex justify-between items-start">
                         {/* Grayscale flags that colorize on hover (Premium feel) */}
