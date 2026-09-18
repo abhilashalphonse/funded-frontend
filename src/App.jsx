@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext.jsx";
 import Homepage from "./components/ui/Homepage.jsx";
 import Auth from "./components/ui/Auth.jsx";
 import Dashboard from "./components/ui/Dashboard.jsx";
+import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
 
 function App() {
@@ -22,11 +23,15 @@ function App() {
   };
 
   if (screen === "dashboard" || (screen === "auth" && user)) {
-    return <Dashboard onBack={() => setScreen("homepage")} />;
+    return <Dashboard onBack={() => setScreen("homepage")} onNewChallenge={() => setScreen("builder")} />;
   }
 
   if (screen === "auth") {
     return <Auth onBack={() => setScreen("homepage")} />;
+  }
+
+  if (screen === "builder") {
+    return <BuildChallenge onSelectPlan={handleSelectPlan} />;
   }
 
   if (screen === "payment") {
