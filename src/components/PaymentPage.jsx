@@ -15,13 +15,13 @@ const formatMoney = (amount, currency = { symbol: "€" }) => {
 
 function CheckoutHeader({ onSignIn }) {
   return (
-    <header className="flex items-center justify-between py-5">
+    <header className="flex items-center justify-between gap-3 py-4 sm:py-5">
       <img src={logo} alt="ACG Funded" className="h-6 w-auto object-contain" />
-      <div className="flex items-center gap-4">
-        <button type="button" onClick={onSignIn} className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 hover:text-white">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <button type="button" onClick={onSignIn} className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-zinc-500 hover:bg-white/[0.03] hover:text-white">
           <LogIn className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Already have an account?</span> Sign in
         </button>
-        <div className="flex items-center gap-1.5 text-[12px] text-gray-400"><Lock className="h-3.5 w-3.5" /> Secure Checkout</div>
+        <div className="hidden items-center gap-1.5 text-[12px] text-gray-400 sm:flex"><Lock className="h-3.5 w-3.5" /> Secure Checkout</div>
       </div>
     </header>
   );
@@ -80,7 +80,7 @@ function EmailField({ email, onChange }) {
 function CryptoPaymentPanel({ method, onMethodChange }) {
   return <div className="rounded-lg border border-white/[0.09] bg-white/[0.015] p-5">
     <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-widest text-zinc-500"><Bitcoin className="h-4 w-4" /> Crypto Payment</div>
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {[{ id: "BTC", label: "Bitcoin (BTC)" }, { id: "USDT_TRX", label: "USDT · TRC20" }].map((coin) => (
         <button key={coin.id} type="button" onClick={() => onMethodChange(coin.id)} className={`rounded-lg border px-3 py-3 text-left text-xs font-semibold transition-colors ${method === coin.id ? "border-white bg-white text-black" : "border-white/[0.09] text-zinc-400 hover:text-white"}`}>
           {coin.label}
@@ -293,8 +293,12 @@ export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => 
         <p className="mt-1.5 text-sm text-zinc-500">You're one step away from trading.</p>
       </div>
       <div className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-2">
-        <ChallengeSummary plan={plan} />
-        <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} getAccessToken={getAccessToken} />
+        <div className="order-2 lg:order-1">
+          <ChallengeSummary plan={plan} />
+        </div>
+        <div className="order-1 lg:order-2">
+          <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} getAccessToken={getAccessToken} />
+        </div>
       </div>
       <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="mailto:support@acgforex.com" className="hover:text-zinc-400">Support</a></div>
     </div>
