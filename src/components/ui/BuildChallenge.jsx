@@ -37,7 +37,7 @@ function SegmentedControl({ options, value, onChange, size = 'md', ariaLabel }) 
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="inline-flex items-center rounded-md border border-white/[0.08] bg-[#0A0C12] p-1 gap-1"
+      className="inline-flex max-w-full flex-wrap items-center justify-center gap-1 rounded-md border border-white/[0.08] bg-[#0A0C12] p-1"
     >
       {options.map((opt) => {
         const active = opt.value === value;
@@ -66,18 +66,18 @@ function SegmentedControl({ options, value, onChange, size = 'md', ariaLabel }) 
 
 function ChallengeHeader({ onBack }) {
   return (
-    <div className="relative flex flex-col items-center text-center mb-10">
+    <div className="relative mb-10 flex flex-col items-center text-center pt-12 sm:pt-0">
       {onBack && (
         <button
           type="button"
           onClick={onBack}
-          className="absolute left-0 top-0 inline-flex items-center gap-1.5 text-sm text-gray-400 transition hover:text-white"
+          className="absolute left-0 top-0 inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 text-sm text-gray-400 transition hover:text-white"
         >
           <ChevronLeft className="h-4 w-4" />
           Back
         </button>
       )}
-      <h1 className="text-4xl sm:text-5xl font-medium tracking-tighter text-white mb-3 leading-[1.1]">
+      <h1 className="text-3xl sm:text-5xl font-medium tracking-tighter text-white mb-3 leading-[1.1]">
         Build Your Challenge
       </h1>
       <p className="text-base sm:text-lg text-gray-400 font-light max-w-md">
@@ -333,7 +333,7 @@ function RuleControl({ label, value, unit = '%', bounds, onChange, helpText, err
 
   return (
     <div className="py-4 border-b border-white/[0.06] last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-sm font-medium text-gray-200">{label}</div>
           {helpText && <div className="text-xs text-gray-500 mt-0.5">{helpText}</div>}
@@ -345,7 +345,7 @@ function RuleControl({ label, value, unit = '%', bounds, onChange, helpText, err
             onClick={dec}
             disabled={value <= min}
             aria-label={`Decrease ${label}`}
-            className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.04] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-l-md focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+            className="h-11 w-11 sm:h-9 sm:w-9 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.04] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-l-md focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
           >
             <Minus className="w-3.5 h-3.5" strokeWidth={2} />
           </button>
@@ -358,7 +358,7 @@ function RuleControl({ label, value, unit = '%', bounds, onChange, helpText, err
             onClick={inc}
             disabled={value >= max}
             aria-label={`Increase ${label}`}
-            className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.04] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-r-md focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+            className="h-11 w-11 sm:h-9 sm:w-9 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.04] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-r-md focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
           >
             <Plus className="w-3.5 h-3.5" strokeWidth={2} />
           </button>
@@ -380,7 +380,7 @@ function RuleControl({ label, value, unit = '%', bounds, onChange, helpText, err
 
 function PhaseTargets({ rules, onRuleChange }) {
   return (
-    <div className="grid grid-cols-2 gap-3 mb-1">
+    <div className="grid grid-cols-1 gap-3 mb-1 sm:grid-cols-2">
       {[
         { key: 'phase1ProfitTarget', label: 'Phase 1' },
         { key: 'phase2ProfitTarget', label: 'Phase 2' },
@@ -389,7 +389,7 @@ function PhaseTargets({ rules, onRuleChange }) {
         return (
           <div key={key} className="rounded-lg border border-white/[0.08] bg-[#0A0C12] p-4">
             <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-2">{label} Target</div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-2xl font-medium tracking-tight text-white">{rules[key]}%</span>
               <div className="flex items-center gap-1">
                 <button
@@ -397,7 +397,7 @@ function PhaseTargets({ rules, onRuleChange }) {
                   onClick={() => onRuleChange(key, clamp(rules[key] - bounds.increment, bounds.min, bounds.max))}
                   disabled={rules[key] <= bounds.min}
                   aria-label={`Decrease ${label} target`}
-                  className="h-7 w-7 flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+                  className="h-10 w-10 sm:h-7 sm:w-7 flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -406,7 +406,7 @@ function PhaseTargets({ rules, onRuleChange }) {
                   onClick={() => onRuleChange(key, clamp(rules[key] + bounds.increment, bounds.min, bounds.max))}
                   disabled={rules[key] >= bounds.max}
                   aria-label={`Increase ${label} target`}
-                  className="h-7 w-7 flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+                  className="h-10 w-10 sm:h-7 sm:w-7 flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -526,7 +526,7 @@ function AdvancedOptions({ advanced, onAdvancedChange }) {
               onChange={(v) => onAdvancedChange('weekendHolding', v)}
             />
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-medium text-gray-200">Profit Split</span>
               <SegmentedControl
                 size="sm"
@@ -537,7 +537,7 @@ function AdvancedOptions({ advanced, onAdvancedChange }) {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-medium text-gray-200">Payout Frequency</span>
               <SegmentedControl
                 size="sm"
@@ -642,14 +642,14 @@ function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid
 
       <div className="rounded-lg border border-white/[0.06] bg-white/[0.01] px-4 py-4 mb-3">
         <div className="text-2xl font-medium tracking-tight text-white">
-          {actionLabel === "Start Free Trial" ? "Free" : formatEUR(pricing.finalPrice)}
+          {actionLabel === "Start Free Trial" ? "Free" : pricing ? formatEUR(pricing.finalPrice) : "—"}
         </div>
         <div className="text-xs text-gray-500 mt-0.5">
           {actionLabel === "Start Free Trial" ? "No payment required" : "One-time fee"}
         </div>
       </div>
 
-      {actionLabel !== "Start Free Trial" && <PriceBreakdown pricing={pricing} />}
+      {actionLabel !== "Start Free Trial" && pricing && <PriceBreakdown pricing={pricing} />}
 
       {!isValid && (
         <div className="flex items-start gap-2 mb-4 px-3 py-2.5 rounded-md border border-red-500/20 bg-red-500/[0.06] text-xs text-red-300">
@@ -851,7 +851,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
         }}
       />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 sm:py-24">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 pb-28 pt-10 sm:px-6 sm:py-24">
         <ChallengeHeader onBack={onBack} />
 <PathSelector step={step} onChange={handleStepChange} />
 <AccountSizeSelector
@@ -865,6 +865,24 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
             <AdvancedOptions advanced={advanced} onAdvancedChange={handleAdvancedChange} />
           </div>
 
+          <div className="hidden lg:block">
+            <ChallengeSummary
+            step={step}
+            accountSize={accountSize}
+            rules={rules}
+            advanced={advanced}
+            pricing={pricing}
+            isValid={validation.valid}
+            validationErrors={validation.errors}
+            onStart={handleStart}
+            actionLabel={actionLabel}
+            actionLoading={actionLoading}
+            notice={notice}
+          />
+          </div>
+        </div>
+
+        <div className="mt-6 lg:hidden">
           <ChallengeSummary
             step={step}
             accountSize={accountSize}
@@ -878,6 +896,23 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
             actionLoading={actionLoading}
             notice={notice}
           />
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#05060A]/95 p-3 pb-[max(env(safe-area-inset-bottom),12px)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-5xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[11px] text-gray-500">{formatAccountSize(accountSize)} · {step === STEP_TYPES.ONE_STEP ? "1-Step" : "2-Step"}</div>
+            <div className="text-sm font-semibold text-white">{actionLabel === "Start Free Trial" ? "Free" : pricing ? formatEUR(pricing.finalPrice) : "Review rules"}</div>
+          </div>
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={!validation.valid || actionLoading}
+            className="h-11 shrink-0 rounded-md bg-white px-5 text-sm font-semibold text-[#05060A] disabled:opacity-40"
+          >
+            {actionLoading ? "Creating…" : actionLabel || "Continue"}
+          </button>
         </div>
       </div>
     </div>
