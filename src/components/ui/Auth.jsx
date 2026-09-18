@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext"; 
 // import acg from "../assets/ACG.png";
 import { Eye, EyeOff, ChevronDown, Check, ArrowLeft } from "lucide-react";
 import Logo from '../../assets/ACG.png';
+import { trackEvent } from '../../utils/analytics.js';
 
 /* ------------------------------------------------------------------ */
 /*  Why this pass looks different                                      */
@@ -368,6 +369,7 @@ function SignupForm({ onSwitchToLogin }) {
       const { error: signUpError } = await signUp(email, password, metadata);
       if (signUpError) throw signUpError;
 
+      void trackEvent("signup_completed", { method: "email", country });
       setSuccessMsg("Registration successful! Check your email inbox to verify your account.");
     } catch (err) {
       setError(err.message || "An error occurred during registration.");
@@ -379,6 +381,9 @@ function SignupForm({ onSwitchToLogin }) {
   const handleGoogleSignup = async () => {
     setError("");
     setLoading(true);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("acg:authMode", "signup");
+    }
     try {
       const { error: googleSignInError } = await signInWithGoogle();
       if (googleSignInError) throw googleSignInError;
@@ -524,6 +529,10 @@ function SignupForm({ onSwitchToLogin }) {
 
 export default function Auth({ onBack = () => {}, initialView = "login" }) {
   const [view, setView] = useState(initialView);
+
+  useEffect(() => {
+    if (view === "signup") void trackEvent("signup_started");
+  }, [view]);
 
   return (
     <div className="relative min-h-screen w-full bg-black font-sans text-white antialiased">
