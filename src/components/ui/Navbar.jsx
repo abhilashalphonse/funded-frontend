@@ -31,9 +31,9 @@ export default function Navbar({
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out ${isScrolled ? 'bg-[#05060A]/70 backdrop-blur-xl border-b border-white/[0.08]' : 'bg-transparent border-transparent'}`}>
       <div className="max-w-[1224px] mx-auto px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2 cursor-pointer group">
+        <a href="#top" className="flex items-center gap-2 cursor-pointer group" aria-label="ACG Funded home">
           <img src={logo} width={80} alt="ACG Funded" />
-        </div>
+        </a>
 
         <div className="hidden md:flex items-center gap-6">
           {['Challenges', 'How It Works', 'Support'].map((link) => (
