@@ -68,13 +68,13 @@ function Row({ label, value }) {
   return <div className="flex items-center justify-between border-b border-white/[0.05] py-2.5 last:border-0"><span className="text-xs text-zinc-500">{label}</span><span className="text-sm font-medium text-white">{value}</span></div>;
 }
 
-function EmailField({ email, onChange }) {
+function EmailField({ email, onChange, locked = false }) {
   return <div className="space-y-1.5">
     <label className="text-[11px] uppercase tracking-widest text-zinc-500" htmlFor="checkout-email">Email</label>
     <div className="relative"><Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
-      <input id="checkout-email" type="email" autoComplete="email" value={email} onChange={(e) => onChange(e.target.value)} placeholder="you@example.com" className="w-full rounded-lg border border-white/[0.09] bg-white/[0.02] py-2.5 pl-10 pr-3.5 text-[13.5px] text-white outline-none placeholder:text-zinc-600 focus:border-white/30" />
+      <input id="checkout-email" type="email" autoComplete="email" value={email} onChange={(e) => onChange(e.target.value)} readOnly={locked} placeholder="you@example.com" className="w-full rounded-lg border border-white/[0.09] bg-white/[0.02] py-2.5 pl-10 pr-3.5 text-[13.5px] text-white outline-none placeholder:text-zinc-600 focus:border-white/30 read-only:cursor-default read-only:text-zinc-400" />
     </div>
-    <p className="text-[11px] text-zinc-600">We'll use this email to create and deliver access to your ACG account.</p>
+    <p className="text-[11px] text-zinc-600">{locked ? "This challenge will be linked to your signed-in account." : "Use the email you want to use for your ACG account."}</p>
   </div>;
 }
 
@@ -99,7 +99,7 @@ function Terms({ checked, onChange }) {
   </label>;
 }
 
-function PaymentSection({ plan, email, onEmailChange, onSignIn, getAccessToken }) {
+function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSignIn, getAccessToken }) {
   const [method, setMethod] = useState("BTC");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [status, setStatus] = useState(STATUS.IDLE);
@@ -174,6 +174,9 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn, getAccessToken }
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.data?.checkoutUrl) throw new Error(data?.message || "Unable to create crypto payment.");
       setPaymentId(data.data.paymentId);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("acg:lastCheckoutEmail", email.trim().toLowerCase());
+      }
       window.location.href = data.data.checkoutUrl;
     } catch (error) {
       setStatus(STATUS.IDLE);
@@ -197,7 +200,7 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn, getAccessToken }
     <div className="mb-1 text-[11px] uppercase tracking-widest text-zinc-500">Payment</div>
     <p className="mb-6 text-xs text-zinc-500">Complete your payment to activate your challenge.</p>
     <div className="space-y-5">
-      <EmailField email={email} onChange={onEmailChange} />
+      <EmailField email={email} onChange={onEmailChange} locked={emailLocked} />
       <CryptoPaymentPanel method={method} onMethodChange={setMethod} />
       <Terms checked={termsAccepted} onChange={setTermsAccepted} />
       {notice && <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{notice}</span></div>}
@@ -306,7 +309,7 @@ export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}
           <ChallengeSummary plan={plan} />
         </div>
         <div className="order-1 lg:order-2">
-          <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} getAccessToken={getAccessToken} />
+          <PaymentSection plan={plan} email={email} onEmailChange={setEmail} emailLocked={Boolean(user?.email)} onSignIn={onSignIn} getAccessToken={getAccessToken} />
         </div>
       </div>
       <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="mailto:support@acgforex.com" className="hover:text-zinc-400">Support</a></div>
