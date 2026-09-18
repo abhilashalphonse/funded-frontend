@@ -250,6 +250,9 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge }) => {
             <CompactStat label="Phase" value={`Phase ${account.currentPhase || 1}`} />
             <CompactStat label="Platform" value={account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—")} />
             <CompactStat label="Account size" value={money(initial)} />
+            {account.accountMode !== "DEMO" && account.commercialTerms?.profitSplit != null && (
+              <CompactStat label="Profit split" value={`${account.commercialTerms.profitSplit}%`} />
+            )}
           </div>
         </div>
       </section>
