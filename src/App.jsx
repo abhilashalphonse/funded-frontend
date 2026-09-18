@@ -32,6 +32,9 @@ function App() {
     return window.sessionStorage.getItem("acg:postAuthScreen");
   });
   const { user, getAccessToken } = useAuth();
+  const checkoutEmailHint = typeof window !== "undefined"
+    ? window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""
+    : "";
 
   useEffect(() => {
     captureAttribution();
@@ -117,6 +120,7 @@ function App() {
       setPostAuthScreen(null);
       if (typeof window !== "undefined") {
         window.sessionStorage.removeItem("acg:postAuthScreen");
+        window.sessionStorage.removeItem("acg:lastCheckoutEmail");
       }
       setScreen("dashboard");
       return;
@@ -193,11 +197,11 @@ function App() {
   }
 
   if (screen === "dashboard" && !user) {
-    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={checkoutEmailHint} />;
   }
 
   if (screen === "auth") {
-    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={checkoutEmailHint} />;
   }
 
   if (screen === "builder") {
