@@ -14,47 +14,78 @@ import { useAuth } from "../../AuthContext";
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 const pageDetails = {
-  overview: { title: 'Trading Account', description: 'Your evaluation account', action: 'Open ACG Trader' },
-  analytics: { title: 'Advanced Metrics', description: 'Performance and risk analysis', action: 'Export report' },
-  calendar: { title: 'Economic Calendar', description: 'Market events and trading restrictions', action: 'View schedule' },
-  traders: { title: 'Traders', description: 'Explore active funded peers', action: 'Browse all traders' },
-  academy: { title: 'Academy', description: 'Continue your trading education', action: 'My progress' },
-  billing: { title: 'Billing', description: 'Payout methods, invoices, and payment details', action: 'Payment settings' },
-  leaderboard: { title: 'Leaderboard', description: 'Current payout-cycle standings', action: 'View rules' },
-  profile: { title: 'Profile Settings', description: 'Manage your account preferences', action: 'Save changes' },
+  overview: { title: 'Overview', description: 'Account, objective and risk status' },
+  analytics: { title: 'Performance', description: 'Understand how this account is performing' },
+  calendar: { title: 'Calendar', description: 'Market events and trading restrictions' },
+  academy: { title: 'Academy', description: 'Continue your trading education' },
+  billing: { title: 'Billing', description: 'Orders, invoices and payout settings' },
+  profile: { title: 'Settings', description: 'Profile, security and preferences' },
+};
+
+const formatFreshness = (value) => {
+  if (!value) return "Waiting for live data";
+  const ageMs = Math.max(0, Date.now() - new Date(value).getTime());
+  if (!Number.isFinite(ageMs)) return "Waiting for live data";
+  const seconds = Math.floor(ageMs / 1000);
+  if (seconds < 5) return "Updated just now";
+  if (seconds < 60) return `Updated ${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  return `Updated ${minutes}m ago`;
 };
 
 const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching, launchError }) => {
-  const page = pageDetails[activeTab];
+  const page = pageDetails[activeTab] || pageDetails.overview;
   const isOverview = activeTab === "overview";
-  const title = isOverview && activeChallenge?.accountId ? `Account #${activeChallenge.accountId}` : page.title;
-  const description = isOverview && activeChallenge
-    ? `${activeChallenge.challengeType === "TWO_STEP" ? "2-Step" : "1-Step"} evaluation · Phase ${activeChallenge.currentPhase || 1}`
-    : page.description;
+  const connectionActive = activeChallenge?.provisioning?.status === "ACTIVE";
+  const freshness = formatFreshness(activeChallenge?.lastPlatformSnapshotAt || activeChallenge?.updatedAt);
+
+  if (!isOverview) {
+    return (
+      <header className="mb-6 border-b border-[#1d1d1d] pb-4 sm:mb-7">
+        <h1 className="text-[clamp(1.35rem,3vw,1.75rem)] font-semibold tracking-[-0.035em] text-white">{page.title}</h1>
+        <p className="mt-1.5 text-[12px] text-[#737373]">{page.description}</p>
+      </header>
+    );
+  }
 
   return (
-    <header className="mb-6 flex min-w-0 flex-col gap-4 border-b border-[#222222] pb-5 sm:mb-8 sm:gap-5 lg:flex-row lg:items-end lg:justify-between lg:pb-6">
-      <div>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="rounded border border-[#222222] bg-[#0A0A0A] px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-[#888888]">
-            {activeChallenge ? `Phase ${activeChallenge.currentPhase || 1} · ${activeChallenge.status}` : "No active challenge"}
+    <header className="mb-5 flex min-w-0 flex-col gap-4 border-b border-[#1d1d1d] pb-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
+          <span className="inline-flex items-center gap-1.5 text-[#9a9a9a]">
+            <span className={`h-1.5 w-1.5 rounded-full ${connectionActive ? "bg-emerald-400" : "bg-zinc-600"}`} />
+            {connectionActive ? "Live" : "Offline"}
           </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-[#888888]"><span className={`h-1.5 w-1.5 rounded-full ${activeChallenge?.provisioning?.status === "ACTIVE" ? "bg-emerald-500" : "bg-zinc-600"}`} />{activeChallenge?.provisioning?.status === "ACTIVE" ? "Live Connection" : "Not Connected"}</span>
+          <span className="text-[#4f4f4f]">•</span>
+          <span className="text-[#6f6f6f]">{freshness}</span>
+          {activeChallenge && (
+            <>
+              <span className="text-[#4f4f4f]">•</span>
+              <span className="text-[#6f6f6f]">Phase {activeChallenge.currentPhase || 1}</span>
+              <span className="text-[#4f4f4f]">•</span>
+              <span className="text-[#6f6f6f]">{activeChallenge.status}</span>
+            </>
+          )}
         </div>
-        <h1 className="break-words text-[clamp(1.5rem,4vw,2rem)] font-medium leading-[1.05] tracking-tight text-white">{title}</h1>
-        <p className="mt-2 text-[13px] text-[#888888]">{description}</p>
-        {isOverview && launchError && <p className="mt-2 text-[12px] text-red-400">{launchError}</p>}
+        <h1 className="truncate text-[clamp(1.45rem,3.5vw,2rem)] font-semibold tracking-[-0.04em] text-white">
+          {activeChallenge?.accountId || "No active trading account"}
+        </h1>
+        <p className="mt-1.5 text-[12px] text-[#737373]">
+          {activeChallenge
+            ? `${activeChallenge.accountMode === "DEMO" ? "Free Trial" : activeChallenge.challengeType === "TWO_STEP" ? "2-Step Evaluation" : "1-Step Evaluation"} · ${money(activeChallenge.accountSize || 0)}`
+            : "Start a challenge or free trial to begin trading."}
+        </p>
+        {launchError && <p className="mt-2 text-[12px] text-red-400">{launchError}</p>}
       </div>
-      {isOverview && (
-        <button
-          type="button"
-          onClick={onOpenTrader}
-          disabled={!activeChallenge || traderLaunching}
-          className="h-9 w-full rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40 sm:w-fit"
-        >
-          {traderLaunching ? "Opening ACG Trader…" : activeChallenge ? "Open ACG Trader" : "No active challenge"}
-        </button>
-      )}
+
+      <button
+        type="button"
+        onClick={onOpenTrader}
+        disabled={!activeChallenge || traderLaunching}
+        className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-40 sm:inline-flex"
+      >
+        {traderLaunching ? "Opening…" : "Open ACG Trader"}
+      </button>
     </header>
   );
 };
@@ -74,11 +105,21 @@ const pct = (value) => {
 
 const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 0));
 
-const OverviewSection = ({ account }) => {
+const OverviewSection = ({ account, onStartTrial, onNewChallenge }) => {
   if (!account) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-[#090b0f] p-8 text-sm text-[#8b93a1] shadow-[0_24px_80px_rgba(0,0,0,.22)]">
-        No active challenge is available on this account yet.
+      <div className="grid min-h-[360px] place-items-center rounded-xl border border-white/[0.08] bg-[#080808] px-6 text-center">
+        <div className="max-w-md">
+          <div className="mx-auto grid size-11 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-[#8a8a8a]">
+            <Activity size={18} />
+          </div>
+          <h2 className="mt-4 text-base font-semibold text-white">No active trading account</h2>
+          <p className="mt-2 text-[12px] leading-5 text-[#777]">Start a free trial or create a challenge to unlock your trading workspace.</p>
+          <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+            <button onClick={onStartTrial} className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-4 py-2 text-[12px] font-semibold text-white hover:bg-white/[0.07]">Start Free Trial</button>
+            <button onClick={onNewChallenge} className="rounded-lg bg-white px-4 py-2 text-[12px] font-semibold text-black hover:bg-[#e8e8e8]">View Challenges</button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -112,172 +153,150 @@ const OverviewSection = ({ account }) => {
   const returnPct = initial > 0 ? profit / initial * 100 : 0;
   const freeMargin = Number(account.marginFree || 0);
   const usedMargin = Number(account.margin || 0);
-
-  const platformName = account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—");
-  const connectionActive = account.provisioning?.status === "ACTIVE";
-  const status = String(account.status || "—").toUpperCase();
+  const dailyRemaining = Math.max(0, dailyLossLimit - dailyLoss);
+  const maxRemaining = Math.max(0, maxLossLimit - totalLoss);
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-7">
-      <section className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_32%),linear-gradient(145deg,#0d1118,#07090d_72%)] p-5 sm:p-6 shadow-[0_30px_100px_rgba(0,0,0,.28)]">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_bottom,black,transparent_72%)]" />
-        <div className="relative flex min-w-0 flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-4 animate-in fade-in duration-300">
+      <section className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#080808]">
+        <div className="grid gap-5 px-4 py-5 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.09] bg-white/[0.035] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#cbd5df]">
-                <span className={`h-1.5 w-1.5 rounded-full ${connectionActive ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.7)]" : "bg-zinc-600"}`} />
-                {connectionActive ? "Live connection" : "Not connected"}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">Current equity</p>
+            <div className="mt-1 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <strong className="text-[clamp(2rem,6vw,3.1rem)] font-semibold leading-none tracking-[-0.055em] text-white tabular-nums">{money(equity)}</strong>
+              <span className={`pb-1 text-[12px] font-medium tabular-nums ${floating > 0 ? "text-emerald-400" : floating < 0 ? "text-rose-400" : "text-[#777]"}`}>
+                {floating >= 0 ? "+" : ""}{money(floating)} floating
               </span>
-              <span className="rounded-full border border-white/[0.09] bg-white/[0.035] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7f8c9b]">
-                {status}
-              </span>
-              <span className="rounded-full border border-white/[0.09] bg-white/[0.035] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7f8c9b]">
-                Phase {account.currentPhase || 1}
-              </span>
-            </div>
-            <div className="mt-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#637285]">Trading account</p>
-              <h2 className="mt-2 break-all text-[clamp(1.5rem,4vw,2.125rem)] font-semibold tracking-[-0.045em] text-white">
-                {account.accountId || "Evaluation Account"}
-              </h2>
-              <p className="mt-2 text-[12px] text-[#7d8b9b]">
-                {account.challengeType === "TWO_STEP" ? "2-Step Evaluation" : "1-Step Evaluation"} · {platformName}
-              </p>
             </div>
           </div>
-
-          <div className="grid min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-4 xl:w-[min(52%,620px)] xl:flex-none">
-            <HeroStat label="Balance" value={money(balance)} />
-            <HeroStat label="Equity" value={money(equity)} />
-            <HeroStat label="Floating P&L" value={money(floating)} tone={floating > 0 ? "positive" : floating < 0 ? "negative" : "neutral"} />
-            <HeroStat label="Return" value={pct(returnPct)} tone={returnPct > 0 ? "positive" : returnPct < 0 ? "negative" : "neutral"} />
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4 lg:text-right">
+            <CompactStat label="Balance" value={money(balance)} />
+            <CompactStat label="Return" value={pct(returnPct)} tone={returnPct > 0 ? "positive" : returnPct < 0 ? "negative" : "neutral"} />
+            <CompactStat label="Free margin" value={money(freeMargin)} />
+            <CompactStat label="Trades" value={String(totalTrades)} />
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-        <ModernMetricCard
-          icon={Wallet}
-          label="Current Balance"
-          value={money(balance)}
-          helper="Starting balance"
-          helperValue={money(initial)}
-        />
-        <ModernMetricCard
-          icon={Activity}
-          label="Current Equity"
-          value={money(equity)}
-          helper="Free margin"
-          helperValue={money(freeMargin)}
-        />
-        <ModernRiskCard
-          icon={ShieldCheck}
-          label="Daily Drawdown"
-          value={money(dailyLoss)}
-          usage={dailyUsagePct}
-          limit={dailyLossLimit}
-          limitPct={dailyLossPctLimit}
-        />
-        <ModernRiskCard
-          icon={Shield}
-          label="Maximum Loss"
-          value={money(totalLoss)}
-          usage={maxUsagePct}
-          limit={maxLossLimit}
-          limitPct={maxLossPctLimit}
-        />
-      </section>
-
-      <section className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.9fr)]">
-        <div className="overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#090c11] shadow-[0_24px_70px_rgba(0,0,0,.18)]">
-          <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
-            <div>
-              <h3 className="text-[13px] font-semibold text-white">Challenge progress</h3>
-              <p className="mt-1 text-[10px] text-[#667487]">Live evaluation objectives from your active challenge.</p>
-            </div>
-            <div className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[#8ba4bb]">
-              <TrendingUp size={15} />
-            </div>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.8fr)]">
+        <div className="rounded-xl border border-white/[0.08] bg-[#080808]">
+          <div className="border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
+            <h2 className="text-[12px] font-semibold text-white">Evaluation progress</h2>
+            <p className="mt-0.5 text-[10px] text-[#666]">What remains before this phase is complete.</p>
           </div>
-
-          <div className="divide-y divide-white/[0.065]">
-            <ModernObjectiveRow
-              label={`Profit Target (${profitTargetPct || 0}%)`}
-              current={Math.max(0, profit)}
-              target={profitTargetAmount}
+          <div className="divide-y divide-white/[0.06]">
+            <ProgressRow
+              label={`Profit target · ${profitTargetPct || 0}%`}
+              value={money(Math.max(0, profit))}
+              target={money(profitTargetAmount)}
               progress={profitProgressPct}
-              currentLabel={money(Math.max(0, profit))}
-              targetLabel={money(profitTargetAmount)}
             />
-            <ModernObjectiveRow
-              label="Minimum Trading Days"
-              current={tradingDays}
-              target={minTradingDays}
+            <ProgressRow
+              label="Minimum trading days"
+              value={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
+              target={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
               progress={tradingDaysPct}
-              currentLabel={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
-              targetLabel={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
             />
           </div>
         </div>
 
-        <div className="rounded-[22px] border border-white/[0.08] bg-[#090c11] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)]">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-[13px] font-semibold text-white">Risk state</h3>
-              <p className="mt-1 text-[10px] text-[#667487]">Current protection and margin status.</p>
+              <h2 className="text-[12px] font-semibold text-white">Risk buffer</h2>
+              <p className="mt-0.5 text-[10px] text-[#666]">Distance from challenge limits.</p>
             </div>
-            <div className="grid size-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[#8ba4bb]">
-              <ShieldCheck size={15} />
-            </div>
+            <ShieldCheck size={16} className="text-[#777]" />
           </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-            <MiniState label="Used margin" value={money(usedMargin)} />
-            <MiniState label="Free margin" value={money(freeMargin)} />
-            <MiniState label="Daily room left" value={money(Math.max(0, dailyLossLimit - dailyLoss))} />
-            <MiniState label="Max-loss room" value={money(Math.max(0, maxLossLimit - totalLoss))} />
+          <div className="mt-5 space-y-5">
+            <RiskBufferRow label="Daily loss remaining" amount={dailyRemaining} usage={dailyUsagePct} />
+            <RiskBufferRow label="Maximum loss remaining" amount={maxRemaining} usage={maxUsagePct} />
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-4">
+            <CompactStat label="Used margin" value={money(usedMargin)} />
+            <CompactStat label="Free margin" value={money(freeMargin)} />
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <div className="rounded-[22px] border border-white/[0.08] bg-[#090c11] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)]">
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-[13px] font-semibold text-white">Performance snapshot</h3>
-              <p className="mt-1 text-[10px] text-[#667487]">Realized challenge statistics.</p>
+              <h2 className="text-[12px] font-semibold text-white">Performance</h2>
+              <p className="mt-0.5 text-[10px] text-[#666]">Current account trading summary.</p>
             </div>
-            <BarChart3 size={16} className="text-[#72869a]" />
+            <BarChart3 size={15} className="text-[#707070]" />
           </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <PerformanceStat label="Trades" value={String(totalTrades)} />
-            <PerformanceStat label="Wins" value={String(winningTrades)} />
-            <PerformanceStat label="Losses" value={String(losingTrades)} />
-            <PerformanceStat label="Win rate" value={pct(winRate)} />
+          <div className="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-4">
+            <CompactStat label="Win rate" value={pct(winRate)} />
+            <CompactStat label="Wins" value={String(winningTrades)} />
+            <CompactStat label="Losses" value={String(losingTrades)} />
+            <CompactStat label="P&L" value={money(profit)} tone={profit > 0 ? "positive" : profit < 0 ? "negative" : "neutral"} />
           </div>
         </div>
 
-        <div className="rounded-[22px] border border-white/[0.08] bg-[#090c11] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)]">
+        <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-[13px] font-semibold text-white">Account state</h3>
-              <p className="mt-1 text-[10px] text-[#667487]">Provisioning and platform details.</p>
+              <h2 className="text-[12px] font-semibold text-white">Account details</h2>
+              <p className="mt-0.5 text-[10px] text-[#666]">Platform and evaluation state.</p>
             </div>
-            <Zap size={16} className="text-[#72869a]" />
+            <Zap size={15} className="text-[#707070]" />
           </div>
-
-          <div className="mt-4 divide-y divide-white/[0.065]">
-            <ModernStateRow label="Status" value={status} />
-            <ModernStateRow label="Phase" value={`Phase ${account.currentPhase || 1}`} />
-            <ModernStateRow label="Platform" value={platformName} />
-            <ModernStateRow label="Provisioning" value={account.provisioning?.status || "—"} />
+          <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+            <CompactStat label="Status" value={String(account.status || "—")} />
+            <CompactStat label="Phase" value={`Phase ${account.currentPhase || 1}`} />
+            <CompactStat label="Platform" value={account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—")} />
+            <CompactStat label="Account size" value={money(initial)} />
           </div>
         </div>
       </section>
     </div>
   );
 };
+
+function CompactStat({ label, value, tone = "neutral" }) {
+  const toneClass = tone === "positive" ? "text-emerald-400" : tone === "negative" ? "text-rose-400" : "text-white";
+  return (
+    <div className="min-w-0">
+      <span className="block text-[9px] font-medium uppercase tracking-[0.11em] text-[#666]">{label}</span>
+      <strong className={`mt-1 block truncate text-[13px] font-semibold tabular-nums ${toneClass}`}>{value}</strong>
+    </div>
+  );
+}
+
+function ProgressRow({ label, value, target, progress }) {
+  const width = clampPercent(progress);
+  return (
+    <div className="px-4 py-4 sm:px-5">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-[11px] font-medium text-[#b8b8b8]">{label}</span>
+        <span className="shrink-0 text-[10px] tabular-nums text-[#707070]">{value} / {target}</span>
+      </div>
+      <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+        <div className="h-full rounded-full bg-white transition-[width] duration-500" style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function RiskBufferRow({ label, amount, usage }) {
+  const width = clampPercent(usage);
+  const barClass = width >= 80 ? "bg-rose-400" : width >= 55 ? "bg-amber-400" : "bg-emerald-400";
+  return (
+    <div>
+      <div className="flex items-end justify-between gap-3">
+        <span className="text-[10px] text-[#777]">{label}</span>
+        <strong className="text-[14px] font-semibold tabular-nums text-white">{money(amount)}</strong>
+      </div>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+        <div className={`h-full rounded-full transition-[width] duration-500 ${barClass}`} style={{ width: `${width}%` }} />
+      </div>
+      <p className="mt-1.5 text-right text-[9px] text-[#5f5f5f]">{width.toFixed(1)}% of limit used</p>
+    </div>
+  );
+}
 
 function HeroStat({ label, value, tone = "neutral" }) {
   const toneClass = tone === "positive" ? "text-emerald-400" : tone === "negative" ? "text-rose-400" : "text-white";
@@ -1047,14 +1066,12 @@ const LeaderboardSection = () => {
 };
 
 const navItems = [
-  { id: 'overview', name: 'Accounts Overview', icon: LayoutDashboard },
-  { id: 'analytics', name: 'Advanced Metrics', icon: BarChart3 }, 
-  { id: 'calendar', name: 'Economic Calendar', icon: Clock },     
-  { id: 'traders', name: 'Traders', icon: Users },
+  { id: 'overview', name: 'Overview', icon: LayoutDashboard },
+  { id: 'analytics', name: 'Performance', icon: BarChart3 },
+  { id: 'calendar', name: 'Calendar', icon: Clock },
   { id: 'academy', name: 'Academy', icon: GraduationCap },
   { id: 'billing', name: 'Billing', icon: CreditCard },
-  { id: 'leaderboard', name: 'Leaderboard', icon: Trophy },
-  { id: 'profile', name: 'Profile Settings', icon: User },
+  { id: 'profile', name: 'Settings', icon: User },
 ];
  
 
@@ -1069,11 +1086,14 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const [workspaceError, setWorkspaceError] = useState("");
   const [traderLaunching, setTraderLaunching] = useState(false);
   const [launchError, setLaunchError] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Trader";
   const userInitials = userName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "TR";
-  const traderCount = "264,000+"; // Kept if you need it elsewhere
-  const activeChallenge = workspace?.activeChallenge || workspace?.demos?.find(account => account.enabled && ["NEW", "ACTIVE", "PHASE_2"].includes(account.status)) || null;
+  const availableAccounts = Array.isArray(workspace?.accounts) ? workspace.accounts : [];
+  const defaultAccount = workspace?.activeChallenge || workspace?.demos?.find(account => account.enabled && ["NEW", "ACTIVE", "PHASE_2"].includes(account.status)) || availableAccounts[0] || null;
+  const activeChallenge = availableAccounts.find(account => account.accountId === selectedAccountId) || defaultAccount;
 
   useEffect(() => {
     let cancelled = false;
@@ -1108,6 +1128,15 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       window.clearInterval(interval);
     };
   }, [getAccessToken]);
+
+  useEffect(() => {
+    if (!availableAccounts.length) {
+      if (selectedAccountId) setSelectedAccountId("");
+      return;
+    }
+    const stillExists = availableAccounts.some(account => account.accountId === selectedAccountId);
+    if (!stillExists && defaultAccount?.accountId) setSelectedAccountId(defaultAccount.accountId);
+  }, [workspace, selectedAccountId]);
 
   const handleOpenTrader = async () => {
     if (!activeChallenge?.accountId || traderLaunching) return;
@@ -1153,7 +1182,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
     switch (activeTab) {
       case 'overview':
-        return <OverviewSection {...propsPayload} account={activeChallenge} />;
+        return <OverviewSection {...propsPayload} account={activeChallenge} onStartTrial={onFreeTrial} onNewChallenge={onNewChallenge} />;
       case 'analytics':
         return <AnalyticsSection account={activeChallenge} />;
       case 'calendar':
@@ -1272,9 +1301,62 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:top-0 lg:w-64 xl:w-72 lg:translate-x-0 lg:shrink-0
           transition-transform duration-200 ease-in-out flex flex-col justify-between
         `}>
-          <div className="p-4 space-y-6">
-            
-            {/* Vercel-style Action Button */}
+          <div className="p-4 space-y-5">
+            <div className="relative">
+              <p className="mb-2 px-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555]">Trading account</p>
+              <button
+                type="button"
+                onClick={() => setAccountMenuOpen(value => !value)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-[#080808] px-3 py-2.5 text-left hover:border-white/[0.14]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-semibold text-white">{activeChallenge?.accountId || "No active account"}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-[#666]">
+                    {activeChallenge ? `${money(activeChallenge.accountSize || 0)} · ${activeChallenge.accountMode === "DEMO" ? "Free Trial" : activeChallenge.status}` : "Choose or create an account"}
+                  </p>
+                </div>
+                <ChevronDown size={14} className={`shrink-0 text-[#666] transition ${accountMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {accountMenuOpen && availableAccounts.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-lg border border-white/[0.1] bg-[#0a0a0a] p-1 shadow-2xl">
+                  {availableAccounts.map(account => {
+                    const selected = account.accountId === activeChallenge?.accountId;
+                    return (
+                      <button
+                        key={account.accountId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAccountId(account.accountId);
+                          setAccountMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left ${selected ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-[11px] font-medium text-white">{account.accountId}</p>
+                          <p className="mt-0.5 text-[9px] text-[#666]">{money(account.accountSize || 0)} · {account.accountMode === "DEMO" ? "Free Trial" : account.status}</p>
+                        </div>
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${account.enabled ? "bg-emerald-400" : "bg-zinc-600"}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {activeChallenge && (
+              <button
+                type="button"
+                onClick={handleOpenTrader}
+                disabled={traderLaunching}
+                className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:opacity-50"
+              >
+                <ArrowUpRight size={14} />
+                {traderLaunching ? "Opening…" : "Open ACG Trader"}
+              </button>
+            )}
+
+            {/* Primary actions */}
             <div className="space-y-2">
               <button 
                 onClick={() => {
@@ -1303,8 +1385,8 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
             </div>
 
             <div> 
-              <p className="text-[11px] font-medium text-[#555555] uppercase tracking-wider px-3 mb-2">
-                Overview
+              <p className="mb-2 px-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555555]">
+                Workspace
               </p>
               <nav className="space-y-0.5">
                 {navItems?.map((item) => {
@@ -1349,7 +1431,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
         {/* --- MAIN CONTENT AREA --- */}
         <main className="min-w-0 flex-1 overflow-y-auto">
-          <div className="dashboard-surface mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 xl:px-10 2xl:px-12">
+          <div className="dashboard-surface mx-auto w-full max-w-[1560px] px-4 py-5 pb-24 sm:px-6 sm:py-6 sm:pb-24 lg:px-7 lg:py-7 lg:pb-8 xl:px-8">
             {workspaceError && (
               <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-[12px] text-red-300">
                 {workspaceError}
@@ -1372,6 +1454,32 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           </div>
         </main>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-white/[0.08] bg-black/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur lg:hidden">
+        {[
+          { id: "overview", label: "Overview", icon: LayoutDashboard },
+          { id: "analytics", label: "Performance", icon: BarChart3 },
+          { id: "calendar", label: "Calendar", icon: Clock },
+        ].map(item => {
+          const Icon = item.icon;
+          const active = activeTab === item.id;
+          return (
+            <button key={item.id} type="button" onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-1 py-1 text-[9px] ${active ? "text-white" : "text-[#666]"}`}>
+              <Icon size={16} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={handleOpenTrader}
+          disabled={!activeChallenge || traderLaunching}
+          className="flex flex-col items-center gap-1 py-1 text-[9px] text-white disabled:text-[#444]"
+        >
+          <ArrowUpRight size={16} />
+          <span>Trade</span>
+        </button>
+      </nav>
     </div>
   );
 }
