@@ -873,7 +873,7 @@ const navItems = [
  
 
 
-export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {} }) {
+export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}, onFreeTrial = () => {} }) {
   const { user, signOut, getAccessToken } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -886,7 +886,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Trader";
   const userInitials = userName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "TR";
   const traderCount = "264,000+"; // Kept if you need it elsewhere
-  const activeChallenge = workspace?.activeChallenge || null;
+  const activeChallenge = workspace?.activeChallenge || workspace?.demos?.find(account => account.enabled && ["NEW", "ACTIVE", "PHASE_2"].includes(account.status)) || null;
 
   useEffect(() => {
     let cancelled = false;
@@ -1065,15 +1065,26 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           <div className="p-4 space-y-6">
             
             {/* Vercel-style Action Button */}
-            <button 
-              onClick={() => {
-                setIsSidebarOpen(false);
-                onNewChallenge();
-              }}
-              className="w-full h-8 bg-white hover:bg-[#EBEBEB] text-black text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
-            >
-              New Challenge
-            </button>
+            <div className="space-y-2">
+              <button 
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  onNewChallenge();
+                }}
+                className="w-full h-8 bg-white hover:bg-[#EBEBEB] text-black text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+              >
+                New Challenge
+              </button>
+              <button
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  onFreeTrial();
+                }}
+                className="w-full h-8 border border-[#333333] bg-[#0A0A0A] hover:bg-[#111111] text-white text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+              >
+                Free Trial
+              </button>
+            </div>
 
             <div> 
               <p className="text-[11px] font-medium text-[#555555] uppercase tracking-wider px-3 mb-2">
