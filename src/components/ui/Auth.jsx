@@ -187,9 +187,10 @@ function LoginForm({ onSwitchToSignup }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, resetPassword } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -200,6 +201,27 @@ function LoginForm({ onSwitchToSignup }) {
       if (signInError) throw signInError;
     } catch (err) {
       setError(err.message || "Invalid login credentials.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setError("");
+    setNotice("");
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError("Enter your email address first.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: resetError } = await resetPassword(normalizedEmail);
+      if (resetError) throw resetError;
+      setNotice("Password reset email sent. Check your inbox.");
+    } catch (err) {
+      setError(err.message || "Unable to send password reset email.");
     } finally {
       setLoading(false);
     }
@@ -245,6 +267,11 @@ function LoginForm({ onSwitchToSignup }) {
           {error}
         </div>
       )}
+      {notice && (
+        <div className="mb-4 rounded-lg border border-white/[0.14] bg-white/[0.03] px-3.5 py-2.5 text-[12.5px] font-medium text-neutral-200">
+          {notice}
+        </div>
+      )}
 
       <form className="flex flex-col gap-3.5" onSubmit={handleLogin}>
         <Field label="Email" htmlFor="email">
@@ -275,9 +302,9 @@ function LoginForm({ onSwitchToSignup }) {
             </span>
             <span className="text-[12.5px] font-medium text-neutral-400">Remember me</span>
           </button>
-          <a href="#" className="text-[12.5px] font-medium text-neutral-400 transition-colors hover:text-white">
+          <button type="button" onClick={handlePasswordReset} disabled={loading} className="text-[12.5px] font-medium text-neutral-400 transition-colors hover:text-white disabled:opacity-50">
             Forgot password?
-          </a>
+          </button>
         </div>
 
         <PrimaryButton loading={loading}>{loading ? "Logging in…" : "Log in"}</PrimaryButton>
@@ -458,9 +485,9 @@ function SignupForm({ onSwitchToLogin }) {
         <div className="flex flex-col gap-3 pt-1">
           <CheckboxRow checked={ageAgree} onChange={() => setAgeAgree((v) => !v)}>
             I certify that I am 18 years of age or older, agree to the{" "}
-            <a href="#" className="text-neutral-300 underline underline-offset-2 hover:text-white">User Agreement</a>{" "}
+            <span className="text-neutral-300">User Agreement</span>{" "}
             and acknowledge the{" "}
-            <a href="#" className="text-neutral-300 underline underline-offset-2 hover:text-white">Privacy Policy</a>.
+            <span className="text-neutral-300">Privacy Policy</span>.
           </CheckboxRow>
           <CheckboxRow checked={idAgree} onChange={() => setIdAgree((v) => !v)}>
             I acknowledge my name is correct and corresponds to my government-issued identification.
@@ -517,9 +544,7 @@ export default function Auth({ onBack = () => {}, initialView = "login" }) {
         </Card>
         <TrustLine />
 
-        <a href="#" className="mt-4 text-center text-[11.5px] font-medium text-neutral-700 transition-colors hover:text-neutral-500">
-          Cookie settings
-        </a>
+
       </div>
     </div>
   );
