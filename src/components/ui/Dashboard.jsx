@@ -897,6 +897,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         if (!token) throw new Error("Your ACG Funded session has expired.");
         const response = await fetch(`${API_URL}/api/customer/workspace`, {
           headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload?.message || "Unable to load your trading workspace.");
@@ -906,7 +907,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       }
     };
     void loadWorkspace();
-    const interval = window.setInterval(loadWorkspace, 15000);
+    const interval = window.setInterval(loadWorkspace, 5000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
