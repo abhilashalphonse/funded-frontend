@@ -2,17 +2,17 @@ import React from 'react';
 
 const Proof = () => {
   return (
-    <section className="min-h-screen bg-black text-neutral-200 font-sans px-6 selection:bg-white selection:text-black">
+    <section className="min-h-screen bg-black px-5 py-20 text-neutral-200 font-sans selection:bg-white selection:text-black sm:px-6 sm:py-24">
       <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-16">
+        <div className="mx-auto mb-14 flex max-w-3xl flex-col items-center text-center sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-white" />
             <span className="text-xs font-medium tracking-wide text-neutral-400">CHALLENGE TRANSPARENCY</span>
           </div>
-          <h2 className="text-5xl md:text-6xl font-medium tracking-tighter text-white mb-6">
+          <h2 className="mb-5 max-w-2xl text-4xl font-medium leading-[1.06] tracking-[-0.04em] text-white sm:mb-6 sm:text-5xl md:text-6xl">
             Know the rules <span className="text-neutral-600">before you trade.</span>
           </h2>
-          <p className="text-lg text-neutral-400 max-w-xl leading-relaxed font-light">
+          <p className="max-w-xl text-base leading-7 text-neutral-400 font-light sm:text-lg">
             Review your challenge configuration, risk limits, pricing and trading conditions before activation.
           </p>
         </div>
