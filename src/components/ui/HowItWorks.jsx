@@ -34,15 +34,8 @@ const STEPS = [
 ];
 
 export default function HowItWorksSection({ onGetFunded, onLearnMore }) {
-  const handleGetFunded = () => {
-    if (onGetFunded) return onGetFunded();
-    window.open("https://acgfunded.com", "_blank", "noopener,noreferrer");
-  };
-
-  const handleLearnMore = () => {
-    if (onLearnMore) return onLearnMore();
-    window.open("https://acgfunded.com", "_blank", "noopener,noreferrer");
-  };
+  const handleGetFunded = () => onGetFunded?.();
+  const handleLearnMore = () => onLearnMore?.();
 
   return (
     <section id="how-it-works" className="relative bg-black px-6 py-28 sm:py-36 text-zinc-300 font-sans selection:bg-white/20">
