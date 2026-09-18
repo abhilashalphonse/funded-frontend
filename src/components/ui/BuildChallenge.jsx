@@ -14,6 +14,7 @@ import {
 } from '../../utils/challengeRules.js';
 import { calculatePrice, validateChallengeConfiguration } from '../../utils/pricingEngine.js';
 import { CHALLENGE_PRESETS } from '../../utils/challengePresets.js';
+import { trackEvent } from '../../utils/analytics.js';
 
 /* ============================================================================
    HELPERS
@@ -708,6 +709,12 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
   const [advanced, setAdvanced] = useState(DEFAULT_COMMERCIAL_CONFIG);
   const [activePresetId, setActivePresetId] = useState('balanced');
 
+  useEffect(() => {
+    void trackEvent("challenge_builder_view", {
+      mode: actionLabel === "Start Free Trial" ? "trial" : "paid",
+    }, { entryIntent: actionLabel === "Start Free Trial" ? "trial" : "paid" });
+  }, [actionLabel]);
+
   const handleStepChange = useCallback((nextStep) => {
     setStep(nextStep);
     setRules(DEFAULT_RULES[nextStep]);
@@ -831,7 +838,22 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
     pricingPreview: pricing,
   };
 
-  console.log('Start challenge with config:', challenge);
+  void trackEvent("challenge_configured", {
+    mode: actionLabel === "Start Free Trial" ? "trial" : "paid",
+    step,
+    accountSize,
+    profitSplit: advanced.profitSplit,
+    payoutFrequency: advanced.payoutFrequency,
+    price: pricing?.finalPrice ?? 0,
+  }, { entryIntent: actionLabel === "Start Free Trial" ? "trial" : "paid" });
+
+  if (actionLabel !== "Start Free Trial") {
+    void trackEvent("checkout_started", {
+      step,
+      accountSize,
+      price: pricing?.finalPrice ?? 0,
+    }, { entryIntent: "paid" });
+  }
 
   onSelectPlan(challenge);
 };
