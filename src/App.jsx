@@ -12,24 +12,44 @@ function App() {
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment")) return "payment";
     return "homepage";
   });
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const stored = window.sessionStorage.getItem("acg:selectedPlan");
+    if (!stored) return null;
+    try { return JSON.parse(stored); } catch { return null; }
+  });
   const [builderMode, setBuilderMode] = useState("paid");
   const [trialError, setTrialError] = useState("");
   const [trialCreating, setTrialCreating] = useState(false);
   const [trialChecking, setTrialChecking] = useState(false);
-  const [pendingTrialIntent, setPendingTrialIntent] = useState(false);
+  const [pendingTrialIntent, setPendingTrialIntent] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("acg:pendingTrial") === "1";
+  });
+  const [postAuthScreen, setPostAuthScreen] = useState(() => {
+    if (typeof window === "undefined") return null;
+    return window.sessionStorage.getItem("acg:postAuthScreen");
+  });
   const { user, getAccessToken } = useAuth();
 
   // Challenge Builder / pricing grid hands a plan object over here; we stash
   // it and move straight to the checkout/activation step.
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("acg:selectedPlan", JSON.stringify(plan));
+    }
     setScreen("payment");
   };
 
   const handleOpenTrialBuilder = useCallback(async () => {
     if (!user) {
       setPendingTrialIntent(true);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("acg:pendingTrial", "1");
+        window.sessionStorage.setItem("acg:postAuthScreen", "trial");
+      }
+      setPostAuthScreen("trial");
       setTrialError("");
       setScreen("auth");
       return;
@@ -64,10 +84,27 @@ function App() {
   }, [getAccessToken, trialChecking, user]);
 
   useEffect(() => {
-    if (!user || !pendingTrialIntent) return;
-    setPendingTrialIntent(false);
-    void handleOpenTrialBuilder();
-  }, [user, pendingTrialIntent, handleOpenTrialBuilder]);
+    if (!user) return;
+
+    if (pendingTrialIntent || postAuthScreen === "trial") {
+      setPendingTrialIntent(false);
+      setPostAuthScreen(null);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("acg:pendingTrial");
+        window.sessionStorage.removeItem("acg:postAuthScreen");
+      }
+      void handleOpenTrialBuilder();
+      return;
+    }
+
+    if (postAuthScreen === "payment" && selectedPlan) {
+      setPostAuthScreen(null);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("acg:postAuthScreen");
+      }
+      setScreen("payment");
+    }
+  }, [user, pendingTrialIntent, postAuthScreen, selectedPlan, handleOpenTrialBuilder]);
 
   const handleStartTrial = async (plan) => {
     if (trialCreating) return;
@@ -98,7 +135,7 @@ function App() {
     }
   };
 
-  if ((screen === "dashboard" && user) || (screen === "auth" && user)) {
+  if (screen === "dashboard" && user) {
     return (
       <Dashboard
         onBack={() => setScreen("homepage")}
@@ -145,7 +182,15 @@ function App() {
         }}
         onSignIn={() => {
           window.history.replaceState({}, document.title, window.location.pathname);
-          setScreen(user ? "dashboard" : "auth");
+          if (user) {
+            setScreen("dashboard");
+            return;
+          }
+          setPostAuthScreen("payment");
+          if (typeof window !== "undefined") {
+            window.sessionStorage.setItem("acg:postAuthScreen", "payment");
+          }
+          setScreen("auth");
         }}
       />
     );
