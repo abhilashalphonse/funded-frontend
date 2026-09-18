@@ -1,178 +1,169 @@
 import React from 'react';
-import { 
-  Mail, 
-  Phone, 
-  ArrowRight, 
-  Globe2, 
-  Clock, 
-  Activity, 
-  ShieldCheck
+import {
+  Mail,
+  ArrowRight,
+  ShieldCheck,
+  Target,
+  Monitor,
+  CreditCard,
+  UserRound,
+  LifeBuoy,
+  CheckCircle2,
 } from 'lucide-react';
-import 'flag-icons/css/flag-icons.min.css';
+
+const supportAreas = [
+  {
+    icon: Target,
+    title: 'Challenge & Rules',
+    description: 'Profit targets, drawdown limits, phases and evaluation questions.',
+  },
+  {
+    icon: Monitor,
+    title: 'ACG Trader',
+    description: 'Platform access, account activation and trading-account support.',
+  },
+  {
+    icon: CreditCard,
+    title: 'Payments & Payouts',
+    description: 'Challenge payments, payment status and payout-related questions.',
+  },
+  {
+    icon: UserRound,
+    title: 'Account Support',
+    description: 'Sign-in, account access, profile and challenge ownership questions.',
+  },
+];
+
+const journeySupport = [
+  'Before you buy',
+  'During your evaluation',
+  'After you pass',
+  'When you request a payout',
+];
 
 export default function Support() {
-  const localizationHubs = [
-    { code: "gb", label: "English", region: "London Node" },
-    { code: "de", label: "German", region: "Frankfurt Node" },
-    { code: "es", label: "Spanish", region: "Madrid Node" },
-    { code: "fr", label: "French", region: "Paris Node" },
-    { code: "it", label: "Italian", region: "Milan Node" },
-    { code: "jp", label: "Japanese", region: "Tokyo Node" },
-    { code: "ae", label: "Arabic", region: "Dubai Node" },
-    { code: "vn", label: "Vietnamese", region: "APAC Node" }
-  ];
-
   return (
-    <section id="support" className="bg-black text-[#EDEDED] py-16 md:py-24 px-4 sm:px-8 lg:px-16 font-sans overflow-hidden relative selection:bg-white/20 selection:text-white">
-      
-      {/* Vercel-style subtle radial spotlight (pure white/gray, no colors) */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.04),transparent_70%)] pointer-events-none select-none" />
+    <section
+      id="support"
+      className="relative overflow-hidden bg-black px-4 py-20 font-sans text-white selection:bg-white/20 selection:text-white sm:px-6 md:py-24"
+    >
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[900px] -translate-x-1/2 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.045),transparent_68%)]" />
 
-      <div className="max-w-[1080px] mx-auto relative z-10 w-full">
-        
-        {/* Main Interface: Pure black with an ultra-thin gray border */}
-        <div className="relative rounded-2xl bg-[#050505] border border-white/[0.08] overflow-hidden shadow-2xl">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 lg:min-h-[560px] divide-y lg:divide-y-0 lg:divide-x divide-white/[0.08]">
-            
-            {/* LEFT COLUMN: Support Routing */}
-            <div className="lg:col-span-5 p-6 sm:p-10 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(255,255,255,0.01)_0%,transparent_100%)]">
-              
-              <div className="space-y-8">
-                {/* Linear-style Status Pill */}
-                <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] text-[11px] font-medium text-[#A1A1AA] shadow-sm backdrop-blur-sm">
-                  <div className="relative flex items-center justify-center w-2 h-2">
-                    <span className="absolute w-full h-full rounded-full bg-emerald-500 opacity-20 animate-ping" />
-                    <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+      <div className="relative z-10 mx-auto w-full max-w-6xl">
+        <div className="mb-10 max-w-2xl sm:mb-12">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1.5 text-[11px] font-medium tracking-wide text-zinc-400">
+            <LifeBuoy className="h-3.5 w-3.5" strokeWidth={1.6} />
+            TRADER SUPPORT
+          </div>
+
+          <h2 className="text-4xl font-medium tracking-[-0.045em] text-white sm:text-5xl md:text-6xl">
+            Support for every stage
+            <span className="text-zinc-600"> of your challenge.</span>
+          </h2>
+
+          <p className="mt-5 max-w-xl text-base leading-7 text-zinc-400 sm:text-lg">
+            Clear help for challenge rules, account access, ACG Trader, payments and payouts.
+          </p>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#050505]">
+          <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="border-b border-white/[0.08] p-6 sm:p-8 lg:border-b-0 lg:border-r lg:p-10">
+              <div className="flex h-full flex-col justify-between gap-10">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1.5 text-[11px] text-zinc-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    ACG Funded Support
                   </div>
-                  Systems Operational
-                </div>
-                
-                <div className="space-y-3">
-                  <h2 className="text-3xl sm:text-4xl font-semibold tracking-tighter text-white">
-                    Global Support
-                  </h2>
-                  <p className="text-[#A1A1AA] text-sm leading-relaxed max-w-[90%]">
-                    Direct access to our institutional routing network. Connect with specialized account managers across primary global timezones.
-                  </p>
-                </div>
 
-                {/* Routing Actions */}
-                <div className="w-full space-y-2 pt-4">
+                  <h3 className="mt-7 text-2xl font-semibold tracking-[-0.035em] text-white sm:text-3xl">
+                    Need help with your account?
+                  </h3>
+
+                  <p className="mt-3 max-w-md text-sm leading-6 text-zinc-500 sm:text-[15px]">
+                    Send us the email on your ACG account and, if applicable, your challenge or account ID so we can resolve your request faster.
+                  </p>
+
                   <a
                     href="mailto:support@acgforex.com"
-                    className="group w-full flex items-center justify-between p-3.5 rounded-xl border border-transparent bg-transparent text-[#888888] transition-all duration-200 hover:bg-white/[0.03] hover:border-white/[0.08] hover:text-white"
+                    className="group mt-7 flex min-h-12 w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-zinc-200 sm:w-fit sm:min-w-[240px]"
                   >
-                    <div className="flex items-center gap-3">
-                      <Mail strokeWidth={1.5} className="w-4 h-4" />
-                      <span className="text-sm font-medium tracking-tight">Email Support</span>
-                    </div>
-                    <ArrowRight strokeWidth={1.5} className="w-4 h-4 text-white/50" />
+                    <span className="flex items-center gap-2.5">
+                      <Mail className="h-4 w-4" strokeWidth={1.8} />
+                      Email Support
+                    </span>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.8} />
                   </a>
+                </div>
 
-                  <a
-                    href="tel:+420910920310"
-                    className="group w-full flex items-center justify-between p-3.5 rounded-xl border border-transparent bg-transparent text-[#888888] transition-all duration-200 hover:bg-white/[0.03] hover:border-white/[0.08] hover:text-white"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Phone strokeWidth={1.5} className="w-4 h-4" />
-                      <span className="text-sm font-medium tracking-tight">Call Support</span>
+                <div className="border-t border-white/[0.07] pt-6">
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" strokeWidth={1.6} />
+                    <div>
+                      <p className="text-xs font-medium text-zinc-300">Account-specific support</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-600">
+                        Never send passwords, recovery codes or private keys by email.
+                      </p>
                     </div>
-                    <ArrowRight strokeWidth={1.5} className="w-4 h-4 text-white/50" />
-                  </a>
+                  </div>
+
+                  <div className="mt-5">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-600">Support email</p>
+                    <a
+                      href="mailto:support@acgforex.com"
+                      className="mt-1.5 inline-block text-sm text-zinc-400 transition-colors hover:text-white"
+                    >
+                      support@acgforex.com
+                    </a>
+                  </div>
                 </div>
               </div>
-
-              {/* Static Contact */}
-              <div className="grid grid-cols-1 gap-4 pt-8 mt-6 sm:grid-cols-2 sm:pt-12 sm:mt-8">
-                <div className="space-y-1.5">
-                  <span className="flex items-center gap-1.5 text-[10px] text-[#666666] uppercase font-medium tracking-wider">
-                    <Mail strokeWidth={1.5} className="w-3 h-3" /> Email
-                  </span>
-                  <a href="mailto:support@acgforex.com" className="text-sm text-[#A1A1AA] hover:text-white transition-colors block truncate">
-                    support@acgforex.com
-                  </a>
-                </div>
-                <div className="space-y-1.5">
-                  <span className="flex items-center gap-1.5 text-[10px] text-[#666666] uppercase font-medium tracking-wider">
-                    <Phone strokeWidth={1.5} className="w-3 h-3" /> Voice
-                  </span>
-                  <a href="tel:+420910920310" className="text-sm text-[#A1A1AA] hover:text-white transition-colors block font-mono">
-                    +420 910 920 310
-                  </a>
-                </div>
-              </div>
-
             </div>
 
-            {/* RIGHT COLUMN: Infrastructure Nodes */}
-            <div className="lg:col-span-7 bg-[#020202] p-6 sm:p-10 flex flex-col justify-between">
-              
-              <div className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
-                  <h3 className="text-sm font-medium text-[#EDEDED] flex items-center gap-2">
-                    <Globe2 strokeWidth={1.5} className="w-4 h-4 text-[#888]" /> Network Footprint
+            <div className="p-6 sm:p-8 lg:p-10">
+              <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] pb-5">
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">How we can help</p>
+                  <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white sm:text-2xl">
+                    Prop firm support, without the noise.
                   </h3>
-                  <span className="text-[10px] font-mono text-[#666] uppercase tracking-widest bg-white/[0.03] px-2 py-0.5 rounded-sm">
-                    ISO 3166-1
-                  </span>
+                </div>
+                <LifeBuoy className="hidden h-5 w-5 text-zinc-700 sm:block" strokeWidth={1.5} />
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {supportAreas.map(({ icon: Icon, title, description }) => (
+                  <div
+                    key={title}
+                    className="rounded-xl border border-white/[0.07] bg-white/[0.018] p-5 transition-colors hover:border-white/[0.12] hover:bg-white/[0.03]"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-zinc-400">
+                      <Icon className="h-4 w-4" strokeWidth={1.6} />
+                    </div>
+                    <h4 className="mt-4 text-sm font-semibold text-white">{title}</h4>
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">{description}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 rounded-xl border border-white/[0.07] bg-black p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-600">Trader journey</p>
+                    <p className="mt-1.5 text-sm font-medium text-zinc-300">Support stays with you from evaluation to payout.</p>
+                  </div>
                 </div>
 
-                {/* Nodes Grid */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {localizationHubs.map((hub, i) => (
-                    <div
-                      key={i}
-                      className="group p-3.5 sm:p-4 rounded-xl border border-white/[0.06] bg-[#070707] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 cursor-default flex flex-col justify-between min-h-[100px]"
-                    >
-                      <div className="flex justify-between items-start">
-                        {/* Grayscale flags that colorize on hover (Premium feel) */}
-                        <div className="w-5 h-3.5 rounded-[2px] overflow-hidden border border-white/[0.1] flex items-center justify-center grayscale opacity-40 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100">
-                          <span className={`fi fi-${hub.code} !block w-full h-full scale-[1.2]`} />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-0.5 mt-auto pt-4">
-                        <p className="text-xs font-medium text-[#EDEDED] tracking-tight">
-                          {hub.label}
-                        </p>
-                        <p className="text-[10px] text-[#666666] tracking-wide font-medium">
-                          {hub.region}
-                        </p>
-                      </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {journeySupport.map((item) => (
+                    <div key={item} className="flex items-center gap-2.5 text-xs text-zinc-500">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-zinc-400" strokeWidth={1.6} />
+                      <span>{item}</span>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* Telemetry Footer */}
-              <div className="mt-12 flex items-center justify-between bg-white/[0.02] border border-white/[0.06] p-4 rounded-xl">
-                <div className="flex items-center gap-6">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[10px] font-medium tracking-wider text-[#888] uppercase">
-                      <Clock strokeWidth={1.5} className="w-3 h-3" /> Queue Time
-                    </div>
-                    <p className="text-sm font-mono text-white tracking-tight">&lt; 45s</p>
-                  </div>
-                  
-                  <div className="w-px h-8 bg-white/[0.08]" />
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[10px] font-medium tracking-wider text-[#888] uppercase">
-                      <Activity strokeWidth={1.5} className="w-3 h-3" /> Resolution
-                    </div>
-                    <p className="text-sm font-mono text-white tracking-tight">99.4%</p>
-                  </div>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-2 text-[10px] font-medium tracking-wider text-[#666] uppercase">
-                  <ShieldCheck strokeWidth={1.5} className="w-3.5 h-3.5" />
-                  AES-256 Encrypted
-                </div>
-              </div>
-
             </div>
-
           </div>
         </div>
       </div>
