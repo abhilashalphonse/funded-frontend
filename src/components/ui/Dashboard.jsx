@@ -729,7 +729,7 @@ const TradersSection = () => {
           <table className="min-w-[760px] w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
-                <th className="py-3 px-6">Trader Name</th><th className="py-3 px-4">Account Tier</th><th className="py-3 px-4 text-center">Win Rate</th><th className="py-3 px-4 text-center">Profit Factor</th><th className="py-3 px-4 text-right">Avg Payout</th><th className="py-3 px-6 text-right">Actions</th>
+                <th className="py-3 px-6">Trader Name</th><th className="py-3 px-4">Account Tier</th><th className="py-3 px-4 text-center">Win Rate</th><th className="py-3 px-4 text-center">Profit Factor</th><th className="py-3 px-4 text-right">Avg Payout</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.06] text-xs text-gray-300">
@@ -743,9 +743,6 @@ const TradersSection = () => {
                   <td className="py-4 px-4 text-center font-semibold text-white">{trader.win}</td>
                   <td className="py-4 px-4 text-center font-mono">{trader.pf}</td>
                   <td className="py-4 px-4 text-right font-medium text-white">{trader.avg}</td>
-                  <td className="py-4 px-6 text-right">
-                    <button className="inline-flex items-center gap-1 text-[11px] font-semibold bg-white/[0.06] hover:bg-white/[0.08] hover:text-white border border-white/[0.12] px-2.5 py-1.5 rounded-lg transition">Analyze <ArrowUpRight size={12} /></button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -791,7 +788,7 @@ const AcademySection = () => {
                 <div className="text-gray-600">● Multi-Timeframe Fractality alignment</div>
               </div>
             </div>
-            <button className="w-full bg-white/[0.08] hover:bg-white text-white hover:text-black font-semibold py-2 rounded-xl transition text-xs flex items-center justify-center gap-1">Resume Module <Play size={10} fill="currentColor" /></button>
+            <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 text-center text-xs font-medium text-gray-500">Module content coming soon</div>
           </div>
 
           <div className="bg-[#0A0C12] border border-white/[0.18] bg-gradient-to-b from-[#0A0C12] via-[#0A0C12] to-white/[0.03] rounded-2xl p-5 flex flex-col justify-between space-y-5 relative overflow-hidden group">
@@ -811,7 +808,7 @@ const AcademySection = () => {
                 <div className="text-gray-600">● Premium vs Discount Pricing arrays</div>
               </div>
             </div>
-            <button className="w-full bg-white hover:bg-gray-200 text-black font-semibold py-2 rounded-xl transition text-xs flex items-center justify-center gap-1">Start Learning <Play size={10} fill="currentColor" /></button>
+            <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 text-center text-xs font-medium text-gray-500">Module content coming soon</div>
           </div>
 
           <div className="bg-[#0A0C12] border border-white/[0.08] opacity-85 rounded-2xl p-5 flex flex-col justify-between space-y-5 transition group">
@@ -829,7 +826,7 @@ const AcademySection = () => {
                 <div className="flex items-center gap-1.5"><Lock size={10} /> Dissociating Simulated Sizes</div>
               </div>
             </div>
-            <button className="w-full bg-white/[0.06] text-gray-400 border border-white/[0.12] font-medium py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"><Lock size={12} /> Unlock via Phase 1</button>
+            <div className="w-full rounded-xl border border-white/[0.12] bg-white/[0.04] py-2 text-center text-xs font-medium text-gray-500"><span className="inline-flex items-center gap-1.5"><Lock size={12} /> Locked until Phase 1</span></div>
           </div>
         </div>
       </section>
@@ -842,12 +839,12 @@ const AcademySection = () => {
           </div>
           <span className="text-[11px] font-medium text-white bg-white/[0.06] border border-white/[0.15] px-2.5 py-1 rounded-lg self-start sm:self-auto">Live Stream Tomorrow @ 15:00 GMT</span>
         </div>
-        <div className="relative aspect-video rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-center items-center p-6 text-center overflow-hidden group cursor-pointer">
+        <div className="relative aspect-video rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-center items-center p-6 text-center overflow-hidden">
           <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-          <div className="w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-110 transition z-10"><Play size={20} className="ml-1" fill="currentColor" /></div>
+          <div className="w-14 h-14 rounded-full bg-white/[0.08] text-gray-500 flex items-center justify-center z-10"><Play size={20} className="ml-1" /></div>
           <div className="mt-4 max-w-sm z-10">
             <h4 className="text-xs font-bold text-white tracking-wide">Liquidity Inducement vs. True Breakouts</h4>
-            <p className="text-[11px] text-gray-400 mt-1">Watch how central algorithms trigger stop hunts prior to expansion.</p>
+            <p className="text-[11px] text-gray-400 mt-1">Session access will appear here when the academy launches.</p>
           </div>
         </div>
       </section>
@@ -873,14 +870,14 @@ const BillingSection = ({ userName }) => {
                   <p className="text-[11px] text-gray-500 font-mono mt-0.5">TR7NHqDjQ62TQ...zNpeee</p>
                 </div>
               </div>
-              <button className="text-[11px] font-semibold text-gray-400 hover:text-white transition">Modify</button>
+              <span className="text-[11px] font-medium text-gray-600">Editing unavailable</span>
             </div>
           </div>
 
           <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2"><CreditCard size={16} className="text-white" /> Cards on file</h2>
-              <button className="text-xs font-semibold text-white hover:underline flex items-center gap-1"><Plus size={14} /> Add Card</button>
+              <span className="text-xs font-medium text-gray-600">Card management unavailable</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-white/[0.02] to-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col justify-between h-28 relative overflow-hidden">
@@ -905,7 +902,7 @@ const BillingSection = ({ userName }) => {
                 <p className="text-[11px] text-gray-400 mt-1">Your baseline fee is reimbursed along with your initial certified cashout.</p>
               </div>
             </div>
-            <a href="#rules" className="inline-flex items-center gap-1 text-[11px] font-semibold text-white hover:underline pt-1">Refund Agreement Details <ExternalLink size={12} /></a>
+            <p className="pt-1 text-[11px] text-gray-500">Refund terms will be shown here when the legal policy page is published.</p>
           </div>
         </div>
       </div>
@@ -916,7 +913,7 @@ const BillingSection = ({ userName }) => {
           <table className="min-w-[760px] w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
-                <th className="py-3 px-6">Invoice ID</th><th className="py-3 px-4">Challenge Description</th><th className="py-3 px-4">Date</th><th className="py-3 px-4 text-center">Status</th><th className="py-3 px-4 text-right">Amount</th><th className="py-3 px-6 text-right">Receipt</th>
+                <th className="py-3 px-6">Invoice ID</th><th className="py-3 px-4">Challenge Description</th><th className="py-3 px-4">Date</th><th className="py-3 px-4 text-center">Status</th><th className="py-3 px-4 text-right">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.06] text-xs text-gray-300">
@@ -930,7 +927,6 @@ const BillingSection = ({ userName }) => {
                   <td className="py-4 px-4 text-gray-500">{inv.date}</td>
                   <td className="py-4 px-4 text-center"><span className="text-[10px] font-bold bg-white/[0.06] text-white border border-white/[0.15] px-2 py-0.5 rounded">{inv.status}</span></td>
                   <td className="py-4 px-4 text-right font-semibold text-white">{inv.price}</td>
-                  <td className="py-4 px-6 text-right"><button className="p-2 bg-white/[0.07] hover:bg-white/[0.08] text-gray-300 rounded-lg border border-white/[0.12] transition"><Download size={13} /></button></td>
                 </tr>
               ))}
             </tbody>
