@@ -28,7 +28,7 @@ export default function Support() {
   ];
 
   return (
-    <section id="contact" className="bg-black text-[#EDEDED] py-24 md:py-32 px-4 sm:px-8 lg:px-16 font-sans overflow-hidden relative min-h-screen flex items-center selection:bg-white/20 selection:text-white">
+    <section id="support" className="bg-black text-[#EDEDED] py-24 md:py-32 px-4 sm:px-8 lg:px-16 font-sans overflow-hidden relative min-h-screen flex items-center selection:bg-white/20 selection:text-white">
       
       {/* Vercel-style subtle radial spotlight (pure white/gray, no colors) */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.04),transparent_70%)] pointer-events-none select-none" />
