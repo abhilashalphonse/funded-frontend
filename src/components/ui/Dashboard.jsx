@@ -1071,7 +1071,10 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         const token = await getAccessToken();
         if (!token) throw new Error("Your ACG Funded session has expired.");
         const response = await fetch(`${API_URL}/api/customer/workspace`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "x-acg-session-id": getAnalyticsSessionId(),
+          },
           cache: "no-store",
         });
         const payload = await response.json().catch(() => ({}));
