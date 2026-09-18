@@ -210,7 +210,7 @@ function PaymentSection({ plan, email, onEmailChange, onSignIn, getAccessToken }
   </motion.div>;
 }
 
-function PaymentReturn({ onBack, onSignIn }) {
+function PaymentReturn({ onHome, onDashboard }) {
   const [state, setState] = useState({ status: "PROCESSING", message: "Checking your payment…", paymentId: null });
 
   useEffect(() => {
@@ -272,15 +272,15 @@ function PaymentReturn({ onBack, onSignIn }) {
         <p className="mt-2 text-sm text-zinc-400">{state.message}</p>
         {state.paymentId && <p className="mt-3 text-[10px] text-zinc-600">Payment ID: {state.paymentId}</p>}
         <div className="mt-6 flex gap-3">
-          {complete && <button type="button" onClick={onSignIn} className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black">Go to dashboard</button>}
-          <button type="button" onClick={onBack} className="rounded-lg border border-white/[0.1] px-4 py-2.5 text-sm text-zinc-300">Homepage</button>
+          {complete && <button type="button" onClick={onDashboard} className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black">Access my challenge</button>}
+          <button type="button" onClick={onHome} className="rounded-lg border border-white/[0.1] px-4 py-2.5 text-sm text-zinc-300">Homepage</button>
         </div>
       </div>
     </section>
   );
 }
 
-export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => {} }) {
+export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}, onDashboard = () => {}, onSignIn = () => {} }) {
   const { user, getAccessToken } = useAuth();
   const [email, setEmail] = useState(user?.email || "");
 
@@ -289,7 +289,7 @@ export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => 
   }, [user?.email]);
   const hasPlan = useMemo(() => Boolean(plan?.challengeDefinition && plan?.commercialConfig), [plan]);
   const returningPayment = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment");
-  if (!hasPlan && returningPayment) return <PaymentReturn onBack={onBack} onSignIn={onSignIn} />;
+  if (!hasPlan && returningPayment) return <PaymentReturn onHome={onHome} onDashboard={onDashboard} />;
   if (!hasPlan) return null;
 
   return <section className="relative min-h-screen bg-[#05060A] font-sans text-zinc-300">
