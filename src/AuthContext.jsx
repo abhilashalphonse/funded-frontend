@@ -1,5 +1,5 @@
 // src/AuthContext.jsx
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 
 const AuthContext = createContext({});
@@ -31,27 +31,32 @@ export const AuthProvider = ({ children }) => {
 
   // Auth functions
   // Modify this line inside your AuthContext.jsx to capture the extra user data
-const signUp = (email, password, metadata) => 
+const signUp = useCallback((email, password, metadata) => 
   supabase.auth.signUp({ 
     email, 
     password, 
     options: { data: metadata } 
-  });
-  const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password });
-  const signInWithGoogle = () =>
+  }), []);
+  const signIn = useCallback((email, password) => supabase.auth.signInWithPassword({ email, password }), []);
+  const signInWithGoogle = useCallback(() =>
     supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin },
-    });
-  const signOut = () => supabase.auth.signOut();
-  const getAccessToken = async () => {
+    }), []);
+  const signOut = useCallback(() => supabase.auth.signOut(), []);
+  const getAccessToken = useCallback(async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) throw error;
     return session?.access_token || null;
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, signUp, signIn, signInWithGoogle, signOut, getAccessToken }),
+    [user, loading, signUp, signIn, signInWithGoogle, signOut, getAccessToken]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut, getAccessToken }}> 
+    <AuthContext.Provider value={value}> 
       {!loading && children}
     </AuthContext.Provider>
   );
