@@ -476,7 +476,7 @@ function RuleConfigurator({ step, rules, onRuleChange, fieldErrors }) {
 
 function ToggleRow({ label, value, onChange, helpText }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <div className="text-sm font-medium text-gray-200">{label}</div>
         {helpText && <div className="text-xs text-gray-500 mt-0.5">{helpText}</div>}
