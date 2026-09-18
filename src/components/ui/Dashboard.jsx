@@ -33,15 +33,15 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
     : page.description;
 
   return (
-    <header className="mb-8 flex flex-col gap-5 border-b border-[#222222] pb-6 sm:flex-row sm:items-end sm:justify-between">
+    <header className="mb-6 flex min-w-0 flex-col gap-4 border-b border-[#222222] pb-5 sm:mb-8 sm:gap-5 lg:flex-row lg:items-end lg:justify-between lg:pb-6">
       <div>
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="rounded border border-[#222222] bg-[#0A0A0A] px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-[#888888]">
             {activeChallenge ? `Phase ${activeChallenge.currentPhase || 1} · ${activeChallenge.status}` : "No active challenge"}
           </span>
           <span className="flex items-center gap-1.5 text-[12px] text-[#888888]"><span className={`h-1.5 w-1.5 rounded-full ${activeChallenge?.provisioning?.status === "ACTIVE" ? "bg-emerald-500" : "bg-zinc-600"}`} />{activeChallenge?.provisioning?.status === "ACTIVE" ? "Live Connection" : "Not Connected"}</span>
         </div>
-        <h1 className="text-[28px] font-medium leading-none tracking-tight text-white sm:text-[32px]">{title}</h1>
+        <h1 className="break-words text-[clamp(1.5rem,4vw,2rem)] font-medium leading-[1.05] tracking-tight text-white">{title}</h1>
         <p className="mt-2 text-[13px] text-[#888888]">{description}</p>
         {isOverview && launchError && <p className="mt-2 text-[12px] text-red-400">{launchError}</p>}
       </div>
@@ -50,7 +50,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
           type="button"
           onClick={onOpenTrader}
           disabled={!activeChallenge || traderLaunching}
-          className="h-8 w-fit rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+          className="h-9 w-full rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40 sm:w-fit"
         >
           {traderLaunching ? "Opening ACG Trader…" : activeChallenge ? "Open ACG Trader" : "No active challenge"}
         </button>
@@ -121,7 +121,7 @@ const OverviewSection = ({ account }) => {
     <div className="animate-in fade-in duration-500 space-y-7">
       <section className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_32%),linear-gradient(145deg,#0d1118,#07090d_72%)] p-5 sm:p-6 shadow-[0_30px_100px_rgba(0,0,0,.28)]">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_bottom,black,transparent_72%)]" />
-        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="relative flex min-w-0 flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.09] bg-white/[0.035] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#cbd5df]">
@@ -137,7 +137,7 @@ const OverviewSection = ({ account }) => {
             </div>
             <div className="mt-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#637285]">Trading account</p>
-              <h2 className="mt-2 text-[26px] font-semibold tracking-[-0.045em] text-white sm:text-[34px]">
+              <h2 className="mt-2 break-all text-[clamp(1.5rem,4vw,2.125rem)] font-semibold tracking-[-0.045em] text-white">
                 {account.accountId || "Evaluation Account"}
               </h2>
               <p className="mt-2 text-[12px] text-[#7d8b9b]">
@@ -146,7 +146,7 @@ const OverviewSection = ({ account }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[540px]">
+          <div className="grid min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-4 xl:w-[min(52%,620px)] xl:flex-none">
             <HeroStat label="Balance" value={money(balance)} />
             <HeroStat label="Equity" value={money(equity)} />
             <HeroStat label="Floating P&L" value={money(floating)} tone={floating > 0 ? "positive" : floating < 0 ? "negative" : "neutral"} />
@@ -155,7 +155,7 @@ const OverviewSection = ({ account }) => {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
         <ModernMetricCard
           icon={Wallet}
           label="Current Balance"
@@ -188,7 +188,7 @@ const OverviewSection = ({ account }) => {
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_.9fr]">
+      <section className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.9fr)]">
         <div className="overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#090c11] shadow-[0_24px_70px_rgba(0,0,0,.18)]">
           <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
             <div>
@@ -231,7 +231,7 @@ const OverviewSection = ({ account }) => {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-2">
+          <div className="mt-5 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
             <MiniState label="Used margin" value={money(usedMargin)} />
             <MiniState label="Free margin" value={money(freeMargin)} />
             <MiniState label="Daily room left" value={money(Math.max(0, dailyLossLimit - dailyLoss))} />
@@ -240,7 +240,7 @@ const OverviewSection = ({ account }) => {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1fr]">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="rounded-[22px] border border-white/[0.08] bg-[#090c11] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)]">
           <div className="flex items-center justify-between">
             <div>
@@ -298,7 +298,7 @@ function ModernMetricCard({ icon: Icon, label, value, helper, helperValue }) {
         </div>
         <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-[#5e6c7d]">{label}</span>
       </div>
-      <strong className="mt-5 block text-[24px] font-semibold tracking-[-0.04em] text-white tabular-nums">{value}</strong>
+      <strong className="mt-5 block break-words text-[clamp(1.2rem,3vw,1.5rem)] font-semibold tracking-[-0.04em] text-white tabular-nums">{value}</strong>
       <div className="mt-4 flex items-center justify-between border-t border-white/[0.065] pt-3 text-[9px]">
         <span className="text-[#657487]">{helper}</span>
         <span className="font-mono text-[#aeb9c5]">{helperValue}</span>
@@ -321,7 +321,7 @@ function ModernRiskCard({ icon: Icon, label, value, usage, limit, limitPct }) {
       <div className="mt-5 flex items-end justify-between gap-3">
         <div>
           <span className="block text-[8px] font-bold uppercase tracking-[0.12em] text-[#5e6c7d]">{label}</span>
-          <strong className="mt-1.5 block text-[24px] font-semibold tracking-[-0.04em] text-white tabular-nums">{value}</strong>
+          <strong className="mt-1.5 block break-words text-[clamp(1.2rem,3vw,1.5rem)] font-semibold tracking-[-0.04em] text-white tabular-nums">{value}</strong>
         </div>
       </div>
       <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/[0.07]">
@@ -508,8 +508,8 @@ const CalendarSection = () => {
           </div>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
+          <table className="min-w-[760px] w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
                 <th className="py-3 px-6 w-28">Time</th>
@@ -564,7 +564,7 @@ const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, 
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <section className="flex flex-col gap-5 rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-4 sm:p-6 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-white/[0.06] flex items-center justify-center text-xl font-bold border-2 border-white/[0.12] relative shadow-inner text-white">
             {userInitials}
@@ -589,8 +589,8 @@ const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, 
         </button>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
               <User size={16} className="text-white" /> Personal Details
@@ -710,7 +710,7 @@ const TradersSection = () => {
           <h2 className="text-sm font-bold uppercase tracking-wider text-white">Verified Recent Payouts</h2>
           <p className="text-xs text-gray-400 mt-0.5">Real-time simulator rewards split processing transparency.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
           {[
             { name: "Marek K.", amount: "$8,450", account: "$100k Challenge", flag: "🇨🇿", time: "2 mins ago" },
             { name: "Sarah L.", amount: "$14,210", account: "$200k Challenge", flag: "🇬🇧", time: "14 mins ago" },
@@ -742,8 +742,8 @@ const TradersSection = () => {
             <input type="text" placeholder="Search traders..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white/[0.03] border border-white/[0.08] focus:border-white/40 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 transition outline-none" />
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
+          <table className="min-w-[760px] w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
                 <th className="py-3 px-6">Trader Name</th><th className="py-3 px-4">Account Tier</th><th className="py-3 px-4 text-center">Win Rate</th><th className="py-3 px-4 text-center">Profit Factor</th><th className="py-3 px-4 text-right">Avg Payout</th><th className="py-3 px-6 text-right">Actions</th>
@@ -791,7 +791,7 @@ const AcademySection = () => {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">Core Syllabus Packages</h2><span className="text-xs text-gray-500">Updated for 2026 Algorithms</span></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3 2xl:gap-6">
           <div className="bg-[#0A0C12] border border-white/[0.08] hover:border-white/[0.1] rounded-2xl p-5 flex flex-col justify-between space-y-5 transition group">
             <div className="space-y-3">
               <div className="flex justify-between items-start">
@@ -874,8 +874,8 @@ const AcademySection = () => {
 const BillingSection = ({ userName }) => {
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2"><Wallet size={16} className="text-white" /> Profit Split Payout Method</h2>
@@ -929,8 +929,8 @@ const BillingSection = ({ userName }) => {
 
       <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] overflow-hidden">
         <div className="p-5 sm:p-6 border-b border-white/[0.08]"><h2 className="text-sm font-bold uppercase tracking-wider text-white">Invoice & Order Ledger</h2></div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
+          <table className="min-w-[760px] w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
                 <th className="py-3 px-6">Invoice ID</th><th className="py-3 px-4">Challenge Description</th><th className="py-3 px-4">Date</th><th className="py-3 px-4 text-center">Status</th><th className="py-3 px-4 text-right">Amount</th><th className="py-3 px-6 text-right">Receipt</th>
@@ -1015,8 +1015,8 @@ const LeaderboardSection = () => {
             <input type="text" placeholder="Search ranked traders..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white/[0.03] border border-white/[0.08] focus:border-white/40 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 transition outline-none" />
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
+          <table className="min-w-[760px] w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
                 <th className="py-3 px-6 text-center w-16">Rank</th><th className="py-3 px-4">Trader</th><th className="py-3 px-4 text-center">Country</th><th className="py-3 px-4">Account Size</th><th className="py-3 px-4 text-center">Avg R:R</th><th className="py-3 px-4 text-center">Consistency</th><th className="py-3 px-6 text-right">Sim Profit</th>
@@ -1201,11 +1201,11 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       />
 
       {/* --- TOP NAVIGATION BAR --- */}
-      <header className="relative z-50 bg-[#000000] border-b border-[#222222] sticky top-0 px-6 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-[#222222] bg-[#000000] px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="md:hidden p-1.5 -ml-1.5 text-[#888888] hover:text-[#EDEDED] transition-colors"
+            className="-ml-1.5 p-1.5 text-[#888888] transition-colors hover:text-[#EDEDED] lg:hidden"
           >
             {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -1263,13 +1263,13 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         </div>
       </header>
 
-      <div className="flex flex-1 relative z-10">
+      <div className="relative z-10 flex min-w-0 flex-1">
         
         {/* --- SIDE NAVIGATION --- */}
         <aside className={`
-          fixed md:static inset-y-0 left-0 top-14 md:top-0 z-40
-          w-64 bg-[#000000] border-r border-[#222222]
-          transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+          fixed inset-y-0 left-0 top-14 z-40
+          w-[min(86vw,18rem)] bg-[#000000] border-r border-[#222222]
+          transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:top-0 lg:w-64 xl:w-72 lg:translate-x-0 lg:shrink-0
           transition-transform duration-200 ease-in-out flex flex-col justify-between
         `}>
           <div className="p-4 space-y-6">
@@ -1343,13 +1343,13 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         {isSidebarOpen && (
           <div 
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 top-14 bg-black/80 z-30 md:hidden backdrop-blur-sm"
+            className="fixed inset-0 top-14 z-30 bg-black/80 backdrop-blur-sm lg:hidden"
           />
         )}
 
         {/* --- MAIN CONTENT AREA --- */}
-        <main className="flex-1 overflow-y-auto w-full">
-          <div className="dashboard-surface mx-auto w-full max-w-[1040px] px-5 py-8 sm:px-6 sm:py-12">
+        <main className="min-w-0 flex-1 overflow-y-auto">
+          <div className="dashboard-surface mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 xl:px-10 2xl:px-12">
             {workspaceError && (
               <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-[12px] text-red-300">
                 {workspaceError}
