@@ -46,7 +46,7 @@ const useCountUp = (endValue, duration = 2000) => {
 };
 
 // --- Animated Number Component ---
-const AnimatedStat = ({ value, prefix = "", suffix = "", decimals = 0, label }) => {
+const AnimatedStat = ({ value, prefix = "", suffix = "", decimals = 0, label, displayValue }) => {
   const { ref, count } = useCountUp(value, 2000);
 
   const formattedCount = new Intl.NumberFormat("en-US", {
@@ -68,7 +68,7 @@ const AnimatedStat = ({ value, prefix = "", suffix = "", decimals = 0, label }) 
         )}
         {/* Tight tracking and sans font for that Inter/Geist look */}
         <span className="text-4xl font-semibold tracking-tighter text-white md:text-5xl lg:text-6xl">
-          {formattedCount}
+          {displayValue ?? formattedCount}
         </span>
         {suffix && (
           <span className="text-2xl font-medium text-zinc-500 md:text-3xl">
@@ -88,10 +88,10 @@ const AnimatedStat = ({ value, prefix = "", suffix = "", decimals = 0, label }) 
 // --- Main Trust Section ---
 export default function TrustSection() {
   const stats = [
-    { label: "Paid out to traders", value: 28, prefix: "$", suffix: "M+", decimals: 0 },
-    { label: "Countries supported", value: 120, suffix: "+", decimals: 0 },
-    { label: "Challenges sold", value: 50000, suffix: "+", decimals: 0 },
-    { label: "Community rating", value: 4.9, suffix: "★", decimals: 1 },
+    { label: "Challenge account size", value: 200, prefix: "$", suffix: "K", decimals: 0 },
+    { label: "Performance reward", value: 90, suffix: "%", decimals: 0 },
+    { label: "Choose your challenge", value: 1, displayValue: "1 or 2", decimals: 0 },
+    { label: "Try ACG before you buy", value: 0, displayValue: "FREE", decimals: 0 },
   ];
 
   return (
@@ -124,6 +124,7 @@ export default function TrustSection() {
                 suffix={stat.suffix}
                 decimals={stat.decimals}
                 label={stat.label}
+                displayValue={stat.displayValue}
               />
             ))}
           </div>
