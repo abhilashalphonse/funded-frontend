@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  MessageSquare, 
-  Command, 
   Mail, 
   Phone, 
   ArrowRight, 
@@ -13,9 +11,6 @@ import {
 import 'flag-icons/css/flag-icons.min.css';
 
 export default function Support() {
-  const [activeChannel, setActiveChannel] = useState('chat');
-  const [hoveredLanguage, setHoveredLanguage] = useState(null);
-
   const localizationHubs = [
     { code: "gb", label: "English", region: "London Node" },
     { code: "de", label: "German", region: "Frankfurt Node" },
@@ -64,35 +59,27 @@ export default function Support() {
 
                 {/* Routing Actions */}
                 <div className="w-full space-y-2 pt-4">
-                  <button 
-                    onClick={() => setActiveChannel('chat')}
-                    className={`group w-full flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 ${
-                      activeChannel === 'chat'
-                        ? 'bg-white/[0.06] border-white/[0.15] text-white'
-                        : 'bg-transparent border-transparent hover:bg-white/[0.03] hover:border-white/[0.08] text-[#888888] hover:text-white'
-                    }`}
+                  <a
+                    href="mailto:support@acgforex.com"
+                    className="group w-full flex items-center justify-between p-3.5 rounded-xl border border-transparent bg-transparent text-[#888888] transition-all duration-200 hover:bg-white/[0.03] hover:border-white/[0.08] hover:text-white"
                   >
                     <div className="flex items-center gap-3">
-                      <MessageSquare strokeWidth={1.5} className="w-4 h-4" />
-                      <span className="text-sm font-medium tracking-tight">Live Terminal Chat</span>
+                      <Mail strokeWidth={1.5} className="w-4 h-4" />
+                      <span className="text-sm font-medium tracking-tight">Email Support</span>
                     </div>
-                    {activeChannel === 'chat' && <ArrowRight strokeWidth={1.5} className="w-4 h-4 text-white/50" />}
-                  </button>
-                  
-                  <button 
-                    onClick={() => setActiveChannel('telegram')}
-                    className={`group w-full flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 ${
-                      activeChannel === 'telegram'
-                        ? 'bg-white/[0.06] border-white/[0.15] text-white'
-                        : 'bg-transparent border-transparent hover:bg-white/[0.03] hover:border-white/[0.08] text-[#888888] hover:text-white'
-                    }`}
+                    <ArrowRight strokeWidth={1.5} className="w-4 h-4 text-white/50" />
+                  </a>
+
+                  <a
+                    href="tel:+420910920310"
+                    className="group w-full flex items-center justify-between p-3.5 rounded-xl border border-transparent bg-transparent text-[#888888] transition-all duration-200 hover:bg-white/[0.03] hover:border-white/[0.08] hover:text-white"
                   >
                     <div className="flex items-center gap-3">
-                      <Command strokeWidth={1.5} className="w-4 h-4" />
-                      <span className="text-sm font-medium tracking-tight">Telegram Secure Route</span>
+                      <Phone strokeWidth={1.5} className="w-4 h-4" />
+                      <span className="text-sm font-medium tracking-tight">Call Support</span>
                     </div>
-                    {activeChannel === 'telegram' && <ArrowRight strokeWidth={1.5} className="w-4 h-4 text-white/50" />}
-                  </button>
+                    <ArrowRight strokeWidth={1.5} className="w-4 h-4 text-white/50" />
+                  </a>
                 </div>
               </div>
 
@@ -136,8 +123,6 @@ export default function Support() {
                   {localizationHubs.map((hub, i) => (
                     <div
                       key={i}
-                      onMouseEnter={() => setHoveredLanguage(i)}
-                      onMouseLeave={() => setHoveredLanguage(null)}
                       className="group p-4 rounded-xl border border-white/[0.06] bg-[#070707] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 cursor-default flex flex-col justify-between min-h-[100px]"
                     >
                       <div className="flex justify-between items-start">
