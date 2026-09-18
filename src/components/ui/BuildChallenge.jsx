@@ -873,7 +873,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
         }}
       />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 pb-28 pt-10 sm:px-6 sm:py-24">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 pb-10 pt-10 sm:px-6 sm:py-24">
         <ChallengeHeader onBack={onBack} />
 <PathSelector step={step} onChange={handleStepChange} />
 <AccountSizeSelector
@@ -921,22 +921,6 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#05060A]/95 p-3 pb-[max(env(safe-area-inset-bottom),12px)] backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-5xl items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[11px] text-gray-500">{formatAccountSize(accountSize)} · {step === STEP_TYPES.ONE_STEP ? "1-Step" : "2-Step"}</div>
-            <div className="text-sm font-semibold text-white">{actionLabel === "Start Free Trial" ? "Free" : pricing ? formatEUR(pricing.finalPrice) : "Review rules"}</div>
-          </div>
-          <button
-            type="button"
-            onClick={handleStart}
-            disabled={!validation.valid || actionLoading}
-            className="h-11 shrink-0 rounded-md bg-white px-5 text-sm font-semibold text-[#05060A] disabled:opacity-40"
-          >
-            {actionLoading ? "Creating…" : actionLabel || "Continue"}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
