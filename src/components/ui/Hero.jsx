@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight, ChevronRight } from 'lucide-react';
 import AcgJourney from './AcgJourney';
 
-const Hero = () => {
+const Hero = ({ onGetStarted = () => {}, onFreeTrial = () => {}, onSeeHowItWorks = () => {} }) => {
   return (
     <div className="relative min-h-screen bg-[#05060A] text-white overflow-hidden flex flex-col items-center pt-16 pb-12 font-sans selection:bg-white/20 selection:text-white">
 
@@ -28,11 +28,11 @@ const Hero = () => {
       <div className="relative z-10 w-full max-w-[1000px] mx-auto px-6 flex flex-col items-center text-center mt-6 sm:mt-8">
 
         {/* Minimalist Pill Badge */}
-        <div className="animate-fade-in-up flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:bg-white/[0.02] transition-colors cursor-pointer">
+        <button type="button" onClick={onFreeTrial} className="animate-fade-in-up flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#0A0C12] text-xs font-medium text-gray-400 mb-8 hover:bg-white/[0.02] transition-colors cursor-pointer">
           <div className="w-1.5 h-1.5 rounded-full bg-white/[0.8] animate-pulse" />
           <span className="tracking-wide">How about a Free Trial?</span>
           <ArrowRight className="w-3.5 h-3.5 opacity-50" strokeWidth={1.5} />
-        </div>
+        </button>
 
         {/* High-Contrast Headline (Linear/Vercel Style Typography) */}
         <h1 className="animate-fade-in-up [animation-delay:100ms] text-5xl sm:text-7xl font-medium tracking-tighter mb-6 leading-[1.05]">
@@ -51,13 +51,13 @@ const Hero = () => {
         {/* Call to Actions */}
         <div className="animate-fade-in-up [animation-delay:300ms] flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           {/* Primary CTA: Stark White */}
-          <button className="w-full sm:w-auto h-11 px-6 rounded-md bg-white text-[#05060A] font-medium text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5">
+          <button type="button" onClick={onGetStarted} className="w-full sm:w-auto h-11 px-6 rounded-md bg-white text-[#05060A] font-medium text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5">
             Start Your Challenge
             <ChevronRight className="w-4 h-4 opacity-70" strokeWidth={2} />
           </button>
 
           {/* Secondary CTA: Surface Background */}
-          <button className="w-full sm:w-auto h-11 px-6 rounded-md border border-white/[0.08] bg-[#0A0C12] text-gray-300 text-sm font-medium hover:text-white hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset]">
+          <button type="button" onClick={onSeeHowItWorks} className="w-full sm:w-auto h-11 px-6 rounded-md border border-white/[0.08] bg-[#0A0C12] text-gray-300 text-sm font-medium hover:text-white hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset]">
             See How It Works
           </button>
         </div>
