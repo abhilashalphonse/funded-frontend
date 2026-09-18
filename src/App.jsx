@@ -136,7 +136,17 @@ function App() {
     );
   }
 
-  return <Homepage onSignIn={() => setScreen("auth")} onSelectPlan={handleSelectPlan} />;
+  return (
+    <Homepage
+      onSignIn={() => setScreen("auth")}
+      onDashboard={() => setScreen("dashboard")}
+      onGetStarted={() => {
+        setBuilderMode("paid");
+        setScreen("builder");
+      }}
+      onSelectPlan={handleSelectPlan}
+    />
+  );
 }
 
 export default App;
