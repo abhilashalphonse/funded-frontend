@@ -851,6 +851,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
     void trackEvent("checkout_started", {
       step,
       accountSize,
+      profitSplit: advanced.profitSplit,
       price: pricing?.finalPrice ?? 0,
     }, { entryIntent: "paid" });
   }
