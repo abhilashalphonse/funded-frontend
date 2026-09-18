@@ -191,9 +191,9 @@ export const RULE_BOUNDS = {
 ====================================================================== */
 
 export const PROFIT_SPLIT_OPTIONS = [
+  60,
   80,
   90,
-  100,
 ];
 
 
@@ -316,14 +316,14 @@ export const BASE_PRICE_CURVES = {
  *
  * base = €269
  *
- * +27% profit split
+ * +12% profit split
  * +22% payout
  *
- * adjustmentTotal = 0.49
+ * adjustmentTotal = 0.34
  *
- * multiplier = 1.49
+ * multiplier = 1.34
  *
- * price ≈ €401
+ * price ≈ €360
  *
  *
  * DEFAULT VALUES MUST ALWAYS BE ZERO.
@@ -458,14 +458,14 @@ export const ADJUSTMENT_TABLES = {
 /**
  * Profit split:
  *
+ * 60% = lower-cost option
  * 80% = standard
  * 90% = premium
- * 100% = maximum premium
  */
 export const PROFIT_SPLIT_ADJUSTMENTS = {
+  60: -0.12,
   80: 0,
   90: 0.12,
-  100: 0.27,
 };
 
 
