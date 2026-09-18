@@ -35,6 +35,7 @@ function App() {
   const checkoutEmailHint = typeof window !== "undefined"
     ? window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""
     : "";
+  const authEmailHint = ["dashboard", "payment"].includes(postAuthScreen) ? checkoutEmailHint : "";
 
   useEffect(() => {
     captureAttribution();
@@ -197,11 +198,11 @@ function App() {
   }
 
   if (screen === "dashboard" && !user) {
-    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={checkoutEmailHint} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={authEmailHint} />;
   }
 
   if (screen === "auth") {
-    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={checkoutEmailHint} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={authEmailHint} />;
   }
 
   if (screen === "builder") {
