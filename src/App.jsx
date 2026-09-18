@@ -103,8 +103,13 @@ function App() {
         window.sessionStorage.removeItem("acg:postAuthScreen");
       }
       setScreen("payment");
+      return;
     }
-  }, [user, pendingTrialIntent, postAuthScreen, selectedPlan, handleOpenTrialBuilder]);
+
+    if (screen === "auth") {
+      setScreen("dashboard");
+    }
+  }, [user, pendingTrialIntent, postAuthScreen, selectedPlan, screen, handleOpenTrialBuilder]);
 
   const handleAuthBack = () => {
     setPendingTrialIntent(false);
