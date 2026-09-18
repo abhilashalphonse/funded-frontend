@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext.jsx";
 
 import Homepage from "./components/ui/Homepage.jsx";
@@ -17,6 +17,7 @@ function App() {
   const [trialError, setTrialError] = useState("");
   const [trialCreating, setTrialCreating] = useState(false);
   const [trialChecking, setTrialChecking] = useState(false);
+  const [pendingTrialIntent, setPendingTrialIntent] = useState(false);
   const { user, getAccessToken } = useAuth();
 
   // Challenge Builder / pricing grid hands a plan object over here; we stash
@@ -26,7 +27,14 @@ function App() {
     setScreen("payment");
   };
 
-  const handleOpenTrialBuilder = async () => {
+  const handleOpenTrialBuilder = useCallback(async () => {
+    if (!user) {
+      setPendingTrialIntent(true);
+      setTrialError("");
+      setScreen("auth");
+      return;
+    }
+
     if (trialChecking) return;
     setTrialChecking(true);
     setTrialError("");
@@ -49,10 +57,17 @@ function App() {
       setScreen("builder");
     } catch (error) {
       setTrialError(error?.message || "Unable to verify ACG Trader readiness.");
+      setScreen("dashboard");
     } finally {
       setTrialChecking(false);
     }
-  };
+  }, [getAccessToken, trialChecking, user]);
+
+  useEffect(() => {
+    if (!user || !pendingTrialIntent) return;
+    setPendingTrialIntent(false);
+    void handleOpenTrialBuilder();
+  }, [user, pendingTrialIntent, handleOpenTrialBuilder]);
 
   const handleStartTrial = async (plan) => {
     if (trialCreating) return;
@@ -100,11 +115,11 @@ function App() {
   }
 
   if (screen === "dashboard" && !user) {
-    return <Auth onBack={() => setScreen("homepage")} />;
+    return <Auth onBack={() => setScreen("homepage")} initialView={pendingTrialIntent ? "signup" : "login"} />;
   }
 
   if (screen === "auth") {
-    return <Auth onBack={() => setScreen("homepage")} />;
+    return <Auth onBack={() => setScreen("homepage")} initialView={pendingTrialIntent ? "signup" : "login"} />;
   }
 
   if (screen === "builder") {
@@ -145,6 +160,7 @@ function App() {
         setScreen("builder");
       }}
       onSelectPlan={handleSelectPlan}
+      onFreeTrial={handleOpenTrialBuilder}
     />
   );
 }
