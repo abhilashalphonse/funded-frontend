@@ -94,7 +94,8 @@ function App() {
         plan={selectedPlan}
         onBack={() => {
           window.history.replaceState({}, document.title, window.location.pathname);
-          setScreen("homepage");
+          setBuilderMode("paid");
+          setScreen("builder");
         }}
         onSignIn={() => {
           window.history.replaceState({}, document.title, window.location.pathname);
