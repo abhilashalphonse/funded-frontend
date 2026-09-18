@@ -45,14 +45,16 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
         <p className="mt-2 text-[13px] text-[#888888]">{description}</p>
         {isOverview && launchError && <p className="mt-2 text-[12px] text-red-400">{launchError}</p>}
       </div>
-      <button
-        type="button"
-        onClick={isOverview ? onOpenTrader : undefined}
-        disabled={isOverview && (!activeChallenge || traderLaunching)}
-        className="h-8 w-fit rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {isOverview ? (traderLaunching ? "Opening ACG Trader…" : activeChallenge ? "Open ACG Trader" : "No active challenge") : page.action}
-      </button>
+      {isOverview && (
+        <button
+          type="button"
+          onClick={onOpenTrader}
+          disabled={!activeChallenge || traderLaunching}
+          className="h-8 w-fit rounded-md bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {traderLaunching ? "Opening ACG Trader…" : activeChallenge ? "Open ACG Trader" : "No active challenge"}
+        </button>
+      )}
     </header>
   );
 };
@@ -412,9 +414,9 @@ const AnalyticsSection = ({ account }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricCard label="Win Rate" value={pct(winRate)} footerLabel="Trades" footerValue={String(totalTrades)} />
-        <MetricCard label="Challenge P&L" value={money(profit)} footerLabel="Return" footerValue={pct(returnPct)} />
-        <MetricCard label="Equity" value={money(equity)} footerLabel="Balance" footerValue={money(balance)} />
+        <ModernMetricCard icon={BarChart3} label="Win Rate" value={pct(winRate)} helper="Trades" helperValue={String(totalTrades)} />
+        <ModernMetricCard icon={TrendingUp} label="Challenge P&L" value={money(profit)} helper="Return" helperValue={pct(returnPct)} />
+        <ModernMetricCard icon={Activity} label="Equity" value={money(equity)} helper="Balance" helperValue={money(balance)} />
       </section>
 
       <section className="bg-[#0A0A0A] rounded-xl border border-[#222222] overflow-hidden">
@@ -1055,6 +1057,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const [activeTab, setActiveTab] = useState('overview');
   const [isOpen, setIsOpen] = useState(false);
   const [workspace, setWorkspace] = useState(null);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [workspaceError, setWorkspaceError] = useState("");
   const [traderLaunching, setTraderLaunching] = useState(false);
   const [launchError, setLaunchError] = useState("");
@@ -1066,7 +1069,11 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
+
     const loadWorkspace = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
       try {
         setWorkspaceError("");
         const token = await getAccessToken();
@@ -1080,8 +1087,12 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         if (!cancelled) setWorkspace(payload?.data || null);
       } catch (error) {
         if (!cancelled) setWorkspaceError(error?.message || "Unable to load your trading workspace.");
+      } finally {
+        inFlight = false;
+        if (!cancelled) setWorkspaceLoading(false);
       }
     };
+
     void loadWorkspace();
     const interval = window.setInterval(loadWorkspace, 5000);
     return () => {
@@ -1324,7 +1335,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 overflow-y-auto w-full">
           <div className="dashboard-surface mx-auto w-full max-w-[1040px] px-5 py-8 sm:px-6 sm:py-12">
-            {workspaceError && activeTab === "overview" && (
+            {workspaceError && (
               <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-[12px] text-red-300">
                 {workspaceError}
               </div>
@@ -1336,7 +1347,13 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               traderLaunching={traderLaunching}
               launchError={launchError}
             />
-            {renderTabContent()}
+            {workspaceLoading
+              ? (
+                <div className="grid min-h-[240px] place-items-center rounded-2xl border border-white/[0.08] bg-[#090b0f] text-[12px] font-semibold text-[#718092]">
+                  Loading your trading workspace…
+                </div>
+              )
+              : renderTabContent()}
           </div>
         </main>
       </div>
