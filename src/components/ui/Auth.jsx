@@ -147,10 +147,10 @@ function TrustLine() {
 /*  Login                                                               */
 /* ------------------------------------------------------------------ */
 
-function LoginForm({ onSwitchToSignup }) {
+function LoginForm({ onSwitchToSignup, initialEmail = "" }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
 
   const { signIn, signInWithGoogle, resetPassword } = useAuth();
@@ -283,8 +283,8 @@ function LoginForm({ onSwitchToSignup }) {
 /*  Signup                                                              */
 /* ------------------------------------------------------------------ */
 
-function SignupForm({ onSwitchToLogin }) {
-  const [email, setEmail] = useState("");
+function SignupForm({ onSwitchToLogin, initialEmail = "" }) {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [ageAgree, setAgeAgree] = useState(false);
@@ -425,7 +425,7 @@ function SignupForm({ onSwitchToLogin }) {
 /*  Root                                                                */
 /* ------------------------------------------------------------------ */
 
-export default function Auth({ onBack = () => {}, initialView = "login" }) {
+export default function Auth({ onBack = () => {}, initialView = "login", initialEmail = "" }) {
   const [view, setView] = useState(initialView);
 
   useEffect(() => {
@@ -444,9 +444,9 @@ export default function Auth({ onBack = () => {}, initialView = "login" }) {
       <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-16 sm:px-5 sm:py-20">
         <Card wide={view === "signup"}>
           {view === "login" ? (
-            <LoginForm onSwitchToSignup={() => setView("signup")} />
+            <LoginForm onSwitchToSignup={() => setView("signup")} initialEmail={initialEmail} />
           ) : (
-            <SignupForm onSwitchToLogin={() => setView("login")} />
+            <SignupForm onSwitchToLogin={() => setView("login")} initialEmail={initialEmail} />
           )}
         </Card>
         <TrustLine />
