@@ -4,7 +4,7 @@ import AcgJourney from './AcgJourney';
 
 const Hero = ({ onGetStarted = () => {}, onFreeTrial = () => {}, onSeeHowItWorks = () => {} }) => {
   return (
-    <div className="relative min-h-screen bg-[#05060A] text-white overflow-hidden flex flex-col items-center pt-16 pb-12 font-sans selection:bg-white/20 selection:text-white">
+    <div id="top" className="relative min-h-screen bg-[#05060A] text-white overflow-hidden flex flex-col items-center pt-16 pb-12 font-sans selection:bg-white/20 selection:text-white">
 
       {/* --- BACKGROUND EFFECTS (Strictly Monochromatic) --- */}
       {/* 1. Ultra-faint Grid Pattern */}
