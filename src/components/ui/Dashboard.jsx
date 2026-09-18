@@ -554,7 +554,14 @@ const CalendarSection = () => {
     </div>
   );
 };
-const ProfileSection = ({ userName, userInitials, userEmail, activeChallenge }) => {
+const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, activeChallenge }) => {
+  const fullName = String(userMetadata?.full_name || userMetadata?.name || userName || "").trim();
+  const nameParts = fullName.split(/\s+/).filter(Boolean);
+  const firstName = userMetadata?.first_name || nameParts[0] || "";
+  const lastName = userMetadata?.last_name || nameParts.slice(1).join(" ") || "";
+  const country = userMetadata?.country || userMetadata?.country_name || "";
+  const timezone = userMetadata?.timezone || "";
+
   return (
     <div className="space-y-8 animate-fade-in">
       <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -572,8 +579,13 @@ const ProfileSection = ({ userName, userInitials, userEmail, activeChallenge }) 
             </div>
           </div>
         </div>
-        <button className="text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.08] text-white border border-white/[0.12] px-4 py-2 rounded-xl transition">
-          Change Avatar
+        <button
+          type="button"
+          disabled
+          title="Avatar editing is not available yet"
+          className="cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-semibold text-gray-500"
+        >
+          Avatar editing unavailable
         </button>
       </section>
 
@@ -584,14 +596,14 @@ const ProfileSection = ({ userName, userInitials, userEmail, activeChallenge }) 
               <User size={16} className="text-white" /> Personal Details
             </h2>
             
-            <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={(e) => e.preventDefault()}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs text-gray-400 font-medium">First Name</label>
-                <input type="text" defaultValue={userName} className="w-full bg-white/[0.05] border border-white/[0.08] focus:border-white/40 focus:ring-1 focus:ring-white/40 rounded-xl px-3.5 py-2 text-sm text-white transition outline-none" />
+                <input type="text" value={firstName} readOnly className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-sm text-gray-400 outline-none" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-gray-400 font-medium">Last Name</label>
-                <input type="text" defaultValue="A." className="w-full bg-white/[0.05] border border-white/[0.08] focus:border-white/40 focus:ring-1 focus:ring-white/40 rounded-xl px-3.5 py-2 text-sm text-white transition outline-none" />
+                <input type="text" value={lastName} readOnly placeholder="—" className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-sm text-gray-400 outline-none" />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs text-gray-400 font-medium">Email Address</label>
@@ -599,22 +611,18 @@ const ProfileSection = ({ userName, userInitials, userEmail, activeChallenge }) 
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-gray-400 font-medium">Country</label>
-                <input type="text" defaultValue="Portugal" disabled className="w-full bg-white/[0.03] border border-white/[0.08] text-gray-500 rounded-xl px-3.5 py-2 text-sm cursor-not-allowed select-none" />
+                <input type="text" value={country} readOnly placeholder="—" className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-sm text-gray-500 outline-none" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-gray-400 font-medium">Timezone</label>
-                <select className="w-full bg-white/[0.03] border border-white/[0.08] focus:border-white/40 rounded-xl px-3.5 py-2 text-sm text-white transition outline-none cursor-pointer">
-                  <option>Western European Time (GMT)</option>
-                  <option>Central European Time (GMT+1)</option>
-                  <option>Eastern Standard Time (GMT-5)</option>
-                </select>
+                <input type="text" value={timezone} readOnly placeholder="—" className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-sm text-gray-500 outline-none" />
               </div>
-              <div className="sm:col-span-2 pt-4 flex justify-end">
-                <button type="submit" className="bg-white hover:bg-gray-200 text-black font-semibold py-2.5 px-6 rounded-xl text-xs transition shadow-lg shadow-white/[0.06] active:scale-[0.98]">
-                  Save Changes
-                </button>
+              <div className="sm:col-span-2 pt-3">
+                <p className="text-[10px] leading-relaxed text-gray-600">
+                  Profile editing will appear here when account-profile persistence is enabled.
+                </p>
               </div>
-            </form>
+            </div>
           </div>
         </div>
 
@@ -625,11 +633,11 @@ const ProfileSection = ({ userName, userInitials, userEmail, activeChallenge }) 
             </h2>
             <p className="text-xs text-gray-400 leading-relaxed">Keep your simulated funding environment safe by updating credentials regularly.</p>
             <div className="pt-2 space-y-2">
-              <button className="w-full bg-white/[0.06] hover:bg-white/[0.06] text-gray-200 border border-white/[0.08] hover:border-white/[0.12] text-left font-medium py-2.5 px-4 rounded-xl transition text-xs flex justify-between items-center">
-                <span>Change Password</span><span>→</span>
+              <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-left text-xs font-medium text-gray-600">
+                <span>Change Password</span><span>Unavailable</span>
               </button>
-              <button className="w-full bg-white/[0.06] hover:bg-white/[0.06] text-gray-200 border border-white/[0.08] hover:border-white/[0.12] text-left font-medium py-2.5 px-4 rounded-xl transition text-xs flex justify-between items-center">
-                <span>Two-Factor Auth (2FA)</span><span className="text-gray-200 text-[10px] bg-white/[0.06] px-1.5 py-0.5 rounded font-bold">Enabled</span>
+              <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-left text-xs font-medium text-gray-600">
+                <span>Two-Factor Auth (2FA)</span><span>Not configured here</span>
               </button>
             </div>
           </div>
@@ -641,15 +649,15 @@ const ProfileSection = ({ userName, userInitials, userEmail, activeChallenge }) 
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer group">
                 <span className="text-xs text-gray-300 group-hover:text-white transition">Email notifications</span>
-                <input type="checkbox" defaultChecked className="accent-white rounded border-white/[0.08] bg-white/[0.03] h-4 w-4" />
+                <input type="checkbox" disabled className="h-4 w-4 cursor-not-allowed rounded border-white/[0.08] bg-white/[0.03] accent-white opacity-40" />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
                 <span className="text-xs text-gray-300 group-hover:text-white transition">Weekly performance digests</span>
-                <input type="checkbox" defaultChecked className="accent-white rounded border-white/[0.08] bg-white/[0.03] h-4 w-4" />
+                <input type="checkbox" disabled className="h-4 w-4 cursor-not-allowed rounded border-white/[0.08] bg-white/[0.03] accent-white opacity-40" />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
                 <span className="text-xs text-gray-300 group-hover:text-white transition">Show profile on leaderboard</span>
-                <input type="checkbox" className="accent-white rounded border-white/[0.08] bg-white/[0.03] h-4 w-4" />
+                <input type="checkbox" disabled className="h-4 w-4 cursor-not-allowed rounded border-white/[0.08] bg-white/[0.03] accent-white opacity-40" />
               </label>
             </div>
           </div>
@@ -1134,7 +1142,14 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   };
 
   const renderTabContent = () => {
-    const propsPayload = { userName, userInitials, userEmail: user?.email || "", activeChallenge, setActiveTab };
+    const propsPayload = {
+      userName,
+      userInitials,
+      userEmail: user?.email || "",
+      userMetadata: user?.user_metadata || {},
+      activeChallenge,
+      setActiveTab,
+    };
 
     switch (activeTab) {
       case 'overview':
