@@ -1140,11 +1140,27 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
   const handleOpenTrader = async () => {
     if (!activeChallenge?.accountId || traderLaunching) return;
+
     setTraderLaunching(true);
     setLaunchError("");
+
+    let traderWindow = null;
+
     try {
+      // Open the tab synchronously from the user's click so browsers do not
+      // treat the eventual federated launch as an unsolicited popup.
+      traderWindow = window.open("about:blank", "_blank");
+      if (!traderWindow) {
+        throw new Error("Your browser blocked the ACG Trader tab. Allow pop-ups for ACG Funded and try again.");
+      }
+
+      // Prevent the trading application from retaining a reference to the
+      // ACG Funded dashboard once the new tab is navigated cross-origin.
+      traderWindow.opener = null;
+
       const token = await getAccessToken();
       if (!token) throw new Error("Your ACG Funded session has expired.");
+
       const response = await fetch(
         `${API_URL}/api/customer/accounts/${encodeURIComponent(activeChallenge.accountId)}/trading-launch`,
         {
@@ -1152,6 +1168,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           headers: { Authorization: `Bearer ${token}` },
         },
       );
+
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.data?.launchUrl) {
         throw new Error(payload?.message || "Unable to open ACG Trader.");
@@ -1163,9 +1180,13 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         throw new Error("ACG Trader launch session is missing its federation ticket.");
       }
 
-      window.location.assign(launchUrl.toString());
+      traderWindow.location.replace(launchUrl.toString());
     } catch (error) {
+      if (traderWindow && !traderWindow.closed) {
+        traderWindow.close();
+      }
       setLaunchError(error?.message || "Unable to open ACG Trader.");
+    } finally {
       setTraderLaunching(false);
     }
   };
