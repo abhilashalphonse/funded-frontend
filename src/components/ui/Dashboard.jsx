@@ -1108,7 +1108,14 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       if (!response.ok || !payload?.data?.launchUrl) {
         throw new Error(payload?.message || "Unable to open ACG Trader.");
       }
-      window.location.assign(payload.data.launchUrl);
+
+      const launchUrl = new URL(payload.data.launchUrl, window.location.origin);
+      const federationTicket = launchUrl.searchParams.get("ticket") || launchUrl.searchParams.get("acg_ticket");
+      if (!federationTicket) {
+        throw new Error("ACG Trader launch session is missing its federation ticket.");
+      }
+
+      window.location.assign(launchUrl.toString());
     } catch (error) {
       setLaunchError(error?.message || "Unable to open ACG Trader.");
       setTraderLaunching(false);
