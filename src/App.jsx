@@ -83,7 +83,7 @@ function App() {
     }
   };
 
-  if (screen === "dashboard" || (screen === "auth" && user)) {
+  if ((screen === "dashboard" && user) || (screen === "auth" && user)) {
     return (
       <Dashboard
         onBack={() => setScreen("homepage")}
@@ -97,6 +97,10 @@ function App() {
         trialError={trialError}
       />
     );
+  }
+
+  if (screen === "dashboard" && !user) {
+    return <Auth onBack={() => setScreen("homepage")} />;
   }
 
   if (screen === "auth") {
