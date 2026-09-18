@@ -1128,7 +1128,10 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         `${API_URL}/api/customer/accounts/${encodeURIComponent(activeChallenge.accountId)}/trading-launch`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "x-acg-session-id": getAnalyticsSessionId(),
+          },
         },
       );
 
