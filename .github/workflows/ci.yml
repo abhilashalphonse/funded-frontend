@@ -7,6 +7,9 @@ on:
 permissions:
   contents: read
 
+env:
+  VITE_API_URL: https://funded-backend-production.up.railway.app
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -28,7 +31,6 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_FINNHUB_KEY: ${{ secrets.VITE_FINNHUB_KEY }}
