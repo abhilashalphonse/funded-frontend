@@ -125,7 +125,7 @@ export default function Support() {
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">How we can help</p>
                   <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white sm:text-2xl">
-                    Prop firm support, without the noise.
+                    Support without the noise.
                   </h3>
                 </div>
                 <LifeBuoy className="hidden h-5 w-5 text-zinc-700 sm:block" strokeWidth={1.5} />
