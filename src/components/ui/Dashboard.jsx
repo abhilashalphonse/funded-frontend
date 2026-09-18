@@ -587,25 +587,15 @@ const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, 
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-white/[0.06] flex items-center justify-center text-xl font-bold border-2 border-white/[0.12] relative shadow-inner text-white">
             {userInitials}
-            <span className="absolute bottom-0 right-0 text-sm bg-white/[0.03] px-1 rounded-full border border-white/[0.12]">🇵🇹</span>
+
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">{userName}</h1>
             <p className="text-xs text-gray-400 mt-0.5">Account: <span className="font-mono text-gray-300">{activeChallenge?.accountId || "No active challenge"}</span></p>
-            <div className="mt-2 inline-flex items-center gap-1.5 bg-white/[0.06] text-white text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border border-white/[0.15]">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-              Verified Account
-            </div>
+
           </div>
         </div>
-        <button
-          type="button"
-          disabled
-          title="Avatar editing is not available yet"
-          className="cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-semibold text-gray-500"
-        >
-          Avatar editing unavailable
-        </button>
+
       </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -646,39 +636,13 @@ const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, 
         </div>
 
         <div className="space-y-6">
-          <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-4">
+          <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-              <Shield size={16} className="text-white" /> Security
+              <Shield size={16} className="text-white" /> Account
             </h2>
-            <p className="text-xs text-gray-400 leading-relaxed">Keep your simulated funding environment safe by updating credentials regularly.</p>
-            <div className="pt-2 space-y-2">
-              <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-left text-xs font-medium text-gray-600">
-                <span>Change Password</span><span>Unavailable</span>
-              </button>
-              <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-left text-xs font-medium text-gray-600">
-                <span>Two-Factor Auth (2FA)</span><span>Not configured here</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-              <Bell size={16} className="text-white" /> Preferences
-            </h2>
-            <div className="space-y-3">
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs text-gray-300 group-hover:text-white transition">Email notifications</span>
-                <input type="checkbox" disabled className="h-4 w-4 cursor-not-allowed rounded border-white/[0.08] bg-white/[0.03] accent-white opacity-40" />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs text-gray-300 group-hover:text-white transition">Weekly performance digests</span>
-                <input type="checkbox" disabled className="h-4 w-4 cursor-not-allowed rounded border-white/[0.08] bg-white/[0.03] accent-white opacity-40" />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs text-gray-300 group-hover:text-white transition">Show profile on leaderboard</span>
-                <input type="checkbox" disabled className="h-4 w-4 cursor-not-allowed rounded border-white/[0.08] bg-white/[0.03] accent-white opacity-40" />
-              </label>
-            </div>
+            <p className="mt-3 text-xs leading-relaxed text-gray-500">
+              Security and notification settings will appear here when they are available for your account.
+            </p>
           </div>
         </div>
       </div>
@@ -1255,7 +1219,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="-ml-1.5 p-1.5 text-[#888888] transition-colors hover:text-[#EDEDED] lg:hidden"
+            className="-ml-1 flex h-11 w-11 items-center justify-center rounded-md text-[#888888] transition-colors hover:bg-white/[0.04] hover:text-[#EDEDED] lg:hidden"
           >
             {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -1270,7 +1234,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           {/* Vercel-style User Trigger */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-full hover:bg-[#111111] transition-colors focus:outline-none"
+            className="flex min-h-11 items-center gap-2 rounded-full pl-3 pr-2 hover:bg-[#111111] transition-colors focus:outline-none"
           >
             <span className="hidden text-[13px] font-medium text-[#888888] md:inline">
               {userName}
@@ -1384,7 +1348,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                   setIsSidebarOpen(false);
                   onNewChallenge();
                 }}
-                className="w-full h-8 bg-white hover:bg-[#EBEBEB] text-black text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="w-full h-11 lg:h-8 bg-white hover:bg-[#EBEBEB] text-black text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
               >
                 New Challenge
               </button>
@@ -1394,7 +1358,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                   onFreeTrial();
                 }}
                 disabled={trialChecking}
-                className="w-full h-8 border border-[#333333] bg-[#0A0A0A] hover:bg-[#111111] text-white text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50"
+                className="w-full h-11 lg:h-8 border border-[#333333] bg-[#0A0A0A] hover:bg-[#111111] text-white text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50"
               >
                 {trialChecking ? "Checking Trader…" : "Free Trial"}
               </button>
@@ -1421,7 +1385,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                         setActiveTab(item.id);
                         setIsSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+                      className={`w-full min-h-11 lg:min-h-0 flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
                         isActive 
                           ? 'bg-[#111111] text-white' 
                           : 'text-[#888888] hover:bg-[#0A0A0A] hover:text-[#EDEDED]'
@@ -1485,7 +1449,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           const Icon = item.icon;
           const active = activeTab === item.id;
           return (
-            <button key={item.id} type="button" onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-1 py-1 text-[9px] ${active ? "text-white" : "text-[#666]"}`}>
+            <button key={item.id} type="button" onClick={() => setActiveTab(item.id)} className={`flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] ${active ? "text-white" : "text-[#666]"}`}>
               <Icon size={16} />
               <span>{item.label}</span>
             </button>
@@ -1495,7 +1459,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           type="button"
           onClick={handleOpenTrader}
           disabled={!activeChallenge || traderLaunching}
-          className="flex flex-col items-center gap-1 py-1 text-[9px] text-white disabled:text-[#444]"
+          className="flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] text-white disabled:text-[#444]"
         >
           <ArrowUpRight size={16} />
           <span>Trade</span>
