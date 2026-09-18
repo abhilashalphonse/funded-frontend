@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Hero from './Hero';
 import TrustSection from './TrustSection';
-import Challenge from './Challenge';
 import HowItWorksSection from './HowItWorks';
 import Proof from './Proof';
 import Support from './Support';
@@ -9,22 +8,28 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import BuildChallenge from './BuildChallenge';
 
+function Homepage({ onSignIn, onDashboard, onGetStarted, onSelectPlan, onFreeTrial }) {
+  const scrollToHowItWorks = () => {
+    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
-
-
-function Homepage({ onSignIn, onDashboard, onGetStarted, onSelectPlan }) {
+  const scrollToChallenges = () => {
+    document.getElementById('challenges')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <>
-    <Navbar onSignIn={onSignIn} onDashboard={onDashboard} onGetStarted={onGetStarted} />
-    <Hero /> 
-    <TrustSection /> 
-    <BuildChallenge onSelectPlan={onSelectPlan} />
-    <HowItWorksSection /> 
-    <Proof />
-    <Support />
-    <Footer />
-    </> 
+      <Navbar onSignIn={onSignIn} onDashboard={onDashboard} onGetStarted={onGetStarted} />
+      <Hero onGetStarted={onGetStarted} onFreeTrial={onFreeTrial} onSeeHowItWorks={scrollToHowItWorks} />
+      <TrustSection />
+      <div id="challenges">
+        <BuildChallenge onSelectPlan={onSelectPlan} />
+      </div>
+      <HowItWorksSection onGetFunded={onGetStarted} onLearnMore={scrollToChallenges} />
+      <Proof />
+      <Support />
+      <Footer />
+    </>
   );
 }
 
