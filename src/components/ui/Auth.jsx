@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext"; 
 // import acg from "../assets/ACG.png";
-import { Eye, EyeOff, ChevronDown, Check, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Check, ArrowLeft } from "lucide-react";
 import Logo from '../../assets/ACG.png';
 import { trackEvent } from '../../utils/analytics.js';
 
@@ -16,25 +16,6 @@ import { trackEvent } from '../../utils/analytics.js';
 /* ------------------------------------------------------------------ */
 
 const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`;
-
-const titles = ["Mr.", "Mrs.", "Ms.", "Mx."];
-const countries = [
-  "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Bulgaria", "Canada",
-  "Chile", "Colombia", "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia",
-  "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "India", "Indonesia",
-  "Ireland", "Italy", "Japan", "Latvia", "Lithuania", "Luxembourg", "Malaysia", "Malta",
-  "Mexico", "Netherlands", "New Zealand", "Norway", "Philippines", "Poland", "Portugal",
-  "Romania", "Singapore", "Slovakia", "Slovenia", "South Africa", "South Korea", "Spain",
-  "Sweden", "Switzerland", "Thailand", "United Arab Emirates", "United Kingdom", "United States",
-  "Vietnam",
-];
-
-const phoneCodes = [
-  "+1", "+27", "+30", "+31", "+32", "+33", "+34", "+36", "+39", "+40", "+41", "+43",
-  "+44", "+45", "+46", "+47", "+48", "+49", "+51", "+52", "+54", "+55", "+60", "+61",
-  "+63", "+64", "+65", "+81", "+82", "+84", "+91", "+351", "+352", "+353", "+354", "+356",
-  "+357", "+358", "+359", "+370", "+371", "+372", "+385", "+420", "+421", "+971",
-];
 
 /* ------------------------------------------------------------------ */
 /*  Primitives                                                         */
@@ -118,22 +99,6 @@ function Field({ label, htmlFor, children }) {
 
 const inputClasses =
   "w-full rounded-lg border border-white/[0.09] bg-white/[0.02] px-3 py-2.5 text-[13.5px] text-white placeholder:text-neutral-600 outline-none transition-all duration-150 focus:border-white/30 focus:bg-white/[0.03] focus:ring-1 focus:ring-white/20";
-
-const selectClasses = inputClasses + " appearance-none pr-9 cursor-pointer disabled:text-neutral-600";
-
-function SelectField({ id, value, onChange, placeholder, options }) {
-  return (
-    <div className="relative">
-      <select id={id} value={value} onChange={onChange} className={selectClasses}>
-        <option value="" disabled className="text-neutral-600">{placeholder}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt} className="bg-black text-white">{opt}</option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-600" strokeWidth={1.75} />
-    </div>
-  );
-}
 
 function CheckboxRow({ checked, onChange, children }) {
   return (
@@ -319,22 +284,10 @@ function LoginForm({ onSwitchToSignup }) {
 /* ------------------------------------------------------------------ */
 
 function SignupForm({ onSwitchToLogin }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [title, setTitle] = useState("");
-  const [dob, setDob] = useState("");
-  const [country, setCountry] = useState("");
   const [email, setEmail] = useState("");
-  const [phoneCountry, setPhoneCountry] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [referralCode, setReferralCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [ageAgree, setAgeAgree] = useState(false);
-  const [idAgree, setIdAgree] = useState(false);
-  const [marketingAgree, setMarketingAgree] = useState(false);
 
   const { signUp, signInWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -346,33 +299,20 @@ function SignupForm({ onSwitchToLogin }) {
     setError("");
     setSuccessMsg("");
 
-    if (password !== confirmPassword) {
-      return setError("Passwords do not match.");
-    }
-    if (!ageAgree || !idAgree) {
-      return setError("You must agree to the age requirement and identification terms.");
+    if (!ageAgree) {
+      setError("Confirm that you are 18 or older and agree to the account terms.");
+      return;
     }
 
     setLoading(true);
     try {
-      const metadata = {
-        first_name: firstName,
-        last_name: lastName,
-        title,
-        date_of_birth: dob,
-        country,
-        phone_number: `${phoneCountry} ${phone}`,
-        referral_code: referralCode,
-        marketing_agreement: marketingAgree,
-      };
-
-      const { error: signUpError } = await signUp(email, password, metadata);
+      const { error: signUpError } = await signUp(email.trim(), password, {});
       if (signUpError) throw signUpError;
 
-      void trackEvent("signup_completed", { method: "email", country });
-      setSuccessMsg("Registration successful! Check your email inbox to verify your account.");
+      void trackEvent("signup_completed", { method: "email" });
+      setSuccessMsg("Account created. Check your email if verification is required.");
     } catch (err) {
-      setError(err.message || "An error occurred during registration.");
+      setError(err.message || "Unable to create your account.");
     } finally {
       setLoading(false);
     }
@@ -399,7 +339,9 @@ function SignupForm({ onSwitchToLogin }) {
       <h1 className="mt-6 text-center text-[19px] font-semibold tracking-tight text-white">
         Create your account
       </h1>
-      <p className="mt-1.5 text-center text-[13px] text-neutral-500">Get funded in minutes, not weeks.</p>
+      <p className="mt-1.5 text-center text-[13px] text-neutral-500">
+        Start with just your login. Complete profile details only when needed.
+      </p>
 
       {error && (
         <div className="mt-5 rounded-lg border border-white/[0.14] bg-white/[0.03] px-3.5 py-2.5 text-[12.5px] font-medium text-neutral-200">
@@ -412,98 +354,9 @@ function SignupForm({ onSwitchToLogin }) {
         </div>
       )}
 
-      <form className="mt-6 flex flex-col gap-3.5" onSubmit={handleSignup}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="First name" htmlFor="firstName">
-            <input id="firstName" type="text" placeholder="Jane" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClasses} required />
-          </Field>
-          <Field label="Last name" htmlFor="lastName">
-            <input id="lastName" type="text" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputClasses} required />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[35%_1fr]">
-          <Field label="Title" htmlFor="title">
-            <SelectField id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="—" options={titles} />
-          </Field>
-          <Field label="Date of birth" htmlFor="dob">
-            <input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} className={inputClasses + " [color-scheme:dark]"} required />
-          </Field>
-        </div>
-
-        <Field label="Country" htmlFor="country">
-          <SelectField id="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Select a country" options={countries} />
-        </Field>
-
-        <Field label="Email" htmlFor="signupEmail">
-          <input id="signupEmail" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClasses} required />
-        </Field>
-
-        <Field label="Phone number" htmlFor="phone">
-          <div className="grid grid-cols-[7.5rem_1fr] gap-2">
-            <div className="min-w-0">
-              <SelectField id="phoneCountry" value={phoneCountry} onChange={(e) => setPhoneCountry(e.target.value)} placeholder="Code" options={phoneCodes} />
-            </div>
-            <input id="phone" type="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClasses + " flex-1"} required />
-          </div>
-        </Field>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Password" htmlFor="signupPassword">
-            <div className="relative">
-              <input
-                id="signupPassword"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={inputClasses + " pr-9"}
-                required
-              />
-              <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 transition-colors hover:text-neutral-200 focus:outline-none">
-                {showPassword ? <EyeOff className="h-[14px] w-[14px]" strokeWidth={1.75} /> : <Eye className="h-[14px] w-[14px]" strokeWidth={1.75} />}
-              </button>
-            </div>
-          </Field>
-          <Field label="Confirm" htmlFor="confirmPassword">
-            <div className="relative">
-              <input
-                id="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={inputClasses + " pr-9"}
-                required
-              />
-              <button type="button" onClick={() => setShowConfirmPassword((s) => !s)} aria-label={showConfirmPassword ? "Hide password" : "Show password"} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 transition-colors hover:text-neutral-200 focus:outline-none">
-                {showConfirmPassword ? <EyeOff className="h-[14px] w-[14px]" strokeWidth={1.75} /> : <Eye className="h-[14px] w-[14px]" strokeWidth={1.75} />}
-              </button>
-            </div>
-          </Field>
-        </div>
-
-        <Field label="Referral code (optional)" htmlFor="referralCode">
-          <input id="referralCode" type="text" placeholder="Optional" value={referralCode} onChange={(e) => setReferralCode(e.target.value)} className={inputClasses} />
-        </Field>
-
-        <div className="flex flex-col gap-3 pt-1">
-          <CheckboxRow checked={ageAgree} onChange={() => setAgeAgree((v) => !v)}>
-            I certify that I am 18 years of age or older, agree to the{" "}
-            <span className="text-neutral-300">User Agreement</span>{" "}
-            and acknowledge the{" "}
-            <span className="text-neutral-300">Privacy Policy</span>.
-          </CheckboxRow>
-          <CheckboxRow checked={idAgree} onChange={() => setIdAgree((v) => !v)}>
-            I acknowledge my name is correct and corresponds to my government-issued identification.
-          </CheckboxRow>
-          <CheckboxRow checked={marketingAgree} onChange={() => setMarketingAgree((v) => !v)}>
-            I agree to receive news, updates and promotions from ACG by phone and email.
-          </CheckboxRow>
-        </div>
-
-        <PrimaryButton loading={loading}>{loading ? "Creating account…" : "Get funded"}</PrimaryButton>
-      </form>
+      <div className="mt-6">
+        <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleSignup} disabled={loading} />
+      </div>
 
       <div className="my-6 flex items-center gap-3">
         <span className="h-px flex-1 bg-white/[0.08]" />
@@ -511,7 +364,52 @@ function SignupForm({ onSwitchToLogin }) {
         <span className="h-px flex-1 bg-white/[0.08]" />
       </div>
 
-      <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleSignup} disabled={loading} />
+      <form className="flex flex-col gap-3.5" onSubmit={handleSignup}>
+        <Field label="Email" htmlFor="signupEmail">
+          <input
+            id="signupEmail"
+            type="email"
+            autoComplete="email"
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputClasses}
+            required
+          />
+        </Field>
+
+        <Field label="Password" htmlFor="signupPassword">
+          <div className="relative">
+            <input
+              id="signupPassword"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder="Create a password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClasses + " pr-10"}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 transition-colors hover:text-neutral-200 focus:outline-none"
+            >
+              {showPassword ? <EyeOff className="h-[15px] w-[15px]" strokeWidth={1.75} /> : <Eye className="h-[15px] w-[15px]" strokeWidth={1.75} />}
+            </button>
+          </div>
+        </Field>
+
+        <CheckboxRow checked={ageAgree} onChange={() => setAgeAgree((value) => !value)}>
+          I confirm that I am 18 years of age or older and agree to the{" "}
+          <span className="text-neutral-300">User Agreement</span>{" "}
+          and{" "}
+          <span className="text-neutral-300">Privacy Policy</span>.
+        </CheckboxRow>
+
+        <PrimaryButton loading={loading}>{loading ? "Creating account…" : "Create account"}</PrimaryButton>
+      </form>
 
       <p className="mt-6 text-center text-[12.5px] text-neutral-500">
         Already have an account?{" "}
