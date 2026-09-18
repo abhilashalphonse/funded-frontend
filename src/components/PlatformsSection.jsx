@@ -25,11 +25,7 @@ export default function PlatformsSection() {
             suits you best.
           </p>
 
-          <div className="pt-2">
-            <button className="px-8 py-3.5 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-gray-200 active:scale-[0.98] transition-all duration-300 shadow-xl shadow-black/30">
-              Show more
-            </button>
-          </div>
+
         </div>
 
         {/* Right Hand Column: Unified Asset Container Wrapper */}
