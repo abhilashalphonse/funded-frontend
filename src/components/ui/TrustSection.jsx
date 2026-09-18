@@ -89,7 +89,7 @@ const AnimatedStat = ({ value, prefix = "", suffix = "", decimals = 0, label, di
 export default function TrustSection() {
   const stats = [
     { label: "Challenge account size", value: 200, prefix: "$", suffix: "K", decimals: 0 },
-    { label: "Performance reward", value: 90, suffix: "%", decimals: 0 },
+    { label: "Maximum performance reward", value: 90, suffix: "%", decimals: 0 },
     { label: "Choose your challenge", value: 1, displayValue: "1 or 2", decimals: 0 },
     { label: "Try ACG before you buy", value: 0, displayValue: "FREE", decimals: 0 },
   ];
