@@ -29,7 +29,12 @@ function deviceType() {
 export function captureAttribution() {
   if (typeof window === "undefined") return {};
   const params = new URLSearchParams(window.location.search);
-  const current = JSON.parse(window.localStorage.getItem(ATTRIBUTION_KEY) || "{}");
+  let current = {};
+  try {
+    current = JSON.parse(window.localStorage.getItem(ATTRIBUTION_KEY) || "{}");
+  } catch {
+    current = {};
+  }
 
   const next = {
     ...current,
