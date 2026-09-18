@@ -18,8 +18,8 @@ function CheckoutHeader({ onSignIn }) {
     <header className="flex items-center justify-between py-5">
       <img src={logo} alt="ACG Funded" className="h-6 w-auto object-contain" />
       <div className="flex items-center gap-4">
-        <button type="button" onClick={onSignIn} className="hidden sm:flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 hover:text-white">
-          <LogIn className="h-3.5 w-3.5" /> Already have an account? Sign in
+        <button type="button" onClick={onSignIn} className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 hover:text-white">
+          <LogIn className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Already have an account?</span> Sign in
         </button>
         <div className="flex items-center gap-1.5 text-[12px] text-gray-400"><Lock className="h-3.5 w-3.5" /> Secure Checkout</div>
       </div>
@@ -94,7 +94,7 @@ function CryptoPaymentPanel({ method, onMethodChange }) {
 function Terms({ checked, onChange }) {
   return <label className="flex cursor-pointer items-start gap-2.5 text-xs text-zinc-500">
     <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-white" />
-    <span>I agree to the <a href="/terms" className="text-zinc-300 underline">Terms & Conditions</a> and <a href="/refund-policy" className="text-zinc-300 underline">Refund Policy</a>.</span>
+    <span>I agree to the <span className="text-zinc-300">Terms & Conditions</span> and <span className="text-zinc-300">Refund Policy</span>.</span>
   </label>;
 }
 
@@ -296,7 +296,7 @@ export default function PaymentPage({ plan, onBack = () => {}, onSignIn = () => 
         <ChallengeSummary plan={plan} />
         <PaymentSection plan={plan} email={email} onEmailChange={setEmail} onSignIn={onSignIn} getAccessToken={getAccessToken} />
       </div>
-      <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="/terms">Terms</a> · <a href="/support">Support</a></div>
+      <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="mailto:support@acgforex.com" className="hover:text-zinc-400">Support</a></div>
     </div>
   </section>;
 }
