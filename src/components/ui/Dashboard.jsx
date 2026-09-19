@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../../AuthContext"; 
 import { getAnalyticsSessionId } from "../../utils/analytics.js";
 import Academy from "../academy/Academy.jsx";
+import NewsCalendar from "../calendar/NewsCalendar.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -460,124 +461,6 @@ const AnalyticsSection = ({ account }) => {
               <span className="text-[13px] text-white font-mono tabular-nums text-right">{value}</span>
             </div>
           ))}
-        </div>
-      </section>
-    </div>
-  );
-};
-const CalendarSection = () => {
-  const [search, setSearch] = useState("");
-  const events = [
-    { time: "13:30 GMT", currency: "USD", impact: "High", event: "Core Retail Sales (MoM)", forecast: "0.2%", previous: "0.1%", restriction: "Blocked Window: 13:28 - 13:32" },
-    { time: "14:45 GMT", currency: "USD", impact: "Medium", event: "Flash Manufacturing PMI", forecast: "51.4", previous: "50.7", restriction: "Monitoring Advised" },
-    { time: "15:00 GMT", currency: "EUR", impact: "High", event: "ECB President Lagarde Speech", forecast: "N/A", previous: "N/A", restriction: "Blocked Window: 14:58 - 15:02" },
-    { time: "23:30 GMT", currency: "AUD", impact: "Medium", event: "RBA Meeting Minutes", forecast: "N/A", previous: "N/A", restriction: "Monitoring Advised" },
-    { time: "07:00 GMT", currency: "GBP", impact: "Low", event: "Public Sector Net Borrowing", forecast: "11.2B", previous: "13.4B", restriction: "Unrestricted" },
-  ];
-
-  return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Top Critical Action Alerts (Matches Top 3 Blocks structure) */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-4">
-        {/* Total Events Tracking */}
-        <div className="bg-[#0A0C12] border border-white/[0.08] rounded-2xl p-5 text-center space-y-3 order-2 md:order-1 relative md:h-[220px] flex flex-col justify-center">
-          <div className="absolute top-4 left-4 text-gray-500 font-black text-xs uppercase tracking-wider">Schedule</div>
-          <div className="w-12 h-12 rounded-full bg-white/[0.06] mx-auto border border-white/[0.12] flex items-center justify-center text-sm font-bold text-gray-400">
-            <Clock size={20} />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-white">Daily Macro Schedule</h4>
-            <p className="text-[11px] text-gray-400 font-mono mt-0.5">Monitored Liquidity Triggers</p>
-          </div>
-          <div className="text-sm font-black text-white font-mono">5 Events Tracked</div>
-          <span className="text-[10px] text-gray-500 font-medium bg-white/[0.02] px-2 py-0.5 rounded-full mx-auto border border-white/[0.08]">Timezone: GMT / UTC</span>
-        </div>
-
-        {/* Center Alert - Strict Risk Banner */}
-        <div className="bg-[#0A0C12] border-2 border-white/[0.08] rounded-2xl p-6 text-center space-y-3 order-1 md:order-2 md:h-[250px] flex flex-col justify-center relative shadow-xl shadow-white/[0.03]">
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white text-black text-[10px] uppercase font-black px-3 py-0.5 rounded-full tracking-wider flex items-center gap-1">
-            <Flame size={10} fill="currentColor" /> Critical Safety Rule
-          </div>
-          <div className="w-16 h-16 rounded-full bg-white/[0.06] mx-auto border-2 border-white/[0.3] flex items-center justify-center text-base font-bold text-white">
-            <AlertTriangle size={22} className="text-gray-300" />
-          </div>
-          <div>
-            <h3 className="text-sm font-black text-white">2-Min Execution Rule</h3>
-            <p className="text-xs text-gray-400 font-mono mt-0.5">Strict platform protocol enforcement</p>
-          </div>
-          <div className="text-sm font-black text-gray-400 font-mono tracking-tight">±2 Min High Impact Windows</div>
-          <span className="text-[10px] text-gray-400 font-bold bg-white/[0.05] px-2 py-0.5 rounded-full mx-auto border border-white/[0.12]">Violations Void Performance</span>
-        </div>
-
-        {/* Upcoming Lockout */}
-        <div className="bg-[#0A0C12] border border-white/[0.08] rounded-2xl p-5 text-center space-y-3 order-3 relative md:h-[220px] flex flex-col justify-center">
-          <div className="absolute top-4 left-4 text-gray-600 font-black text-xs uppercase tracking-wider">Next Hazard</div>
-          <div className="w-12 h-12 rounded-full bg-white/[0.06] mx-auto border border-white/[0.12] flex items-center justify-center text-sm font-bold text-white">
-            <AlertCircle size={20} className="text-gray-400" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-white">USD Core Retail Sales</h4>
-            <p className="text-[11px] text-gray-400 font-mono mt-0.5">High volatility index output</p>
-          </div>
-          <div className="text-sm font-black text-gray-400 font-mono">In 2h 45m</div>
-          <span className="text-[10px] text-gray-500 font-medium bg-white/[0.02] px-2 py-0.5 rounded-full mx-auto border border-white/[0.08]">Action: Restrict Executions</span>
-        </div>
-      </section>
-
-      {/* Main Calendar Data Table */}
-      <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">Economic Event Feed</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Real-time macro timeline track. Blocked periods indicate operational trade suspension rules.</p>
-          </div>
-          <div className="relative max-w-xs w-full">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500"><Search size={14} /></span>
-            <input type="text" placeholder="Filter currency or event..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white/[0.03] border border-white/[0.08] focus:border-white/40 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 transition outline-none" />
-          </div>
-        </div>
-        
-        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
-          <table className="min-w-[760px] w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
-                <th className="py-3 px-6 w-28">Time</th>
-                <th className="py-3 px-4 text-center w-20">Currency</th>
-                <th className="py-3 px-4 text-center w-24">Impact</th>
-                <th className="py-3 px-4">Macroeconomic Event</th>
-                <th className="py-3 px-4 text-center w-20">Forecast</th>
-                <th className="py-3 px-4 text-center w-20">Previous</th>
-                <th className="py-3 px-6 text-right">Rule Restriction</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.06] text-xs text-gray-300">
-              {events.filter(e => e.event.toLowerCase().includes(search.toLowerCase()) || e.currency.toLowerCase().includes(search.toLowerCase())).map((row, idx) => (
-                <tr key={idx} className="hover:bg-white/[0.02] transition group">
-                  <td className="py-4 px-6 font-bold text-gray-400 font-mono group-hover:text-white">{row.time}</td>
-                  <td className="py-4 px-4 text-center font-bold text-white font-mono">{row.currency}</td>
-                  <td className="py-4 px-4 text-center">
-                    <div className="flex items-center justify-center">
-                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase border ${
-                        row.impact === 'High' 
-                          ? 'bg-white/[0.05] text-gray-400 border-white/[0.12]' 
-                          : row.impact === 'Medium' 
-                          ? 'bg-white/[0.05] text-gray-400 border-white/[0.12]' 
-                          : 'bg-white/[0.06] text-gray-400 border-white/[0.12]'
-                      }`}>
-                        {row.impact}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 font-semibold text-white">{row.event}</td>
-                  <td className="py-4 px-4 text-center font-mono text-gray-400">{row.forecast}</td>
-                  <td className="py-4 px-4 text-center font-mono text-gray-500">{row.previous}</td>
-                  <td className={`py-4 px-6 text-right font-mono font-medium ${
-                    row.impact === 'High' ? 'text-gray-400' : 'text-gray-500'
-                  }`}>{row.restriction}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </section>
     </div>
@@ -1097,7 +980,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       case 'analytics':
         return <AnalyticsSection account={activeChallenge} />;
       case 'calendar':
-        return <CalendarSection />;
+        return <NewsCalendar account={activeChallenge} />;
       case 'traders':
         return <TradersSection />;
       case 'academy':
