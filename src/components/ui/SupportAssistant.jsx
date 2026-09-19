@@ -120,7 +120,7 @@ export default function SupportAssistant() {
         ...current,
         {
           role: "assistant",
-          content: "I couldn’t send that message. You can retry, or email support@acgforex.com if the issue is urgent.",
+          content: "I couldn’t send that message. You can retry, or email support@acgfunded.com if the issue is urgent.",
         },
       ]);
     } finally {
