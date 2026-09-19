@@ -34,7 +34,7 @@ const formatFreshness = (value) => {
   return `Updated ${minutes}m ago`;
 };
 
-const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching, launchError }) => {
+const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching, trialChecking, launchError }) => {
   const page = pageDetails[activeTab] || pageDetails.overview;
   const isOverview = activeTab === "overview";
   const connectionActive = activeChallenge?.provisioning?.status === "ACTIVE";
@@ -82,10 +82,10 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
       <button
         type="button"
         onClick={onOpenTrader}
-        disabled={!activeChallenge || traderLaunching}
-        className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-40 sm:inline-flex"
+        disabled={traderLaunching || trialChecking}
+        className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50 sm:inline-flex"
       >
-        {traderLaunching ? "Opening…" : "Open ACG Trader"}
+        {traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
       </button>
     </header>
   );
@@ -1106,10 +1106,21 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   }, [workspace, selectedAccountId]);
 
   const handleOpenTrader = async () => {
-    if (!activeChallenge?.accountId || traderLaunching) return;
+    if (traderLaunching || trialChecking) return;
+
+    setLaunchError("");
+
+    // ACG Trader must be discoverable from the first dashboard visit.
+    // The terminal still requires a provisioned trading account, so users
+    // without one enter the existing free-trial onboarding path instead of
+    // seeing a disabled/dead Trader control.
+    if (!activeChallenge?.accountId) {
+      setIsSidebarOpen(false);
+      onFreeTrial();
+      return;
+    }
 
     setTraderLaunching(true);
-    setLaunchError("");
 
     let traderWindow = null;
 
@@ -1335,17 +1346,15 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               )}
             </div>
 
-            {activeChallenge && (
-              <button
-                type="button"
-                onClick={handleOpenTrader}
-                disabled={traderLaunching}
-                className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:opacity-50"
-              >
-                <ArrowUpRight size={14} />
-                {traderLaunching ? "Opening…" : "Open ACG Trader"}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleOpenTrader}
+              disabled={traderLaunching || trialChecking}
+              className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50"
+            >
+              <ArrowUpRight size={14} />
+              {traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
+            </button>
 
             {/* Primary actions */}
             <div className="space-y-2">
@@ -1433,6 +1442,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               activeChallenge={activeChallenge}
               onOpenTrader={handleOpenTrader}
               traderLaunching={traderLaunching}
+              trialChecking={trialChecking}
               launchError={launchError}
             />
             {workspaceLoading
@@ -1464,11 +1474,11 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         <button
           type="button"
           onClick={handleOpenTrader}
-          disabled={!activeChallenge || traderLaunching}
-          className="flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] text-white disabled:text-[#444]"
+          disabled={traderLaunching || trialChecking}
+          className="flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] text-white disabled:cursor-wait disabled:text-[#555]"
         >
           <ArrowUpRight size={16} />
-          <span>Trade</span>
+          <span>{trialChecking ? "Preparing" : "Trade"}</span>
         </button>
       </nav>
     </div>
