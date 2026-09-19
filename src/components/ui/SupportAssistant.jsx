@@ -170,7 +170,7 @@ export default function SupportAssistant() {
   }
 
   return (
-    <div className="fixed bottom-[max(env(safe-area-inset-bottom),18px)] right-4 z-[90] sm:bottom-5 sm:right-5">
+    <div className="fixed bottom-[calc(max(env(safe-area-inset-bottom),8px)+4.5rem)] right-4 z-[90] sm:bottom-5 sm:right-5">
       {open && (
         <div className="mb-3 flex h-[min(72vh,620px)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#080808] text-white shadow-2xl shadow-black/60">
           <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3.5">
