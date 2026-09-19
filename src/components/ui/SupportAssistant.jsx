@@ -67,206 +67,187 @@ export default function SupportAssistant() {
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [conversationId, getAccessToken, open, sessionId, user?.id]);
-
-  useEffect(() => {
-    if (!open) return;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-    });
-  }, [messages, open, sending]);
-
-  async function sendMessage(prefill) {
-    const text = String(prefill ?? input).trim();
-    if (!text || sending) return;
-
-    setInput("");
-    setError("");
-    setMessages(current => [...current, { role: "user", content: text }]);
-    setSending(true);
-
-    try {
-      const token = await getAccessToken().catch(() => null);
-      const response = await fetch(`${API_URL}/api/support/message`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "x-acg-support-session": sessionId,
-        },
-        body: JSON.stringify({
-          sessionId,
-          conversationId: conversationId || undefined,
-          message: text,
-          pageContext: typeof window !== "undefined" ? window.location.pathname : "/",
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.data?.answer) {
-        throw new Error(payload?.message || "Support is temporarily unavailable.");
-      }
-
-      const nextConversationId = payload.data.conversationId;
-      if (nextConversationId && nextConversationId !== conversationId) {
-        setConversationId(nextConversationId);
-        window.localStorage.setItem(CONVERSATION_KEY, nextConversationId);
-      }
-      setStatus(payload.data.status || "OPEN");
-      setMessages(current => [...current, { role: "assistant", content: payload.data.answer }]);
-    } catch (requestError) {
-      setError(requestError?.message || "Support is temporarily unavailable.");
-      setMessages(current => [
-        ...current,
-        {
-          role: "assistant",
-          content: "I couldn’t send that message. You can retry, or email support@acgfunded.com if the issue is urgent.",
-        },
-      ]);
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function requestHuman() {
-    if (!conversationId || sending) {
-      setMessages(current => [
-        ...current,
-        { role: "assistant", content: "Send me a short description first and I’ll attach it to the support handoff." },
-      ]);
-      return;
-    }
-
-    setSending(true);
-    setError("");
-    try {
-      const token = await getAccessToken().catch(() => null);
-      const response = await fetch(
-        `${API_URL}/api/support/conversations/${encodeURIComponent(conversationId)}/escalate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            "x-acg-support-session": sessionId,
-          },
-          body: JSON.stringify({ sessionId, reason: "CUSTOMER_REQUESTED" }),
-        },
-      );
-      if (!response.ok) throw new Error("Unable to request human support.");
-      setStatus("ESCALATED");
-      setMessages(current => [
-        ...current,
-        {
-          role: "assistant",
-          content: "This conversation is now flagged for human review. You won’t need to repeat the details already in this chat.",
-        },
-      ]);
-    } catch (requestError) {
-      setError(requestError?.message || "Unable to request human support.");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <div className="fixed bottom-[calc(max(env(safe-area-inset-bottom),8px)+4.5rem)] right-4 z-[90] sm:bottom-5 sm:right-5">
+    return (
+    <>
       {open && (
-        <div className="mb-3 flex h-[min(72vh,620px)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#080808] text-white shadow-2xl shadow-black/60">
-          <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3.5">
-            <div className="flex items-center gap-3">
-              <div className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
-                <Bot size={17} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-[13px] font-semibold">ACG Support</p>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        <>
+          <button
+            type="button"
+            aria-label="Close support messenger"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-[98] bg-black/45 backdrop-blur-[1px] sm:hidden"
+          />
+
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="ACG Support"
+            className="
+              fixed inset-0 z-[99] flex min-h-0 flex-col overflow-hidden bg-[#0b0b0c] text-white
+              sm:inset-auto sm:bottom-[92px] sm:right-5 sm:h-[min(720px,calc(100vh-120px))] sm:w-[400px]
+              sm:rounded-[20px] sm:border sm:border-white/[0.1] sm:shadow-[0_24px_80px_rgba(0,0,0,0.55)]
+            "
+          >
+            <header className="shrink-0 border-b border-white/[0.08] bg-[#0b0b0c] px-4 pb-4 pt-[max(env(safe-area-inset-top),16px)] sm:px-5 sm:pb-4 sm:pt-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-black">
+                    <Bot size={18} strokeWidth={1.9} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h2 className="truncate text-[14px] font-semibold tracking-[-0.01em]">ACG Support</h2>
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                    </div>
+                    <p className="mt-1 truncate text-[11px] text-zinc-500">
+                      {status === "ESCALATED"
+                        ? "Human review requested"
+                        : user
+                          ? "Account-aware support"
+                          : "Typically replies instantly"}
+                    </p>
+                  </div>
                 </div>
-                <p className="mt-0.5 text-[10px] text-zinc-500">
-                  {status === "ESCALATED" ? "Human review requested" : user ? "Account-aware support" : "Instant support"}
+
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close ACG Support"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-zinc-500 transition hover:bg-white/[0.06] hover:text-white"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+
+              {status !== "ESCALATED" && (
+                <p className="mt-4 max-w-[300px] text-[12px] leading-5 text-zinc-400">
+                  Ask about your challenge, account, payment, payout eligibility or ACG Trader.
                 </p>
-              </div>
-            </div>
-            <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg text-zinc-500 hover:bg-white/[0.05] hover:text-white">
-              <X size={16} />
-            </button>
-          </div>
+              )}
 
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {messages.map((message, index) => (
-              <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[86%] rounded-2xl px-3.5 py-2.5 text-[12px] leading-5 ${
-                  message.role === "user"
-                    ? "rounded-br-md bg-white text-black"
-                    : "rounded-bl-md border border-white/[0.07] bg-white/[0.035] text-zinc-300"
-                }`}>
-                  {message.content}
+              {status === "ESCALATED" && (
+                <div className="mt-4 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] px-3 py-2.5 text-[11px] leading-5 text-amber-200">
+                  Your conversation is queued for human review. You do not need to repeat the details already shared.
                 </div>
-              </div>
-            ))}
+              )}
+            </header>
 
-            {sending && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl rounded-bl-md border border-white/[0.07] bg-white/[0.035] px-3.5 py-2.5 text-[11px] text-zinc-500">
-                  Checking…
+            <div
+              ref={scrollRef}
+              className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#0b0b0c] px-4 py-5 sm:px-5"
+            >
+              {messages.map((message, index) => (
+                <div
+                  key={`${message.role}-${index}`}
+                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[82%] whitespace-pre-wrap break-words px-3.5 py-2.5 text-[13px] leading-[1.55] ${
+                      message.role === "user"
+                        ? "rounded-[18px] rounded-br-[6px] bg-white text-black"
+                        : "rounded-[18px] rounded-bl-[6px] bg-[#171719] text-zinc-200"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
                 </div>
-              </div>
-            )}
+              ))}
 
-            {messages.length <= 1 && (
-              <div className="grid gap-2 pt-1">
-                {starters.map(starter => (
-                  <button key={starter} type="button" onClick={() => sendMessage(starter)} className="rounded-xl border border-white/[0.07] bg-black px-3.5 py-2.5 text-left text-[11px] text-zinc-400 hover:border-white/[0.13] hover:text-white">
-                    {starter}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              {sending && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-1 rounded-[18px] rounded-bl-[6px] bg-[#171719] px-4 py-3">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-500" />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-500 [animation-delay:120ms]" />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-500 [animation-delay:240ms]" />
+                  </div>
+                </div>
+              )}
 
-          <div className="border-t border-white/[0.08] p-3">
-            {error && <p className="mb-2 px-1 text-[10px] text-red-400">{error}</p>}
-            <div className="flex items-end gap-2 rounded-xl border border-white/[0.09] bg-black p-2">
-              <textarea
-                value={input}
-                onChange={event => setInput(event.target.value)}
-                onKeyDown={event => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void sendMessage();
-                  }
-                }}
-                rows={1}
-                maxLength={3000}
-                placeholder="Ask ACG Support…"
-                className="max-h-28 min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-[12px] text-white outline-none placeholder:text-zinc-700"
-              />
-              <button type="button" onClick={() => sendMessage()} disabled={!input.trim() || sending} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-black disabled:opacity-30">
-                <Send size={14} />
-              </button>
+              {messages.length <= 1 && (
+                <div className="space-y-2 pt-2">
+                  <p className="px-1 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600">Common questions</p>
+                  <div className="grid gap-2">
+                    {starters.map(starter => (
+                      <button
+                        key={starter}
+                        type="button"
+                        onClick={() => sendMessage(starter)}
+                        className="flex min-h-11 items-center justify-between rounded-xl border border-white/[0.08] bg-[#121214] px-3.5 text-left text-[12px] text-zinc-300 transition hover:border-white/[0.14] hover:bg-[#171719] hover:text-white"
+                      >
+                        <span>{starter}</span>
+                        <span className="ml-3 text-zinc-600">›</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="mt-2 flex items-center justify-between px-1">
-              <button type="button" onClick={requestHuman} disabled={sending || status === "ESCALATED"} className="flex items-center gap-1.5 text-[10px] text-zinc-600 hover:text-zinc-300 disabled:cursor-default disabled:text-zinc-700">
-                <UserRound size={11} />
-                {status === "ESCALATED" ? "Human review requested" : "Request human support"}
-              </button>
-              <p className="text-[9px] text-zinc-700">Never share passwords or private keys</p>
-            </div>
-          </div>
-        </div>
+            <footer className="shrink-0 border-t border-white/[0.08] bg-[#0b0b0c] px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 sm:px-4 sm:pb-4">
+              {error && (
+                <div className="mb-2 rounded-lg border border-red-400/15 bg-red-400/[0.05] px-3 py-2 text-[10px] leading-4 text-red-300">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex items-end gap-2 rounded-2xl border border-white/[0.1] bg-[#151517] p-2 shadow-inner">
+                <textarea
+                  value={input}
+                  onChange={event => setInput(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void sendMessage();
+                    }
+                  }}
+                  rows={1}
+                  maxLength={3000}
+                  placeholder="Message ACG Support"
+                  className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2.5 text-[13px] leading-5 text-white outline-none placeholder:text-zinc-600"
+                />
+                <button
+                  type="button"
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim() || sending}
+                  aria-label="Send message"
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:cursor-default disabled:bg-white/10 disabled:text-zinc-600"
+                >
+                  <Send size={15} />
+                </button>
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3 px-1">
+                <button
+                  type="button"
+                  onClick={requestHuman}
+                  disabled={sending || status === "ESCALATED"}
+                  className="inline-flex items-center gap-1.5 text-[10px] text-zinc-500 transition hover:text-zinc-300 disabled:cursor-default disabled:text-zinc-700"
+                >
+                  <UserRound size={11} />
+                  {status === "ESCALATED" ? "Human review requested" : "Talk to a person"}
+                </button>
+                <span className="text-right text-[9px] text-zinc-700">Never share passwords or private keys</span>
+              </div>
+            </footer>
+          </section>
+        </>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpen(value => !value)}
-        aria-label={open ? "Close ACG Support" : "Open ACG Support"}
-        className="ml-auto flex h-12 items-center gap-2.5 rounded-full border border-white/[0.1] bg-white px-4 text-[12px] font-semibold text-black shadow-xl shadow-black/30 transition hover:bg-zinc-200"
-      >
-        {open ? <ChevronDown size={16} /> : <LifeBuoy size={16} />}
-        <span>{open ? "Close" : "Support"}</span>
-      </button>
-    </div>
+      {!open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Open ACG Support"
+          className="
+            fixed bottom-[calc(max(env(safe-area-inset-bottom),8px)+4.25rem)] right-4 z-[97]
+            grid h-14 w-14 place-items-center rounded-full bg-white text-black
+            shadow-[0_10px_35px_rgba(0,0,0,0.35)] transition hover:scale-[1.03] hover:bg-zinc-200 active:scale-95
+            sm:bottom-5 sm:right-5
+          "
+        >
+          <LifeBuoy size={21} strokeWidth={2} />
+        </button>
+      )}
+    </>
   );
 }
