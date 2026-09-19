@@ -273,6 +273,7 @@ export default function AdminDashboard() {
     try {
       if (page === "users") setSelectedDetail(await adminFetch(`/users/${encodeURIComponent(row.customerId)}`));
       if (["challenges", "trials", "funded", "breaches"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
+      if (page === "orders" || page === "payments") setSelectedDetail({ payment: row });
     } catch (err) {
       setSelectedDetail({ error: err.message });
     }
@@ -284,6 +285,8 @@ export default function AdminDashboard() {
     try {
       if (action.type === "customer") {
         await adminFetch(`/users/${encodeURIComponent(action.id)}/status`, { method: "POST", body: JSON.stringify({ status: action.value, reason }) });
+      } else if (action.type === "payment") {
+        await adminFetch(`/payments/${encodeURIComponent(action.id)}/retry-activation`, { method: "POST", body: JSON.stringify({ reason }) });
       } else {
         await adminFetch(`/challenges/${encodeURIComponent(action.id)}/action`, { method: "POST", body: JSON.stringify({ action: action.value, reason }) });
       }
@@ -491,7 +494,7 @@ export default function AdminDashboard() {
     if (page === "overview") return renderOverview();
     if (page === "users") return renderUsers();
     if (["challenges","trials","funded"].includes(page)) return renderChallenges();
-    if (page === "orders" || page === "payments") return <DataTable rows={rows} columns={paymentColumns} />;
+    if (page === "orders" || page === "payments") return <DataTable rows={rows} columns={paymentColumns} onRow={openRow} />;
     if (page === "risk" || page === "breaches") return renderRisk();
     if (page === "funnel") return renderFunnel();
     if (page === "revenue") return renderRevenue();
@@ -554,7 +557,7 @@ export default function AdminDashboard() {
             <div className="relative min-w-0 flex-1"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by email, ID, order or account…" className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#0e0e0e] pl-9 pr-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/20" /></div>
             <select value={status} onChange={e => setStatus(e.target.value)} className="h-10 rounded-lg border border-white/[0.08] bg-[#0e0e0e] px-3 text-xs text-zinc-400 outline-none">
               <option value="">All statuses</option>
-              {["ACTIVE","BLOCKED","PAID","WAITING","FAILED","NEW","PASSED","BREACHED","LOCKED","FUNDED","ESCALATED","OPEN"].map(v => <option key={v} value={v}>{v}</option>)}
+              {["ACTIVE","BLOCKED","PAID","WAITING","FAILED","NEW","PASSED","BREACHED","LOCKED","PHASE_2","FUNDED_REVIEW","FUNDED","ESCALATED","OPEN"].map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>}
           {renderContent()}
@@ -580,12 +583,37 @@ export default function AdminDashboard() {
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={money(accountDetail?.projections?.profit || 0,"USD")} /></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3"><Kpi label="Daily Loss" value={pct(accountDetail?.projections?.dailyLoss)} /><Kpi label="Total Loss" value={pct(accountDetail?.projections?.totalLoss)} /><Kpi label="Trading Days" value={accountDetail?.projections?.tradingDays || 0} /></div>
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">State</p><div className="mt-2"><Badge>{accountDetail?.status}</Badge></div></div><div className="flex flex-wrap gap-2">
-            {accountDetail?.status !== "LOCKED" && !["CLOSED","BREACHED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
+            {["ACTIVE","PHASE_2","FUNDED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
             {accountDetail?.status === "LOCKED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"UNLOCK",label:"Unlock account"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300">Unlock</button>}
+            {accountDetail?.status === "FUNDED_REVIEW" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"APPROVE_FUNDED",label:"Approve funded account"})} className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs font-semibold text-emerald-300">Approve Funded</button>}
             {accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
           </div></div></div>
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><p className="text-xs font-semibold text-white">Rules snapshot</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><p className="text-[10px] text-zinc-600">Daily drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.dailyDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Max drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.maxDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Minimum trading days</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.rules?.minimumTradingDays || 0}</p></div><div><p className="text-[10px] text-zinc-600">Platform</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.platform || "—"}</p></div></div></div>
         </>}
+      </Inspector>}
+
+      {selected && ["orders","payments"].includes(page) && <Inspector title={selected.orderId || "Payment"} subtitle={selected.email || selected._id} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Kpi label="Amount" value={money(selected.amount, selected.currency || "EUR")} />
+          <Kpi label="Payment" value={selected.status || "—"} />
+          <Kpi label="Activation" value={selected.activation?.status || "NOT_STARTED"} />
+        </div>
+        <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Provider reference</p><p className="mt-1 break-all text-xs text-zinc-300">{selected.providerPaymentId || selected.providerInvoiceId || "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Funded account</p><p className="mt-1 text-xs text-zinc-300">{selected.accountId || "Not activated"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Last activation attempt</p><p className="mt-1 text-xs text-zinc-300">{dateTime(selected.activation?.attemptedAt)}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Activation error</p><p className="mt-1 text-xs text-zinc-300">{selected.activation?.error || "—"}</p></div>
+          </div>
+          {selected.status === "PAID" && !selected.accountId && selected.activation?.status !== "ACTIVE" && (
+            <button
+              onClick={() => setAction({type:"payment",id:selected._id,value:"RETRY_ACTIVATION",label:"Retry account activation"})}
+              className="mt-5 rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs font-semibold text-amber-300"
+            >
+              Retry activation
+            </button>
+          )}
+        </div>
       </Inspector>}
 
       {action && <ConfirmModal action={action} entity={action.id} busy={actionBusy} onClose={() => setAction(null)} onConfirm={performAction} />}
