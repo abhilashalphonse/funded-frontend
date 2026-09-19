@@ -3,9 +3,9 @@ import ReactCountryFlag from "react-country-flag";
 import acg from '../../assets/ACG.png';
 import { 
   User, Menu, BarChart2, X, ChevronRight, LayoutDashboard, Gem, Users, GraduationCap, 
-  CreditCard, Trophy, MessageSquare, Clock, Flag, ChevronDown,
+  Trophy, MessageSquare, Clock, Flag, ChevronDown,
   Shield, Bell, Globe, Check, Search, ArrowUpRight, Percent, DollarSign,
-  BookOpen, Play, Lock, Award, BarChart3, Download, Receipt, Plus, Wallet, 
+  BookOpen, Play, Lock, Award, BarChart3, Wallet, 
   ExternalLink, Activity, TrendingUp, AlertTriangle, CheckCircle2, Zap,
    Layers, ShieldCheck, Flame, AlertCircle, LogOut
 } from 'lucide-react';
@@ -21,7 +21,7 @@ const pageDetails = {
   analytics: { title: 'Performance', description: 'Understand how this account is performing' },
   calendar: { title: 'Calendar', description: 'Market events and trading restrictions' },
   academy: { title: 'Academy', description: 'Continue your trading education' },
-  billing: { title: 'Billing', description: 'Orders, invoices and payout settings' },
+  billing: { title: 'Payouts', description: 'Reward eligibility, payout terms and history' },
   profile: { title: 'Settings', description: 'Profile, security and preferences' },
 };
 
@@ -646,91 +646,201 @@ const TradersSection = () => {
     </div>
   );
 };
-const BillingSection = ({ userName }) => {
+const BillingSection = ({ activeChallenge }) => {
+  const account = activeChallenge || null;
+  const isDemo = account?.accountMode === "DEMO";
+  const status = String(account?.status || "").toUpperCase();
+  const profitSplit = account?.commercialTerms?.profitSplit;
+  const payoutFrequency = account?.commercialTerms?.payoutFrequency;
+
+  const payoutState = (() => {
+    if (!account) {
+      return {
+        badge: "No active account",
+        title: "Payouts begin with a funded account",
+        description: "Complete an evaluation and progress to a funded account to unlock payout eligibility.",
+        step: 0,
+      };
+    }
+
+    if (isDemo) {
+      return {
+        badge: "Free Trial",
+        title: "Payouts are not available on trial accounts",
+        description: "Free Trials let you experience the evaluation rules. Payout eligibility starts after completing a paid evaluation and receiving a funded account.",
+        step: 0,
+      };
+    }
+
+    if (status === "FUNDED") {
+      return {
+        badge: "Funded",
+        title: "Your payout eligibility is being tracked",
+        description: "The payout option unlocks automatically when your funded account reaches its selected payout cycle and satisfies the applicable account rules.",
+        step: 3,
+      };
+    }
+
+    if (status === "FUNDED_REVIEW" || status === "PASSED") {
+      return {
+        badge: status === "PASSED" ? "Evaluation passed" : "Funded review",
+        title: "You're progressing toward payout eligibility",
+        description: "Your evaluation is complete. Once funded activation is complete, your selected profit split and payout cycle will apply.",
+        step: 2,
+      };
+    }
+
+    if (status === "PHASE_2") {
+      return {
+        badge: "Phase 2",
+        title: "Complete Phase 2 to progress toward funding",
+        description: "Payout eligibility starts after the evaluation is completed and your funded account is activated.",
+        step: 1,
+      };
+    }
+
+    if (["BREACHED", "LOCKED", "CLOSED"].includes(status)) {
+      return {
+        badge: "Not eligible",
+        title: "This account is not eligible for payouts",
+        description: "Payout eligibility applies to funded accounts that remain within the applicable account rules.",
+        step: 0,
+      };
+    }
+
+    return {
+      badge: "Evaluation",
+      title: "Complete your evaluation to unlock funded status",
+      description: "Your selected payout terms stay attached to this challenge and become relevant after you progress to a funded account.",
+      step: 1,
+    };
+  })();
+
+  const steps = [
+    { label: "Evaluation", hint: isDemo ? "Trial" : "Complete challenge" },
+    { label: "Funded review", hint: "Account review" },
+    { label: "Funded", hint: "Funded activation" },
+    { label: "Payout eligible", hint: "Unlocks automatically" },
+  ];
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2"><Wallet size={16} className="text-white" /> Profit Split Payout Method</h2>
-              <span className="text-[10px] bg-white/[0.06] text-white font-bold border border-white/[0.15] px-2 py-0.5 rounded uppercase">Verified</span>
-            </div>
-            <p className="text-xs text-gray-400 leading-relaxed">Configure your destination gateway to route processed simulated reward splits.</p>
-            <div className="bg-white/[0.05] border border-white/[0.08] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-lg bg-white/[0.06] border border-white/[0.12] flex items-center justify-center text-xs font-mono font-bold text-white">USDT</div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Crypto Settlement (TRC-20)</h4>
-                  <p className="text-[11px] text-gray-500 font-mono mt-0.5">TR7NHqDjQ62TQ...zNpeee</p>
-                </div>
+    <div className="space-y-6 animate-fade-in">
+      <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0A0C12]">
+        <div className="border-b border-white/[0.07] p-5 sm:p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
+                <span className={`h-1.5 w-1.5 rounded-full ${status === "FUNDED" ? "bg-emerald-400" : "bg-zinc-500"}`} />
+                {payoutState.badge}
               </div>
-              <span className="text-[11px] font-medium text-gray-600">Editing unavailable</span>
+              <h2 className="text-xl font-semibold tracking-[-0.025em] text-white sm:text-2xl">{payoutState.title}</h2>
+              <p className="mt-2 max-w-xl text-[12px] leading-5 text-zinc-500">{payoutState.description}</p>
             </div>
-          </div>
 
-          <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2"><CreditCard size={16} className="text-white" /> Cards on file</h2>
-              <span className="text-xs font-medium text-gray-600">Card management unavailable</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-gradient-to-br from-white/[0.02] to-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex flex-col justify-between h-28 relative overflow-hidden">
-                <div className="absolute -right-3 -bottom-3 text-white/[0.05] text-6xl font-black select-none">VISA</div>
-                <div className="flex justify-between items-start"><span className="text-[10px] bg-white/[0.06] text-gray-300 px-2 py-0.5 rounded font-medium">Default</span><span className="text-xs font-bold text-gray-400">•• 4242</span></div>
-                <div><p className="text-[11px] text-gray-400 font-medium">{userName} A.</p><p className="text-[10px] text-gray-500 mt-0.5">Expires 12/28</p></div>
-              </div>
-            </div>
+            <button
+              type="button"
+              disabled
+              className="h-10 shrink-0 cursor-not-allowed rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 text-[11px] font-semibold text-zinc-600"
+            >
+              Request payout
+            </button>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-6 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">Fee Architecture</h2>
-            <div className="space-y-3 pt-1">
-              <div className="p-3 bg-white/[0.04] rounded-xl border border-white/[0.07]">
-                <div className="flex justify-between text-xs font-semibold text-white"><span>Evaluation Fees</span><span className="text-gray-400">One-Time</span></div>
-                <p className="text-[11px] text-gray-500 mt-1">Challenge fees are structured per evaluation size. No hidden monthly subscriptions.</p>
-              </div>
-              <div className="p-3 bg-white/[0.03] rounded-xl border border-white/[0.08]">
-                <div className="flex justify-between text-xs font-bold text-white"><span>Refundable Rule</span><span className="text-gray-200 font-mono">100%</span></div>
-                <p className="text-[11px] text-gray-400 mt-1">Your baseline fee is reimbursed along with your initial certified cashout.</p>
-              </div>
-            </div>
-            <p className="pt-1 text-[11px] text-gray-500">Refund terms will be shown here when the legal policy page is published.</p>
+        <div className="grid gap-px bg-white/[0.06] sm:grid-cols-3">
+          <div className="bg-[#080A0E] p-5">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Profit split</span>
+            <strong className="mt-2 block text-lg font-semibold text-white">{profitSplit != null ? `${profitSplit}%` : "—"}</strong>
+            <p className="mt-1 text-[10px] text-zinc-600">{profitSplit != null ? "Selected with this challenge" : "Applies to funded accounts"}</p>
           </div>
-        </div>
-      </div>
-
-      <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-white/[0.08]"><h2 className="text-sm font-bold uppercase tracking-wider text-white">Invoice & Order Ledger</h2></div>
-        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
-          <table className="min-w-[760px] w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-white/[0.07] text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.03]">
-                <th className="py-3 px-6">Invoice ID</th><th className="py-3 px-4">Challenge Description</th><th className="py-3 px-4">Date</th><th className="py-3 px-4 text-center">Status</th><th className="py-3 px-4 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.06] text-xs text-gray-300">
-              {[
-                { id: "INV-2026-0842", desc: "$200,000 Sim evaluation allocation", date: "June 14, 2026", status: "Paid", price: "$1,089.00" },
-                { id: "INV-2026-0211", desc: "$50,000 Sim evaluation allocation", date: "Jan 08, 2026", status: "Paid", price: "$329.00" },
-              ].map((inv, idx) => (
-                <tr key={idx} className="hover:bg-white/[0.02] transition">
-                  <td className="py-4 px-6 font-mono font-medium text-white">{inv.id}</td>
-                  <td className="py-4 px-4 text-gray-400 font-medium">{inv.desc}</td>
-                  <td className="py-4 px-4 text-gray-500">{inv.date}</td>
-                  <td className="py-4 px-4 text-center"><span className="text-[10px] font-bold bg-white/[0.06] text-white border border-white/[0.15] px-2 py-0.5 rounded">{inv.status}</span></td>
-                  <td className="py-4 px-4 text-right font-semibold text-white">{inv.price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="bg-[#080A0E] p-5">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Payout schedule</span>
+            <strong className="mt-2 block text-lg font-semibold text-white">{payoutFrequency || "—"}</strong>
+            <p className="mt-1 text-[10px] text-zinc-600">{payoutFrequency ? "Selected payout cycle" : "Applies to funded accounts"}</p>
+          </div>
+          <div className="bg-[#080A0E] p-5">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Available reward</span>
+            <strong className="mt-2 block text-lg font-semibold text-white">—</strong>
+            <p className="mt-1 text-[10px] text-zinc-600">{status === "FUNDED" ? "Updates when payout eligibility is reached" : "Available after funded eligibility"}</p>
+          </div>
         </div>
       </section>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-[12px] font-semibold text-white">Path to payout</h3>
+            <p className="mt-1 text-[10px] text-zinc-600">Your account progresses through these stages automatically.</p>
+          </div>
+          <Wallet size={16} className="text-zinc-600" />
+        </div>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-4">
+          {steps.map((item, index) => {
+            const completed = payoutState.step > index;
+            const current = payoutState.step === index && payoutState.step < 4;
+            return (
+              <div key={item.label} className={`rounded-xl border p-4 ${completed ? "border-emerald-500/15 bg-emerald-500/[0.035]" : current ? "border-white/[0.13] bg-white/[0.04]" : "border-white/[0.07] bg-white/[0.015]"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className={`grid size-6 place-items-center rounded-full border text-[10px] font-semibold ${completed ? "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-300" : current ? "border-white/20 text-white" : "border-white/[0.08] text-zinc-600"}`}>
+                    {completed ? <Check size={12} /> : index + 1}
+                  </span>
+                  {current && <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Current</span>}
+                </div>
+                <p className={`mt-4 text-[11px] font-semibold ${completed || current ? "text-zinc-200" : "text-zinc-600"}`}>{item.label}</p>
+                <p className="mt-1 text-[9px] text-zinc-600">{item.hint}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
+        <section className="rounded-2xl border border-white/[0.08] bg-[#0A0C12]">
+          <div className="border-b border-white/[0.07] p-5 sm:p-6">
+            <h3 className="text-[12px] font-semibold text-white">Payout history</h3>
+            <p className="mt-1 text-[10px] text-zinc-600">Your completed and processed payouts will appear here.</p>
+          </div>
+          <div className="grid min-h-[190px] place-items-center px-6 py-10 text-center">
+            <div className="max-w-sm">
+              <div className="mx-auto grid size-10 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-zinc-600">
+                <Wallet size={16} />
+              </div>
+              <p className="mt-4 text-[12px] font-semibold text-zinc-300">No payouts yet</p>
+              <p className="mt-1.5 text-[10px] leading-4 text-zinc-600">Your payout history will populate automatically once an eligible reward has been processed.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-5 sm:p-6">
+          <h3 className="text-[12px] font-semibold text-white">Payout details</h3>
+          <div className="mt-5 divide-y divide-white/[0.06]">
+            <div className="flex items-center justify-between gap-4 py-3 first:pt-0">
+              <span className="text-[10px] text-zinc-600">Account</span>
+              <span className="max-w-[60%] truncate text-right text-[11px] font-medium text-zinc-300">{account?.accountId || "—"}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-3">
+              <span className="text-[10px] text-zinc-600">Account status</span>
+              <span className="text-right text-[11px] font-medium text-zinc-300">{account ? (isDemo ? "Free Trial" : account.status || "—") : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-3">
+              <span className="text-[10px] text-zinc-600">Destination</span>
+              <span className="text-right text-[11px] font-medium text-zinc-500">{status === "FUNDED" ? "Set when eligible" : "Available when eligible"}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-3">
+              <span className="text-[10px] text-zinc-600">Request status</span>
+              <span className="text-right text-[11px] font-medium text-zinc-500">Not eligible yet</span>
+            </div>
+          </div>
+          <p className="mt-4 border-t border-white/[0.06] pt-4 text-[9px] leading-4 text-zinc-600">
+            Payout availability is determined by funded-account status, the selected payout cycle and applicable account rules.
+          </p>
+        </section>
+      </div>
     </div>
   );
 };
+
 const LeaderboardSection = () => {
   const [search, setSearch] = useState("");
   const rankings = [
@@ -825,7 +935,7 @@ const navItems = [
   { id: 'analytics', name: 'Performance', icon: BarChart3 },
   { id: 'calendar', name: 'Calendar', icon: Clock },
   { id: 'academy', name: 'Academy', icon: GraduationCap },
-  { id: 'billing', name: 'Billing', icon: CreditCard },
+  { id: 'billing', name: 'Payouts', icon: Wallet },
   { id: 'profile', name: 'Settings', icon: User },
 ];
  
