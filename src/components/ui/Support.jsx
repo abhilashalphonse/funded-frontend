@@ -85,7 +85,7 @@ export default function Support() {
                   </p>
 
                   <a
-                    href="mailto:support@acgforex.com"
+                    href="mailto:support@acgfunded.com"
                     className="group mt-7 flex min-h-12 w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-zinc-200 sm:w-fit sm:min-w-[240px]"
                   >
                     <span className="flex items-center gap-2.5">
@@ -110,10 +110,10 @@ export default function Support() {
                   <div className="mt-5">
                     <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-600">Support email</p>
                     <a
-                      href="mailto:support@acgforex.com"
+                      href="mailto:support@acgfunded.com"
                       className="mt-1.5 inline-block text-sm text-zinc-400 transition-colors hover:text-white"
                     >
-                      support@acgforex.com
+                      support@acgfunded.com
                     </a>
                   </div>
                 </div>
