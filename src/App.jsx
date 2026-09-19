@@ -215,7 +215,7 @@ function App() {
     }
   };
 
-  const isAdminPath = typeof window !== "undefined" && window.location.pathname.replace(/\\/+$/, "").startsWith("/admin");
+const isAdminPath = typeof window !== "undefined" && window.location.pathname.replace(/\/+$/, "").startsWith("/admin");
 
   if (isAdminPath) {
     if (!user) {
