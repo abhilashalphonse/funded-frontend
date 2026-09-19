@@ -31,22 +31,30 @@ export const AuthProvider = ({ children }) => {
 
   // Auth functions
   // Modify this line inside your AuthContext.jsx to capture the extra user data
-const signUp = useCallback((email, password, metadata) => 
-  supabase.auth.signUp({ 
-    email, 
-    password, 
-    options: { data: metadata } 
-  }), []);
+const signUp = useCallback((email, password, metadata) => {
+  const emailRedirectTo = typeof window !== 'undefined'
+    ? `${window.location.origin}/auth/callback`
+    : undefined;
+
+  return supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: metadata,
+      emailRedirectTo,
+    },
+  });
+}, []);
   const signIn = useCallback((email, password) => supabase.auth.signInWithPassword({ email, password }), []);
   const signInWithGoogle = useCallback(() =>
     supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     }), []);
   const signOut = useCallback(() => supabase.auth.signOut(), []);
   const resetPassword = useCallback((email) =>
     supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}/auth/callback`,
     }), []);
   const getAccessToken = useCallback(async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
