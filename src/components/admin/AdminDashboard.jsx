@@ -32,18 +32,23 @@ const NAV = [
   { label: "Growth", items: [
     { id: "funnel", label: "Funnel", icon: BarChart3 },
     { id: "revenue", label: "Revenue", icon: Activity },
+    { id: "affiliates", label: "Affiliates", icon: Users },
   ] },
   { label: "Support", items: [{ id: "support", label: "Cases", icon: LifeBuoy }] },
   { label: "Operations", items: [
-    { id: "system", label: "System & Integrations", icon: Activity },
     { id: "jobs", label: "Jobs", icon: FileClock },
+    { id: "integrations", label: "Integrations", icon: Activity },
+    { id: "errors", label: "Errors", icon: AlertTriangle },
   ] },
   { label: "Configuration", items: [
     { id: "products", label: "Challenge Products", icon: Settings2 },
     { id: "pricing", label: "Pricing", icon: SlidersHorizontal },
     { id: "platforms", label: "Trading Platforms", icon: Gauge },
   ] },
-  { label: "Admin", items: [{ id: "audit", label: "Audit Log", icon: FileClock }] },
+  { label: "Admin", items: [
+    { id: "admins", label: "Admin Users", icon: Users },
+    { id: "audit", label: "Audit Log", icon: FileClock },
+  ] },
 ];
 
 const TITLES = {
@@ -61,11 +66,14 @@ const TITLES = {
   funnel: ["Funnel", "Acquisition to paid challenge conversion"],
   revenue: ["Revenue", "Revenue and paid-order performance"],
   support: ["Support Cases", "Customer conversations escalated for human review"],
-  system: ["System & Integrations", "Operational configuration and service readiness"],
   jobs: ["Jobs", "Background work and provisioning operations"],
+  integrations: ["Integrations", "Operational configuration and service readiness"],
+  errors: ["Errors", "Application and integration failures requiring attention"],
   products: ["Challenge Products", "Published challenge definitions and versions"],
   pricing: ["Pricing", "Commercial pricing configuration"],
   platforms: ["Trading Platforms", "Available trading integrations"],
+  affiliates: ["Affiliates", "Acquisition partners, attributed sales and commissions"],
+  admins: ["Admin Users", "Accounts authorized to operate the admin dashboard"],
   audit: ["Audit Log", "Immutable record of privileged admin actions"],
 };
 
@@ -221,7 +229,8 @@ export default function AdminDashboard() {
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
     if (page === "support") return `/support?limit=100${s}`;
     if (page === "audit") return "/audit?limit=100";
-    if (["system", "jobs", "payouts", "refunds", "products", "pricing", "platforms"].includes(page)) return "/system";
+    if (page === "admins") return "/admin-users";
+    if (["jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
     return "/overview";
   }, [page, search, status, days]);
 
@@ -291,7 +300,7 @@ export default function AdminDashboard() {
 
   const rows = data?.rows || [];
 
-  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "system", "jobs", "payouts", "refunds", "products", "pricing", "platforms", "audit"].includes(page);
+  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
 
   const renderOverview = () => {
     const k = data?.kpis || {};
@@ -487,7 +496,13 @@ export default function AdminDashboard() {
     if (page === "funnel") return renderFunnel();
     if (page === "revenue") return renderRevenue();
     if (page === "support") return renderSupport();
-    if (page === "system") return renderSystem();
+    if (page === "integrations" || page === "platforms") return renderSystem();
+    if (page === "admins") return <div className="space-y-4"><DataTable rows={rows} columns={[
+      { key: "email", label: "Admin" },
+      { key: "role", label: "Role" },
+      { key: "source", label: "Source" },
+      { key: "current", label: "Current", render: r => r.current ? <Badge>ACTIVE</Badge> : "—" },
+    ]} /><p className="text-xs text-zinc-600">{data?.note}</p></div>;
     if (page === "audit") return renderAudit();
     if (page === "payouts") return unavailable("Payout workflow is not connected yet", "Funded-review accounts are visible, but the backend currently has no payout entity or payout processing lifecycle.", "payouts");
     if (page === "refunds") return unavailable("Refund workflow is not connected yet", "Payments can reach REFUNDED from the provider, but there is not yet a first-class admin refund request/approval workflow.", "refunds");
@@ -495,6 +510,8 @@ export default function AdminDashboard() {
     if (page === "pricing") return unavailable("Pricing admin is not connected yet", "Pricing is currently code-driven. Publishing mutable pricing without version snapshots would risk changing historical challenge terms.", "pricingAdmin");
     if (page === "platforms") return renderSystem();
     if (page === "jobs") return unavailable("Job inspection is not exposed yet", "The backend uses pg-boss workers, but there is no safe operator read API for job payloads/retries yet. Do not expose raw queue controls without idempotency and permissions.");
+    if (page === "errors") return unavailable("Central error inbox is not exposed yet", "Runtime errors are logged today, but they are not yet stored as first-class incident records that can be resolved or reopened safely.");
+    if (page === "affiliates") return unavailable("Affiliate operations are not connected yet", "Attribution fields already exist in analytics and payments, but there is no affiliate entity, commission ledger or payout workflow yet.", "affiliates");
     return null;
   };
 
