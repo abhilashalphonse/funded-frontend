@@ -8,9 +8,30 @@ import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
 import { captureAttribution, getAnalyticsSessionId, trackEvent } from "./utils/analytics.js";
 
+function isAuthCallbackLocation() {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname.replace(/\/+$/, "");
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return path === "/auth/callback"
+    || query.has("code")
+    || query.has("token_hash")
+    || hash.has("access_token")
+    || hash.has("refresh_token")
+    || ["signup", "recovery", "email_change", "magiclink"].includes(query.get("type"))
+    || ["signup", "recovery", "email_change", "magiclink"].includes(hash.get("type"));
+}
+
+function cleanAuthCallbackUrl() {
+  if (typeof window === "undefined") return;
+  if (!isAuthCallbackLocation()) return;
+  window.history.replaceState({}, document.title, "/");
+}
+
 function App() {
   const [screen, setScreen] = useState(() => {
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment")) return "payment";
+    if (isAuthCallbackLocation()) return "auth-callback";
     return "homepage";
   });
   const [selectedPlan, setSelectedPlan] = useState(() => {
@@ -31,7 +52,7 @@ function App() {
     if (typeof window === "undefined") return null;
     return window.sessionStorage.getItem("acg:postAuthScreen");
   });
-  const { user, getAccessToken } = useAuth();
+  const { user, loading: authLoading, getAccessToken } = useAuth();
   const checkoutEmailHint = typeof window !== "undefined"
     ? window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""
     : "";
@@ -40,6 +61,18 @@ function App() {
   useEffect(() => {
     captureAttribution();
   }, []);
+
+  useEffect(() => {
+    if (screen !== "auth-callback" || authLoading) return;
+    if (user) {
+      cleanAuthCallbackUrl();
+      setScreen("dashboard");
+      return;
+    }
+    cleanAuthCallbackUrl();
+    setPostAuthScreen("dashboard");
+    setScreen("auth");
+  }, [authLoading, screen, user]);
 
   useEffect(() => {
     if (!user || typeof window === "undefined") return;
@@ -180,6 +213,17 @@ function App() {
       setTrialCreating(false);
     }
   };
+
+  if (screen === "auth-callback") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-black px-6 text-center text-white">
+        <div>
+          <div className="mx-auto size-7 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+          <p className="mt-4 text-[13px] font-medium text-neutral-300">Confirming your email…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === "dashboard" && user) {
     return (
