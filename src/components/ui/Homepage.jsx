@@ -7,6 +7,7 @@ import Support from './Support';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import BuildChallenge from './BuildChallenge';
+import FreeTrialSection from './FreeTrialSection';
 import { captureAttribution, trackEvent } from '../../utils/analytics.js';
 
 function Homepage({ onSignIn, onDashboard, onGetStarted, onSelectPlan, onFreeTrial }) {
@@ -38,6 +39,10 @@ function Homepage({ onSignIn, onDashboard, onGetStarted, onSelectPlan, onFreeTri
       <Navbar onSignIn={onSignIn} onDashboard={onDashboard} onGetStarted={() => startChallenge("navbar")} />
       <Hero onGetStarted={() => startChallenge("hero")} onFreeTrial={() => startTrial("hero_badge")} onSeeHowItWorks={scrollToHowItWorks} />
       <TrustSection />
+      <FreeTrialSection
+        onStartTrial={() => startTrial("landing_free_trial_section")}
+        onViewChallenges={scrollToChallenges}
+      />
       <div id="challenges">
         <BuildChallenge onSelectPlan={onSelectPlan} />
       </div>
