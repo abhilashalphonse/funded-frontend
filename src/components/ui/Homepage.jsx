@@ -39,14 +39,14 @@ function Homepage({ onSignIn, onDashboard, onGetStarted, onSelectPlan, onFreeTri
       <Navbar onSignIn={onSignIn} onDashboard={onDashboard} onGetStarted={() => startChallenge("navbar")} />
       <Hero onGetStarted={() => startChallenge("hero")} onFreeTrial={() => startTrial("hero_badge")} onSeeHowItWorks={scrollToHowItWorks} />
       <TrustSection />
-      <FreeTrialSection
-        onStartTrial={() => startTrial("landing_free_trial_section")}
-        onViewChallenges={scrollToChallenges}
-      />
       <div id="challenges">
         <BuildChallenge onSelectPlan={onSelectPlan} />
       </div>
       <HowItWorksSection onGetFunded={() => startChallenge("how_it_works")} onLearnMore={scrollToChallenges} />
+      <FreeTrialSection
+        onStartTrial={() => startTrial("landing_free_trial_section")}
+        onViewChallenges={scrollToChallenges}
+      />
       <Proof />
       <Support />
       <Footer />
