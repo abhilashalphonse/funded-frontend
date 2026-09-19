@@ -67,7 +67,109 @@ export default function SupportAssistant() {
       }
     })();
 
-    return (
+    return () => { cancelled = true; };
+  }, [conversationId, getAccessToken, open, sessionId, user?.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    });
+  }, [messages, open, sending]);
+
+  async function sendMessage(prefill) {
+    const text = String(prefill ?? input).trim();
+    if (!text || sending) return;
+
+    setInput("");
+    setError("");
+    setMessages(current => [...current, { role: "user", content: text }]);
+    setSending(true);
+
+    try {
+      const token = await getAccessToken().catch(() => null);
+      const response = await fetch(`${API_URL}/api/support/message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "x-acg-support-session": sessionId,
+        },
+        body: JSON.stringify({
+          sessionId,
+          conversationId: conversationId || undefined,
+          message: text,
+          pageContext: typeof window !== "undefined" ? window.location.pathname : "/",
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.data?.answer) {
+        throw new Error(payload?.message || "Support is temporarily unavailable.");
+      }
+
+      const nextConversationId = payload.data.conversationId;
+      if (nextConversationId && nextConversationId !== conversationId) {
+        setConversationId(nextConversationId);
+        window.localStorage.setItem(CONVERSATION_KEY, nextConversationId);
+      }
+      setStatus(payload.data.status || "OPEN");
+      setMessages(current => [...current, { role: "assistant", content: payload.data.answer }]);
+    } catch (requestError) {
+      setError(requestError?.message || "Support is temporarily unavailable.");
+      setMessages(current => [
+        ...current,
+        {
+          role: "assistant",
+          content: "I couldn’t send that message. You can retry, or email support@acgfunded.com if the issue is urgent.",
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function requestHuman() {
+    if (!conversationId || sending) {
+      setMessages(current => [
+        ...current,
+        { role: "assistant", content: "Send me a short description first and I’ll attach it to the support handoff." },
+      ]);
+      return;
+    }
+
+    setSending(true);
+    setError("");
+    try {
+      const token = await getAccessToken().catch(() => null);
+      const response = await fetch(
+        `${API_URL}/api/support/conversations/${encodeURIComponent(conversationId)}/escalate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            "x-acg-support-session": sessionId,
+          },
+          body: JSON.stringify({ sessionId, reason: "CUSTOMER_REQUESTED" }),
+        },
+      );
+      if (!response.ok) throw new Error("Unable to request human support.");
+      setStatus("ESCALATED");
+      setMessages(current => [
+        ...current,
+        {
+          role: "assistant",
+          content: "This conversation is now flagged for human review. You won’t need to repeat the details already in this chat.",
+        },
+      ]);
+    } catch (requestError) {
+      setError(requestError?.message || "Unable to request human support.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
     <>
       {open && (
         <>
@@ -142,11 +244,9 @@ export default function SupportAssistant() {
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[82%] whitespace-pre-wrap break-words px-3.5 py-2.5 text-[13px] leading-[1.55] ${
-                      message.role === "user"
-                        ? "rounded-[18px] rounded-br-[6px] bg-white text-black"
-                        : "rounded-[18px] rounded-bl-[6px] bg-[#171719] text-zinc-200"
-                    }`}
+                    className={`max-w-[82%] whitespace-pre-wrap break-words px-3.5 py-2.5 text-[13px] leading-[1.55] ${message.role === "user"
+                      ? "rounded-[18px] rounded-br-[6px] bg-white text-black"
+                      : "rounded-[18px] rounded-bl-[6px] bg-[#171719] text-zinc-200"}`}
                   >
                     {message.content}
                   </div>
