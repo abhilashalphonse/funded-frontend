@@ -1445,6 +1445,27 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               trialChecking={trialChecking}
               launchError={launchError}
             />
+
+            {activeTab === "overview" && (
+              <div className="mb-4 sm:hidden">
+                <button
+                  type="button"
+                  onClick={handleOpenTrader}
+                  disabled={traderLaunching || trialChecking}
+                  className="flex min-h-12 w-full items-center justify-between rounded-xl bg-white px-4 text-left text-black shadow-[0_10px_30px_rgba(0,0,0,.18)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[12px] font-semibold">
+                      {traderLaunching ? "Opening ACG Trader…" : trialChecking ? "Preparing ACG Trader…" : "Open ACG Trader"}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[9px] font-medium text-black/55">
+                      {activeChallenge ? "Trade your selected account" : "Start with a free trial"}
+                    </span>
+                  </span>
+                  <ArrowUpRight size={17} className="ml-3 shrink-0" />
+                </button>
+              </div>
+            )}
             {workspaceLoading
               ? (
                 <div className="grid min-h-[240px] place-items-center rounded-2xl border border-white/[0.08] bg-[#090b0f] text-[12px] font-semibold text-[#718092]">
