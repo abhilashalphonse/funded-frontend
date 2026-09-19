@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, LogIn } from "lucide-react";
+import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, CreditCard, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
 import { useAuth } from "../AuthContext.jsx";
 import { getAnalyticsSessionId, getAttribution } from "../utils/analytics.js";
@@ -77,6 +77,32 @@ function EmailField({ email, onChange, locked = false }) {
     </div>
     <p className="text-[11px] text-zinc-600">{locked ? "This challenge will be linked to your signed-in account." : "Use the email you want to use for your ACG account."}</p>
   </div>;
+}
+
+function PaymentMethodSelector() {
+  return (
+    <div className="grid grid-cols-2 gap-2" aria-label="Payment methods">
+      <button
+        type="button"
+        disabled
+        aria-disabled="true"
+        className="flex min-h-12 cursor-not-allowed items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.01] px-3.5 text-left opacity-45"
+      >
+        <span className="flex items-center gap-2 text-xs font-semibold text-zinc-400">
+          <CreditCard className="h-4 w-4" />
+          Card
+        </span>
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-zinc-600">Unavailable</span>
+      </button>
+      <div className="flex min-h-12 items-center justify-between rounded-lg border border-white bg-white px-3.5 text-left text-black">
+        <span className="flex items-center gap-2 text-xs font-semibold">
+          <Bitcoin className="h-4 w-4" />
+          Crypto
+        </span>
+        <Check className="h-3.5 w-3.5" />
+      </div>
+    </div>
+  );
 }
 
 function CryptoPaymentPanel({ method, onMethodChange }) {
@@ -202,6 +228,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     <p className="mb-6 text-xs text-zinc-500">Complete your payment to activate your challenge.</p>
     <div className="space-y-5">
       <EmailField email={email} onChange={onEmailChange} locked={emailLocked} />
+      <PaymentMethodSelector />
       <CryptoPaymentPanel method={method} onMethodChange={setMethod} />
       <Terms checked={termsAccepted} onChange={setTermsAccepted} />
       {notice && <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{notice}</span></div>}
