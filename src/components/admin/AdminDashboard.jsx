@@ -84,6 +84,14 @@ const money = (value, currency = "EUR") => {
 
 const dateTime = value => value ? new Date(value).toLocaleString() : "—";
 const pct = value => `${Number(value || 0).toFixed(2)}%`;
+const lossPct = (lossAmount, baseAmount) => {
+  const loss = Number(lossAmount || 0);
+  const base = Number(baseAmount || 0);
+  if (!Number.isFinite(loss) || !Number.isFinite(base) || base <= 0) return "0.00%";
+  return `${((loss / base) * 100).toFixed(2)}%`;
+};
+const lossBase = account => Number(account?.initialDeposit || account?.accountSize || 0);
+const lossLimitAmount = (account, rulePercent) => lossBase(account) * Number(rulePercent || 0) / 100;
 const statusTone = status => {
   const s = String(status || "").toUpperCase();
   if (["PAID", "ACTIVE", "FUNDED", "PASSED", "HEALTHY", "CONFIGURED", "OPEN"].includes(s)) return "text-emerald-300 bg-emerald-400/10 border-emerald-400/20";
@@ -395,7 +403,11 @@ export default function AdminDashboard() {
     { key: "currentPhase", label: "Phase", render: r => r.currentPhase || 1 },
     { key: "platform", label: "Platform" },
     { key: "profit", label: "Profit", render: r => money(r.projections?.profit || 0, "USD") },
-    { key: "dailyLoss", label: "Daily Loss", render: r => pct(r.projections?.dailyLoss || 0) },
+    {
+      key: "dailyLoss",
+      label: "Daily Loss",
+      render: r => `${lossPct(r.projections?.dailyLoss, lossBase(r))} · ${money(r.projections?.dailyLoss || 0, "USD")}`,
+    },
     { key: "tradingDays", label: "Days", render: r => r.projections?.tradingDays || 0 },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ];
@@ -581,7 +593,19 @@ export default function AdminDashboard() {
       {selected && ["challenges","trials","funded","breaches"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load account" text={selectedDetail.error} /> : <>
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={money(accountDetail?.projections?.profit || 0,"USD")} /></div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3"><Kpi label="Daily Loss" value={pct(accountDetail?.projections?.dailyLoss)} /><Kpi label="Total Loss" value={pct(accountDetail?.projections?.totalLoss)} /><Kpi label="Trading Days" value={accountDetail?.projections?.tradingDays || 0} /></div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Kpi
+              label="Daily Loss"
+              value={lossPct(accountDetail?.projections?.dailyLoss, lossBase(accountDetail))}
+              detail={`${money(accountDetail?.projections?.dailyLoss || 0, "USD")} of ${money(lossLimitAmount(accountDetail, accountDetail?.rules?.dailyDrawdown), "USD")} limit`}
+            />
+            <Kpi
+              label="Total Loss"
+              value={lossPct(accountDetail?.projections?.totalLoss, lossBase(accountDetail))}
+              detail={`${money(accountDetail?.projections?.totalLoss || 0, "USD")} of ${money(lossLimitAmount(accountDetail, accountDetail?.rules?.maxDrawdown), "USD")} limit`}
+            />
+            <Kpi label="Trading Days" value={accountDetail?.projections?.tradingDays || 0} />
+          </div>
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">State</p><div className="mt-2"><Badge>{accountDetail?.status}</Badge></div></div><div className="flex flex-wrap gap-2">
             {["ACTIVE","PHASE_2","FUNDED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
             {accountDetail?.status === "LOCKED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"UNLOCK",label:"Unlock account"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300">Unlock</button>}
