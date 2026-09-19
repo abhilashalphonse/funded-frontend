@@ -6,6 +6,7 @@ import Auth from "./components/ui/Auth.jsx";
 import Dashboard from "./components/ui/Dashboard.jsx";
 import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
+import AdminDashboard from "./components/admin/AdminDashboard.jsx";
 import { captureAttribution, getAnalyticsSessionId, trackEvent } from "./utils/analytics.js";
 
 function isAuthCallbackLocation() {
@@ -213,6 +214,15 @@ function App() {
       setTrialCreating(false);
     }
   };
+
+  const isAdminPath = typeof window !== "undefined" && window.location.pathname.replace(/\\/+$/, "").startsWith("/admin");
+
+  if (isAdminPath) {
+    if (!user) {
+      return <Auth onBack={() => { window.location.href = "/"; }} initialView="login" />;
+    }
+    return <AdminDashboard />;
+  }
 
   if (screen === "auth-callback") {
     return (
