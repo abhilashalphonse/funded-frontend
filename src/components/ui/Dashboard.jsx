@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
 import { getAnalyticsSessionId } from "../../utils/analytics.js";
+import Academy from "../academy/Academy.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -106,7 +107,7 @@ const pct = (value) => {
 
 const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 0));
 
-const OverviewSection = ({ account, onStartTrial, onNewChallenge }) => {
+const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyLesson }) => {
   if (!account) {
     return (
       <div className="grid min-h-[360px] place-items-center rounded-xl border border-white/[0.08] bg-[#080808] px-6 text-center">
@@ -210,8 +211,8 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge }) => {
             <ShieldCheck size={16} className="text-[#777]" />
           </div>
           <div className="mt-5 space-y-5">
-            <RiskBufferRow label="Daily loss remaining" amount={dailyRemaining} usage={dailyUsagePct} />
-            <RiskBufferRow label="Maximum loss remaining" amount={maxRemaining} usage={maxUsagePct} />
+            <RiskBufferRow label="Daily loss remaining" amount={dailyRemaining} usage={dailyUsagePct} onLearn={() => onOpenAcademyLesson?.("daily-loss")} />
+            <RiskBufferRow label="Maximum loss remaining" amount={maxRemaining} usage={maxUsagePct} onLearn={() => onOpenAcademyLesson?.("maximum-loss")} />
           </div>
           <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-4">
             <CompactStat label="Used margin" value={money(usedMargin)} />
@@ -285,7 +286,7 @@ function ProgressRow({ label, value, target, progress }) {
   );
 }
 
-function RiskBufferRow({ label, amount, usage }) {
+function RiskBufferRow({ label, amount, usage, onLearn = null }) {
   const width = clampPercent(usage);
   const barClass = width >= 80 ? "bg-rose-400" : width >= 55 ? "bg-amber-400" : "bg-emerald-400";
   return (
@@ -297,7 +298,12 @@ function RiskBufferRow({ label, amount, usage }) {
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.07]">
         <div className={`h-full rounded-full transition-[width] duration-500 ${barClass}`} style={{ width: `${width}%` }} />
       </div>
-      <p className="mt-1.5 text-right text-[9px] text-[#5f5f5f]">{width.toFixed(1)}% of limit used</p>
+      <div className="mt-1.5 flex items-center justify-between gap-3">
+        {onLearn ? (
+          <button type="button" onClick={onLearn} className="text-[9px] font-medium text-[#777] underline decoration-white/15 underline-offset-2 transition hover:text-white">Learn how this rule works</button>
+        ) : <span />}
+        <p className="text-right text-[9px] text-[#5f5f5f]">{width.toFixed(1)}% of limit used</p>
+      </div>
     </div>
   );
 }
@@ -757,104 +763,6 @@ const TradersSection = () => {
     </div>
   );
 };
-const AcademySection = () => {
-  return (
-    <div className="space-y-8 animate-fade-in">
-      <section className="bg-gradient-to-r from-[#0A0C12] to-white/[0.02] rounded-2xl border border-white/[0.08] p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 bg-white/[0.08] text-white text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border border-white/[0.15]">Institutional Training Hub</div>
-          <h1 className="text-xl font-bold text-white tracking-tight">ACG Elite Trading Academy</h1>
-          <p className="text-xs text-gray-400 max-w-xl">Master the algorithmic frameworks required to pass your Evaluation Challenges and scale simulated assets safely.</p>
-        </div>
-        <div className="bg-white/[0.05] border border-white/[0.08] rounded-xl p-4 min-w-[200px] w-full md:w-auto">
-          <div className="flex justify-between text-xs font-semibold mb-1.5"><span className="text-gray-400">Curriculum Progress</span><span className="text-white">35%</span></div>
-          <div className="w-full bg-white/[0.06] h-1.5 rounded-full overflow-hidden"><div className="bg-white h-full w-[35%] rounded-full"></div></div>
-          <p className="text-[10px] text-gray-500 mt-2 flex items-center gap-1"><Award size={12} className="text-white" /> 2 of 6 Modules Completed</p>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">Core Syllabus Packages</h2><span className="text-xs text-gray-500">Updated for 2026 Algorithms</span></div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3 2xl:gap-6">
-          <div className="bg-[#0A0C12] border border-white/[0.08] hover:border-white/[0.1] rounded-2xl p-5 flex flex-col justify-between space-y-5 transition group">
-            <div className="space-y-3">
-              <div className="flex justify-between items-start">
-                <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center text-white"><BarChart3 size={18} /></div>
-                <span className="text-[10px] font-bold bg-white/[0.06] text-gray-400 px-2 py-0.5 rounded uppercase tracking-wider">Foundation</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white group-hover:text-white transition">1. Market Structure Principles</h3>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">Break away from retail chart patterns. Map institutional order flow trends utilizing structural shifts.</p>
-              </div>
-              <div className="pt-2 space-y-1.5 border-t border-white/[0.07] text-[11px] text-gray-300">
-                <div><span className="text-gray-200 font-bold">✓</span> Break of Structure (BOS) vs CHoCH</div>
-                <div><span className="text-gray-200 font-bold">✓</span> Swing Highs/Lows Mapping</div>
-                <div className="text-gray-600">● Multi-Timeframe Fractality alignment</div>
-              </div>
-            </div>
-            <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 text-center text-xs font-medium text-gray-500">Module content coming soon</div>
-          </div>
-
-          <div className="bg-[#0A0C12] border border-white/[0.18] bg-gradient-to-b from-[#0A0C12] via-[#0A0C12] to-white/[0.03] rounded-2xl p-5 flex flex-col justify-between space-y-5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 bg-white text-black text-[9px] font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">Active</div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-start">
-                <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.15] flex items-center justify-center text-white"><Gem size={18} /></div>
-                <span className="text-[10px] font-bold bg-white/[0.15] text-white px-2 py-0.5 rounded uppercase tracking-wider">Advanced</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white group-hover:text-white transition">2. Order Flow & Liquidity</h3>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">Identify where retail stops sit. Trade alongside institutional order sweeps and execution setups.</p>
-              </div>
-              <div className="pt-2 space-y-1.5 border-t border-white/[0.07] text-[11px] text-gray-300">
-                <div><span className="text-white font-mono">→</span> Order Blocks & Fair Value Gaps (FVG)</div>
-                <div><span className="text-white font-mono">→</span> Liquidity Pools & Inducement Zones</div>
-                <div className="text-gray-600">● Premium vs Discount Pricing arrays</div>
-              </div>
-            </div>
-            <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 text-center text-xs font-medium text-gray-500">Module content coming soon</div>
-          </div>
-
-          <div className="bg-[#0A0C12] border border-white/[0.08] opacity-85 rounded-2xl p-5 flex flex-col justify-between space-y-5 transition group">
-            <div className="space-y-3">
-              <div className="flex justify-between items-start">
-                <div className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.12] flex items-center justify-center text-gray-400"><User size={18} /></div>
-                <span className="text-[10px] font-bold bg-white/[0.06] text-gray-400 px-2 py-0.5 rounded uppercase tracking-wider">Elite</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">3. Psychological Scale Frameworks</h3>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">Manage emotional drawdowns under strict simulated evaluation thresholds.</p>
-              </div>
-              <div className="pt-2 space-y-1.5 border-t border-white/[0.07] text-[11px] text-gray-500 space-y-1">
-                <div className="flex items-center gap-1.5"><Lock size={10} /> Over-trading Regulation Systems</div>
-                <div className="flex items-center gap-1.5"><Lock size={10} /> Dissociating Simulated Sizes</div>
-              </div>
-            </div>
-            <div className="w-full rounded-xl border border-white/[0.12] bg-white/[0.04] py-2 text-center text-xs font-medium text-gray-500"><span className="inline-flex items-center gap-1.5"><Lock size={12} /> Locked until Phase 1</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#0A0C12] rounded-2xl border border-white/[0.08] p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">Smart Money Concept (SMC) Masterclass</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Interactive algorithm trace session with certified prop evaluators.</p>
-          </div>
-          <span className="text-[11px] font-medium text-white bg-white/[0.06] border border-white/[0.15] px-2.5 py-1 rounded-lg self-start sm:self-auto">Live Stream Tomorrow @ 15:00 GMT</span>
-        </div>
-        <div className="relative aspect-video rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-center items-center p-6 text-center overflow-hidden">
-          <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-          <div className="w-14 h-14 rounded-full bg-white/[0.08] text-gray-500 flex items-center justify-center z-10"><Play size={20} className="ml-1" /></div>
-          <div className="mt-4 max-w-sm z-10">
-            <h4 className="text-xs font-bold text-white tracking-wide">Liquidity Inducement vs. True Breakouts</h4>
-            <p className="text-[11px] text-gray-400 mt-1">Session access will appear here when the academy launches.</p>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
 const BillingSection = ({ userName }) => {
   return (
     <div className="space-y-8 animate-fade-in">
@@ -1052,6 +960,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const [launchError, setLaunchError] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [academyInitialLesson, setAcademyInitialLesson] = useState(null);
 
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Trader";
   const userInitials = userName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "TR";
@@ -1184,7 +1093,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
     switch (activeTab) {
       case 'overview':
-        return <OverviewSection {...propsPayload} account={activeChallenge} onStartTrial={onFreeTrial} onNewChallenge={onNewChallenge} />;
+        return <OverviewSection {...propsPayload} account={activeChallenge} onStartTrial={onFreeTrial} onNewChallenge={onNewChallenge} onOpenAcademyLesson={(lessonId) => { setAcademyInitialLesson(lessonId); setActiveTab("academy"); }} />;
       case 'analytics':
         return <AnalyticsSection account={activeChallenge} />;
       case 'calendar':
@@ -1192,7 +1101,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       case 'traders':
         return <TradersSection />;
       case 'academy':
-        return <AcademySection />;
+        return <Academy initialLessonId={academyInitialLesson} onLessonOpened={setAcademyInitialLesson} />;
       case 'billing':
         return <BillingSection {...propsPayload} />;
       case 'leaderboard':
@@ -1397,6 +1306,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                     <button
                       key={item.id}
                       onClick={() => {
+                        if (item.id === "academy") setAcademyInitialLesson(null);
                         setActiveTab(item.id);
                         setIsSidebarOpen(false);
                       }}
@@ -1477,16 +1387,17 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-white/[0.08] bg-black/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-white/[0.08] bg-black/95 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur lg:hidden">
         {[
           { id: "overview", label: "Overview", icon: LayoutDashboard },
           { id: "analytics", label: "Performance", icon: BarChart3 },
           { id: "calendar", label: "Calendar", icon: Clock },
+          { id: "academy", label: "Academy", icon: GraduationCap },
         ].map(item => {
           const Icon = item.icon;
           const active = activeTab === item.id;
           return (
-            <button key={item.id} type="button" onClick={() => setActiveTab(item.id)} className={`flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] ${active ? "text-white" : "text-[#666]"}`}>
+            <button key={item.id} type="button" onClick={() => { if (item.id === "academy") setAcademyInitialLesson(null); setActiveTab(item.id); }} className={`flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[9px] ${active ? "text-white" : "text-[#666]"}`}>
               <Icon size={16} />
               <span>{item.label}</span>
             </button>
