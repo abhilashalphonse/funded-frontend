@@ -96,10 +96,10 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
       <button
         type="button"
         onClick={onOpenTrader}
-        disabled={workspaceLoading || traderLaunching || trialChecking}
+        disabled={loading || traderLaunching || trialChecking}
         className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50 sm:inline-flex"
       >
-        {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
+        {loading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
       </button>
     </header>
   );
