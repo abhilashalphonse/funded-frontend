@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LayoutDashboard, LogOut } from 'lucide-react';
 import logo from '../../assets/ACG.png';
 import { useAuth } from '../../AuthContext.jsx';
 
@@ -109,22 +109,24 @@ export default function Navbar({
           ))}
           <div className="pt-6 border-t border-white/[0.08] flex flex-col gap-4">
             {user ? (
-              <>
+              <div className="flex flex-col gap-1">
                 <button
                   type="button"
                   onClick={() => closeAndRun(onDashboard)}
-                  className="w-full text-left text-white font-medium"
+                  className="flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.05]"
                 >
-                  Dashboard
+                  <LayoutDashboard size={17} strokeWidth={1.9} className="text-white/70" />
+                  <span>Dashboard</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="w-full bg-white text-black py-2 rounded-full font-medium text-sm"
+                  className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-medium text-white/55 transition-colors hover:bg-white/[0.04] hover:text-white"
                 >
-                  Sign Out
+                  <LogOut size={16} strokeWidth={1.8} />
+                  <span>Sign out</span>
                 </button>
-              </>
+              </div>
             ) : (
               <>
                 <button
