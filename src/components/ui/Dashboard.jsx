@@ -478,7 +478,20 @@ const AnalyticsSection = ({ account }) => {
     </div>
   );
 };
-const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, activeChallenge }) => {
+const ProfileSection = ({
+  userName,
+  userInitials,
+  userEmail,
+  userMetadata = {},
+  activeChallenge,
+  tradingCredential,
+  credentialLoading,
+  credentialError,
+  credentialPasswordVisible,
+  onRevealTradingPassword = () => {},
+  onResetTradingPassword = () => {},
+  onCopyCredential = () => {},
+}) => {
   const profileName = String(userMetadata?.full_name || userMetadata?.name || "").trim();
   const nameParts = profileName.split(/\s+/).filter(Boolean);
   const firstName = userMetadata?.first_name || nameParts[0] || "";
@@ -549,6 +562,50 @@ const ProfileSection = ({ userName, userInitials, userEmail, userMetadata = {}, 
               Security and notification settings will appear here when they are available for your account.
             </p>
           </div>
+
+          {activeChallenge?.platform === "acg-trader" && (
+            <div id="trading-credentials" className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0A0C12]">
+              <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] p-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Lock size={14} className="text-white" />
+                    <h2 className="text-[12px] font-semibold text-white">Trading credentials</h2>
+                  </div>
+                  <p className="mt-1 text-[10px] leading-4 text-zinc-600">Only needed for direct or bookmarked ACG Trader login.</p>
+                </div>
+                {credentialLoading && <RefreshCw size={13} className="mt-0.5 animate-spin text-zinc-600" />}
+              </div>
+
+              <div className="space-y-3 p-5">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/30 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <span className="block text-[8px] font-semibold uppercase tracking-[0.1em] text-zinc-600">Login</span>
+                    <span className="mt-1 block truncate font-mono text-[11px] text-white">{tradingCredential?.login || "Preparing…"}</span>
+                  </div>
+                  <button type="button" onClick={() => onCopyCredential(tradingCredential?.login)} disabled={!tradingCredential?.login} className="grid size-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label="Copy trading login"><Copy size={13} /></button>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/30 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <span className="block text-[8px] font-semibold uppercase tracking-[0.1em] text-zinc-600">Password</span>
+                    <span className="mt-1 block truncate font-mono text-[11px] text-white">{credentialPasswordVisible && tradingCredential?.password ? tradingCredential.password : "••••••••••••"}</span>
+                  </div>
+                  <div className="flex shrink-0 items-center">
+                    {credentialPasswordVisible && tradingCredential?.password && (
+                      <button type="button" onClick={() => onCopyCredential(tradingCredential.password)} className="grid size-8 place-items-center rounded-md text-zinc-500 hover:bg-white/[0.05] hover:text-white" aria-label="Copy trading password"><Copy size={13} /></button>
+                    )}
+                    <button type="button" onClick={onRevealTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="grid size-8 place-items-center rounded-md text-zinc-500 hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label={credentialPasswordVisible ? "Hide trading password" : "Reveal trading password"}>{credentialPasswordVisible ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <p className="text-[9px] leading-4 text-zinc-600">Password reveal automatically hides again after one minute.</p>
+                  <button type="button" onClick={onResetTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="shrink-0 text-[9px] font-medium text-zinc-500 underline decoration-white/10 underline-offset-2 transition hover:text-white disabled:opacity-30">Reset password</button>
+                </div>
+                {credentialError && <p className="text-[9px] leading-4 text-rose-400">{credentialError}</p>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1028,7 +1085,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     setCredentialError("");
     setCredentialPasswordVisible(false);
 
-    if (!activeChallenge?.accountId || activeChallenge?.platform !== "acg-trader") return undefined;
+    if (activeTab !== "profile" || !activeChallenge?.accountId || activeChallenge?.platform !== "acg-trader") return undefined;
 
     const load = async () => {
       setCredentialLoading(true);
@@ -1051,7 +1108,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
     void load();
     return () => { cancelled = true; };
-  }, [activeChallenge?.accountId, activeChallenge?.platform, getAccessToken]);
+  }, [activeChallenge?.accountId, activeChallenge?.platform, activeTab, getAccessToken]);
 
   const revealTradingPassword = async () => {
     if (!activeChallenge?.accountId || credentialLoading) return;
@@ -1206,7 +1263,16 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       case 'leaderboard':
         return <LeaderboardSection />;
       case 'profile':
-        return <ProfileSection {...propsPayload} />;
+        return <ProfileSection
+          {...propsPayload}
+          tradingCredential={tradingCredential}
+          credentialLoading={credentialLoading}
+          credentialError={credentialError}
+          credentialPasswordVisible={credentialPasswordVisible}
+          onRevealTradingPassword={revealTradingPassword}
+          onResetTradingPassword={resetTradingPassword}
+          onCopyCredential={copyCredential}
+        />;
       default:
         return null;
     }
@@ -1373,83 +1439,78 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
             </button>
 
-            {activeChallenge?.platform === "acg-trader" && (
-              <div className="rounded-lg border border-white/[0.08] bg-[#080808] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#555]">Direct login</p>
-                    <p className="mt-0.5 text-[9px] text-[#666]">For bookmarked ACG Trader access</p>
-                  </div>
-                  {credentialLoading && <RefreshCw size={12} className="animate-spin text-[#666]" />}
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-black px-2.5 py-2">
-                    <div className="min-w-0">
-                      <span className="block text-[8px] uppercase tracking-[0.1em] text-[#555]">Login</span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] text-white">{tradingCredential?.login || "Preparing…"}</span>
-                    </div>
-                    <button type="button" onClick={() => copyCredential(tradingCredential?.login)} disabled={!tradingCredential?.login} className="grid size-7 shrink-0 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label="Copy trading login">
-                      <Copy size={13} />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-black px-2.5 py-2">
-                    <div className="min-w-0">
-                      <span className="block text-[8px] uppercase tracking-[0.1em] text-[#555]">Password</span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] text-white">
-                        {credentialPasswordVisible && tradingCredential?.password ? tradingCredential.password : "••••••••••••"}
-                      </span>
-                    </div>
-                    <div className="flex shrink-0 items-center">
-                      {credentialPasswordVisible && tradingCredential?.password && (
-                        <button type="button" onClick={() => copyCredential(tradingCredential.password)} className="grid size-7 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white" aria-label="Copy trading password">
-                          <Copy size={13} />
-                        </button>
-                      )}
-                      <button type="button" onClick={revealTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="grid size-7 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label={credentialPasswordVisible ? "Hide trading password" : "Reveal trading password"}>
-                        {credentialPasswordVisible ? <EyeOff size={13} /> : <Eye size={13} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <button type="button" onClick={resetTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="mt-2 text-[9px] font-medium text-[#666] underline decoration-white/10 underline-offset-2 transition hover:text-white disabled:opacity-30">
-                  Reset password
-                </button>
-                {credentialError && <p className="mt-2 text-[9px] leading-4 text-rose-400">{credentialError}</p>}
-              </div>
-            )}
-
             {/* Primary actions */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => {
-                  setIsSidebarOpen(false);
-                  onNewChallenge();
-                }}
-                className="w-full h-11 lg:h-8 bg-white hover:bg-[#EBEBEB] text-black text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
-              >
-                New Challenge
-              </button>
-              <button
-                onClick={() => {
-                  setIsSidebarOpen(false);
-                  onFreeTrial();
-                }}
-                disabled={trialChecking}
-                className="w-full h-11 lg:h-8 border border-[#333333] bg-[#0A0A0A] hover:bg-[#111111] text-white text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50"
-              >
-                {trialChecking ? "Checking Trader…" : "Free Trial"}
-              </button>
+            <div>
+              <p className="mb-2 px-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555]">Start</p>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                <button 
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    onNewChallenge();
+                  }}
+                  className="h-10 w-full rounded-lg bg-white px-3 text-[12px] font-semibold text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 lg:h-8"
+                >
+                  New Challenge
+                </button>
+                <button
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    onFreeTrial();
+                  }}
+                  disabled={trialChecking}
+                  className="h-10 w-full rounded-lg border border-[#333] bg-[#0A0A0A] px-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#111] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50 lg:h-8"
+                >
+                  {trialChecking ? "Checking…" : "Free Trial"}
+                </button>
+              </div>
               {trialError && (
-                <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[11px] leading-relaxed text-amber-300">
+                <div className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[11px] leading-relaxed text-amber-300">
                   {trialError}
                 </div>
               )}
             </div>
 
-            <div> 
+            <div className="lg:hidden">
+              <p className="mb-2 px-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555]">Account</p>
+              <nav className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("billing"); setIsSidebarOpen(false); }}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${activeTab === "billing" ? "bg-[#111] text-white" : "text-[#888] hover:bg-[#0A0A0A] hover:text-[#EDEDED]"}`}
+                >
+                  <Wallet size={16} />
+                  Payouts
+                  <ChevronRight size={14} className="ml-auto text-[#555]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("profile"); setIsSidebarOpen(false); }}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${activeTab === "profile" ? "bg-[#111] text-white" : "text-[#888] hover:bg-[#0A0A0A] hover:text-[#EDEDED]"}`}
+                >
+                  <User size={16} />
+                  Settings
+                  <ChevronRight size={14} className="ml-auto text-[#555]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsSidebarOpen(false); onBack(); }}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-[#888] transition-colors hover:bg-[#0A0A0A] hover:text-[#EDEDED]"
+                >
+                  <ExternalLink size={16} />
+                  Homepage
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsSidebarOpen(false); void handleLogout(); }}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-[#888] transition-colors hover:bg-[#0A0A0A] hover:text-rose-300"
+                >
+                  <LogOut size={16} />
+                  Log out
+                </button>
+              </nav>
+            </div>
+
+            <div className="hidden lg:block"> 
               <p className="mb-2 px-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555555]">
                 Workspace
               </p>
