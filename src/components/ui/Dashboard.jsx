@@ -1253,7 +1253,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           
           <div className="flex items-center gap-2">
             {/* Replace with your logo, scaled appropriately for a 14px high nav */}
-            <img src={acg} alt="ACG Logo" className="h-5 w-auto object-contain" />
+            <img src={acg} alt="ACG Logo" className="h-7 w-auto object-contain sm:h-8" />
           </div>
         </div>
 
