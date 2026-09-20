@@ -7,7 +7,7 @@ import {
   Shield, Bell, Globe, Check, Search, ArrowUpRight, Percent, DollarSign,
   BookOpen, Play, Lock, Award, BarChart3, Wallet, 
   ExternalLink, Activity, TrendingUp, AlertTriangle, CheckCircle2, Zap,
-   Layers, ShieldCheck, Flame, AlertCircle, LogOut
+   Layers, ShieldCheck, Flame, AlertCircle, LogOut, Eye, EyeOff, Copy, RefreshCw
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
 import { getAnalyticsSessionId } from "../../utils/analytics.js";
@@ -954,6 +954,10 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [academyInitialLesson, setAcademyInitialLesson] = useState(null);
+  const [tradingCredential, setTradingCredential] = useState(null);
+  const [credentialLoading, setCredentialLoading] = useState(false);
+  const [credentialError, setCredentialError] = useState("");
+  const [credentialPasswordVisible, setCredentialPasswordVisible] = useState(false);
 
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Trader";
   const userInitials = userName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "TR";
@@ -1006,6 +1010,98 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     const stillExists = availableAccounts.some(account => account.accountId === selectedAccountId);
     if (!stillExists && defaultAccount?.accountId) setSelectedAccountId(defaultAccount.accountId);
   }, [workspace, selectedAccountId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTradingCredential(null);
+    setCredentialError("");
+    setCredentialPasswordVisible(false);
+
+    if (!activeChallenge?.accountId || activeChallenge?.platform !== "acg-trader") return undefined;
+
+    const load = async () => {
+      setCredentialLoading(true);
+      try {
+        const token = await getAccessToken();
+        if (!token) throw new Error("Your ACG Funded session has expired.");
+        const response = await fetch(
+          `${API_URL}/api/customer/accounts/${encodeURIComponent(activeChallenge.accountId)}/trading-credentials`,
+          { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+        );
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.message || "Unable to load trading credentials.");
+        if (!cancelled) setTradingCredential(payload?.data || null);
+      } catch (error) {
+        if (!cancelled) setCredentialError(error?.message || "Unable to load trading credentials.");
+      } finally {
+        if (!cancelled) setCredentialLoading(false);
+      }
+    };
+
+    void load();
+    return () => { cancelled = true; };
+  }, [activeChallenge?.accountId, activeChallenge?.platform, getAccessToken]);
+
+  const revealTradingPassword = async () => {
+    if (!activeChallenge?.accountId || credentialLoading) return;
+    if (credentialPasswordVisible) {
+      setCredentialPasswordVisible(false);
+      setTradingCredential(current => current ? { ...current, password: undefined } : current);
+      return;
+    }
+
+    setCredentialLoading(true);
+    setCredentialError("");
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Your ACG Funded session has expired.");
+      const response = await fetch(
+        `${API_URL}/api/customer/accounts/${encodeURIComponent(activeChallenge.accountId)}/trading-credentials/reveal`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.message || "Unable to reveal trading password.");
+      setTradingCredential(payload?.data || null);
+      setCredentialPasswordVisible(Boolean(payload?.data?.password));
+      if (payload?.data?.password) {
+        window.setTimeout(() => {
+          setCredentialPasswordVisible(false);
+          setTradingCredential(current => current ? { ...current, password: undefined } : current);
+        }, 60000);
+      }
+    } catch (error) {
+      setCredentialError(error?.message || "Unable to reveal trading password.");
+    } finally {
+      setCredentialLoading(false);
+    }
+  };
+
+  const resetTradingPassword = async () => {
+    if (!activeChallenge?.accountId || credentialLoading) return;
+    setCredentialLoading(true);
+    setCredentialError("");
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Your ACG Funded session has expired.");
+      const response = await fetch(
+        `${API_URL}/api/customer/accounts/${encodeURIComponent(activeChallenge.accountId)}/trading-credentials/reset`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.message || "Unable to reset trading password.");
+      setTradingCredential(payload?.data || null);
+      setCredentialPasswordVisible(Boolean(payload?.data?.password));
+    } catch (error) {
+      setCredentialError(error?.message || "Unable to reset trading password.");
+    } finally {
+      setCredentialLoading(false);
+    }
+  };
+
+  const copyCredential = async value => {
+    if (!value) return;
+    try { await navigator.clipboard.writeText(String(value)); } catch { /* clipboard unavailable */ }
+  };
 
   const handleOpenTrader = async () => {
     if (traderLaunching || trialChecking) return;
@@ -1257,6 +1353,54 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               <ArrowUpRight size={14} />
               {traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
             </button>
+
+            {activeChallenge?.platform === "acg-trader" && (
+              <div className="rounded-lg border border-white/[0.08] bg-[#080808] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#555]">Direct login</p>
+                    <p className="mt-0.5 text-[9px] text-[#666]">For bookmarked ACG Trader access</p>
+                  </div>
+                  {credentialLoading && <RefreshCw size={12} className="animate-spin text-[#666]" />}
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-black px-2.5 py-2">
+                    <div className="min-w-0">
+                      <span className="block text-[8px] uppercase tracking-[0.1em] text-[#555]">Login</span>
+                      <span className="mt-0.5 block truncate font-mono text-[11px] text-white">{tradingCredential?.login || "Preparing…"}</span>
+                    </div>
+                    <button type="button" onClick={() => copyCredential(tradingCredential?.login)} disabled={!tradingCredential?.login} className="grid size-7 shrink-0 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label="Copy trading login">
+                      <Copy size={13} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-black px-2.5 py-2">
+                    <div className="min-w-0">
+                      <span className="block text-[8px] uppercase tracking-[0.1em] text-[#555]">Password</span>
+                      <span className="mt-0.5 block truncate font-mono text-[11px] text-white">
+                        {credentialPasswordVisible && tradingCredential?.password ? tradingCredential.password : "••••••••••••"}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center">
+                      {credentialPasswordVisible && tradingCredential?.password && (
+                        <button type="button" onClick={() => copyCredential(tradingCredential.password)} className="grid size-7 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white" aria-label="Copy trading password">
+                          <Copy size={13} />
+                        </button>
+                      )}
+                      <button type="button" onClick={revealTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="grid size-7 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label={credentialPasswordVisible ? "Hide trading password" : "Reveal trading password"}>
+                        {credentialPasswordVisible ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <button type="button" onClick={resetTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="mt-2 text-[9px] font-medium text-[#666] underline decoration-white/10 underline-offset-2 transition hover:text-white disabled:opacity-30">
+                  Reset password
+                </button>
+                {credentialError && <p className="mt-2 text-[9px] leading-4 text-rose-400">{credentialError}</p>}
+              </div>
+            )}
 
             {/* Primary actions */}
             <div className="space-y-2">
