@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import logo from '../../assets/ACG.png';
 import Footer from './Footer';
+import TermsAndConditions from './TermsAndConditions';
 
 const LEGAL_PAGES = {
   '/legal/funded-account-disclaimer': {
@@ -150,12 +151,7 @@ const LEGAL_PAGES = {
   },
   '/legal/terms-and-conditions': {
     title: 'Terms & Conditions',
-    content: (
-      <p>
-        The ACG Funded Terms & Conditions will be published here before the service is made
-        generally available.
-      </p>
-    ),
+    content: <TermsAndConditions />,
   },
   '/legal/privacy-policy': {
     title: 'Privacy Policy',
@@ -211,7 +207,12 @@ export default function LegalPage({ page }) {
           <div
             className="
               space-y-5 text-[14px] leading-7 text-[#A4A8B1]
-              [&_h2]:pt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:tracking-[-0.02em] [&_h2]:text-white
+              [&_h2]:pt-7 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:tracking-[-0.02em] [&_h2]:text-white
+              [&_h3]:pt-5 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-white
+              [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-2
+              [&_li]:pl-1
+              [&_strong]:font-semibold [&_strong]:text-[#E7E9ED]
+              [&_a]:text-white [&_a]:underline [&_a]:underline-offset-4
             "
           >
             {page.content}
