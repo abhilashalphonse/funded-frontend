@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import logo from '../../assets/ACG.png';
 import Footer from './Footer';
 import TermsAndConditions from './TermsAndConditions';
+import PrivacyPolicy from './PrivacyPolicy';
 
 const LEGAL_PAGES = {
   '/legal/funded-account-disclaimer': {
@@ -155,12 +156,7 @@ const LEGAL_PAGES = {
   },
   '/legal/privacy-policy': {
     title: 'Privacy Policy',
-    content: (
-      <p>
-        The ACG Funded Privacy Policy will be published here before the service is made generally
-        available.
-      </p>
-    ),
+    content: <PrivacyPolicy />,
   },
 };
 
