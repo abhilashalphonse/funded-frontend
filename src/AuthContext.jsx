@@ -46,6 +46,17 @@ const signUp = useCallback((email, password, metadata) => {
   });
 }, []);
   const signIn = useCallback((email, password) => supabase.auth.signInWithPassword({ email, password }), []);
+  const resendSignupVerification = useCallback((email) => {
+    const emailRedirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : undefined;
+
+    return supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo },
+    });
+  }, []);
   const signInWithGoogle = useCallback(() =>
     supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -63,8 +74,8 @@ const signUp = useCallback((email, password, metadata) => {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword, getAccessToken }),
-    [user, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword, getAccessToken]
+    () => ({ user, loading, signUp, signIn, signInWithGoogle, resendSignupVerification, signOut, resetPassword, getAccessToken }),
+    [user, loading, signUp, signIn, signInWithGoogle, resendSignupVerification, signOut, resetPassword, getAccessToken]
   );
 
   return (
