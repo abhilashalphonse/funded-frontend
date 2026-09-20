@@ -597,8 +597,7 @@ const TradersSection = () => {
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-white">Verified Recent Payouts</h2>
           <p className="text-xs text-gray-400 mt-0.5">Real-time simulator rewards split processing transparency.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+        </div>        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
           {[
             { name: "Marek K.", amount: "$8,450", account: "$100k Challenge", flag: "🇨🇿", time: "2 mins ago" },
             { name: "Sarah L.", amount: "$14,210", account: "$200k Challenge", flag: "🇬🇧", time: "14 mins ago" },
@@ -1197,8 +1196,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         return <OverviewSection {...propsPayload} account={activeChallenge} onStartTrial={onFreeTrial} onNewChallenge={onNewChallenge} onOpenAcademyLesson={(lessonId) => { setAcademyInitialLesson(lessonId); setActiveTab("academy"); }} />;
       case 'analytics':
         return <AnalyticsSection account={activeChallenge} />;
-      case 'calendar':
-        return <NewsCalendar account={activeChallenge} />;
+      case 'calendar':        return <NewsCalendar account={activeChallenge} />;
       case 'traders':
         return <TradersSection />;
       case 'academy':
@@ -1225,7 +1223,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
   return (
     // Outer shell: Pure black
-    <div className="relative min-h-screen bg-[#000000] text-[#EDEDED] font-sans flex flex-col antialiased overflow-x-hidden selection:bg-white/20">
+    <div className="relative min-h-[100dvh] bg-[#000000] text-[#EDEDED] font-sans flex flex-col antialiased overflow-x-clip selection:bg-white/20 lg:h-[100dvh] lg:overflow-hidden">
 
       {/* Subtle, engineered grid (no glow) */}
       <div
@@ -1304,13 +1302,13 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         </div>
       </header>
 
-      <div className="relative z-10 flex min-w-0 flex-1">
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 lg:overflow-hidden">
         
         {/* --- SIDE NAVIGATION --- */}
         <aside className={`
-          fixed inset-y-0 left-0 top-14 z-40
-          w-[min(86vw,18rem)] bg-[#000000] border-r border-[#222222]
-          transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:top-0 lg:w-64 xl:w-72 lg:translate-x-0 lg:shrink-0
+          fixed bottom-0 left-0 top-14 z-40
+          w-[min(86vw,18rem)] overflow-y-auto overscroll-contain bg-[#000000] border-r border-[#222222]
+          transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:h-full lg:w-64 xl:w-72 lg:translate-x-0 lg:shrink-0
           transition-transform duration-200 ease-in-out flex flex-col justify-between
         `}>
           <div className="p-4 space-y-5">
@@ -1498,7 +1496,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         )}
 
         {/* --- MAIN CONTENT AREA --- */}
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className="min-h-0 min-w-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">
           <div className="dashboard-surface mx-auto w-full max-w-[1560px] px-4 py-5 pb-24 sm:px-6 sm:py-6 sm:pb-24 lg:px-7 lg:py-7 lg:pb-8 xl:px-8">
             {workspaceError && (
               <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-[12px] text-red-300">
