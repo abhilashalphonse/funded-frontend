@@ -1505,43 +1505,65 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                 {workspaceError}
               </div>
             )}
-            <PageHeader
-              activeTab={activeTab}
-              activeChallenge={activeChallenge}
-              onOpenTrader={handleOpenTrader}
-              traderLaunching={traderLaunching}
-              trialChecking={trialChecking}
-              launchError={launchError}
-              loading={workspaceLoading}
-            />
-
-            {activeTab === "overview" && (
-              <div className="mb-4 sm:hidden">
-                <button
-                  type="button"
-                  onClick={handleOpenTrader}
-                  disabled={workspaceLoading || traderLaunching || trialChecking}
-                  className="flex min-h-12 w-full items-center justify-between rounded-xl bg-white px-4 text-left text-black shadow-[0_10px_30px_rgba(0,0,0,.18)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-[12px] font-semibold">
-                      {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening ACG Trader…" : trialChecking ? "Preparing ACG Trader…" : "Open ACG Trader"}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[9px] font-medium text-black/55">
-                      {workspaceLoading ? "Syncing your trading workspace" : activeChallenge ? "Trade your selected account" : "Start with a free trial"}
-                    </span>
-                  </span>
-                  <ArrowUpRight size={17} className="ml-3 shrink-0" />
-                </button>
-              </div>
-            )}
-            {workspaceLoading
-              ? (
-                <div className="grid min-h-[240px] place-items-center rounded-2xl border border-white/[0.08] bg-[#090b0f] text-[12px] font-semibold text-[#718092]">
-                  Loading your trading workspace…
+            {workspaceLoading ? (
+              <div className="animate-pulse space-y-4" aria-label="Loading trading workspace">
+                <div className="border-b border-[#1d1d1d] pb-4">
+                  <div className="h-3 w-28 rounded bg-white/[0.06]" />
+                  <div className="mt-3 h-8 w-56 max-w-[70vw] rounded bg-white/[0.08]" />
+                  <div className="mt-2 h-3 w-40 rounded bg-white/[0.05]" />
                 </div>
-              )
-              : renderTabContent()}
+                <div className="h-12 rounded-xl bg-white/[0.07] sm:hidden" />
+                <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-5">
+                  <div className="h-3 w-24 rounded bg-white/[0.06]" />
+                  <div className="mt-3 h-10 w-44 max-w-[60vw] rounded bg-white/[0.08]" />
+                  <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div key={index}>
+                        <div className="h-2 w-14 rounded bg-white/[0.05]" />
+                        <div className="mt-2 h-4 w-20 rounded bg-white/[0.07]" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="h-44 rounded-xl border border-white/[0.08] bg-[#080808]" />
+                  <div className="h-44 rounded-xl border border-white/[0.08] bg-[#080808]" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <PageHeader
+                  activeTab={activeTab}
+                  activeChallenge={activeChallenge}
+                  onOpenTrader={handleOpenTrader}
+                  traderLaunching={traderLaunching}
+                  trialChecking={trialChecking}
+                  launchError={launchError}
+                />
+
+                {activeTab === "overview" && (
+                  <div className="mb-4 sm:hidden">
+                    <button
+                      type="button"
+                      onClick={handleOpenTrader}
+                      disabled={traderLaunching || trialChecking}
+                      className="flex min-h-12 w-full items-center justify-between rounded-xl bg-white px-4 text-left text-black shadow-[0_10px_30px_rgba(0,0,0,.18)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-[12px] font-semibold">
+                          {traderLaunching ? "Opening ACG Trader…" : trialChecking ? "Preparing ACG Trader…" : "Open ACG Trader"}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[9px] font-medium text-black/55">
+                          {activeChallenge ? "Trade your selected account" : "Start with a free trial"}
+                        </span>
+                      </span>
+                      <ArrowUpRight size={17} className="ml-3 shrink-0" />
+                    </button>
+                  </div>
+                )}
+                {renderTabContent()}
+              </>
+            )}
           </div>
         </main>
       </div>
