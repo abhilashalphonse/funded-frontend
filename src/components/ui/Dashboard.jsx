@@ -1439,83 +1439,78 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
             </button>
 
-            {activeChallenge?.platform === "acg-trader" && (
-              <div className="rounded-lg border border-white/[0.08] bg-[#080808] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#555]">Direct login</p>
-                    <p className="mt-0.5 text-[9px] text-[#666]">For bookmarked ACG Trader access</p>
-                  </div>
-                  {credentialLoading && <RefreshCw size={12} className="animate-spin text-[#666]" />}
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-black px-2.5 py-2">
-                    <div className="min-w-0">
-                      <span className="block text-[8px] uppercase tracking-[0.1em] text-[#555]">Login</span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] text-white">{tradingCredential?.login || "Preparing…"}</span>
-                    </div>
-                    <button type="button" onClick={() => copyCredential(tradingCredential?.login)} disabled={!tradingCredential?.login} className="grid size-7 shrink-0 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label="Copy trading login">
-                      <Copy size={13} />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-black px-2.5 py-2">
-                    <div className="min-w-0">
-                      <span className="block text-[8px] uppercase tracking-[0.1em] text-[#555]">Password</span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] text-white">
-                        {credentialPasswordVisible && tradingCredential?.password ? tradingCredential.password : "••••••••••••"}
-                      </span>
-                    </div>
-                    <div className="flex shrink-0 items-center">
-                      {credentialPasswordVisible && tradingCredential?.password && (
-                        <button type="button" onClick={() => copyCredential(tradingCredential.password)} className="grid size-7 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white" aria-label="Copy trading password">
-                          <Copy size={13} />
-                        </button>
-                      )}
-                      <button type="button" onClick={revealTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="grid size-7 place-items-center rounded text-[#777] hover:bg-white/[0.05] hover:text-white disabled:opacity-30" aria-label={credentialPasswordVisible ? "Hide trading password" : "Reveal trading password"}>
-                        {credentialPasswordVisible ? <EyeOff size={13} /> : <Eye size={13} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <button type="button" onClick={resetTradingPassword} disabled={!tradingCredential?.available || credentialLoading} className="mt-2 text-[9px] font-medium text-[#666] underline decoration-white/10 underline-offset-2 transition hover:text-white disabled:opacity-30">
-                  Reset password
-                </button>
-                {credentialError && <p className="mt-2 text-[9px] leading-4 text-rose-400">{credentialError}</p>}
-              </div>
-            )}
-
             {/* Primary actions */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => {
-                  setIsSidebarOpen(false);
-                  onNewChallenge();
-                }}
-                className="w-full h-11 lg:h-8 bg-white hover:bg-[#EBEBEB] text-black text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
-              >
-                New Challenge
-              </button>
-              <button
-                onClick={() => {
-                  setIsSidebarOpen(false);
-                  onFreeTrial();
-                }}
-                disabled={trialChecking}
-                className="w-full h-11 lg:h-8 border border-[#333333] bg-[#0A0A0A] hover:bg-[#111111] text-white text-[13px] font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50"
-              >
-                {trialChecking ? "Checking Trader…" : "Free Trial"}
-              </button>
+            <div>
+              <p className="mb-2 px-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555]">Start</p>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                <button 
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    onNewChallenge();
+                  }}
+                  className="h-10 w-full rounded-lg bg-white px-3 text-[12px] font-semibold text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 lg:h-8"
+                >
+                  New Challenge
+                </button>
+                <button
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    onFreeTrial();
+                  }}
+                  disabled={trialChecking}
+                  className="h-10 w-full rounded-lg border border-[#333] bg-[#0A0A0A] px-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#111] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50 lg:h-8"
+                >
+                  {trialChecking ? "Checking…" : "Free Trial"}
+                </button>
+              </div>
               {trialError && (
-                <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[11px] leading-relaxed text-amber-300">
+                <div className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[11px] leading-relaxed text-amber-300">
                   {trialError}
                 </div>
               )}
             </div>
 
-            <div> 
+            <div className="lg:hidden">
+              <p className="mb-2 px-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555]">Account</p>
+              <nav className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("billing"); setIsSidebarOpen(false); }}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${activeTab === "billing" ? "bg-[#111] text-white" : "text-[#888] hover:bg-[#0A0A0A] hover:text-[#EDEDED]"}`}
+                >
+                  <Wallet size={16} />
+                  Payouts
+                  <ChevronRight size={14} className="ml-auto text-[#555]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("profile"); setIsSidebarOpen(false); }}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${activeTab === "profile" ? "bg-[#111] text-white" : "text-[#888] hover:bg-[#0A0A0A] hover:text-[#EDEDED]"}`}
+                >
+                  <User size={16} />
+                  Settings
+                  <ChevronRight size={14} className="ml-auto text-[#555]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsSidebarOpen(false); onBack(); }}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-[#888] transition-colors hover:bg-[#0A0A0A] hover:text-[#EDEDED]"
+                >
+                  <ExternalLink size={16} />
+                  Homepage
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsSidebarOpen(false); void handleLogout(); }}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-[#888] transition-colors hover:bg-[#0A0A0A] hover:text-rose-300"
+                >
+                  <LogOut size={16} />
+                  Log out
+                </button>
+              </nav>
+            </div>
+
+            <div className="hidden lg:block"> 
               <p className="mb-2 px-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555555]">
                 Workspace
               </p>
