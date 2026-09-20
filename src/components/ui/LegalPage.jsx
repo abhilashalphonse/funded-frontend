@@ -63,10 +63,89 @@ const LEGAL_PAGES = {
   '/legal/complaints-policy': {
     title: 'Complaints Policy',
     content: (
-      <p>
-        The ACG Funded Complaints Policy will be published here. For assistance in the meantime,
-        please contact support@acgforex.com.
-      </p>
+      <>
+        <p><strong>Effective Date:</strong> 01/06/2025</p>
+        <p><strong>Last Updated:</strong> 01/06/2025</p>
+
+        <p>
+          At ACG Funded, we are committed to delivering a high standard of service to all of our
+          users. We recognize that, from time to time, things may go wrong. When that happens, we
+          want to hear about it and have the opportunity to put things right as quickly as
+          possible. This Complaints Policy outlines how you can raise a complaint, how we will
+          handle it, and what you can expect from us.
+        </p>
+
+        <h2>1. Who Can Make a Complaint</h2>
+        <p>Any individual or entity who has interacted with ACG Funded, including but not limited to:</p>
+        <ul>
+          <li>Registered platform users (funded or evaluation phase)</li>
+          <li>Prospective clients</li>
+          <li>Business partners</li>
+          <li>General website visitors</li>
+        </ul>
+
+        <h2>2. What Constitutes a Complaint</h2>
+        <p>
+          We define a complaint as: “Any expression of dissatisfaction, whether oral or written,
+          and whether justified or not, regarding a service, decision, or outcome provided by
+          ACG Funded.”
+        </p>
+        <p>This may include, but is not limited to:</p>
+        <ul>
+          <li>Disputes over challenge results or evaluation outcomes</li>
+          <li>Platform performance or technical issues</li>
+          <li>Account suspensions or terminations</li>
+          <li>Disagreement with billing or fees</li>
+          <li>Concerns over communication or customer service</li>
+        </ul>
+
+        <h2>3. How to Submit a Complaint</h2>
+        <p><strong>Online Submission (Preferred)</strong></p>
+        <p>
+          Use the Contact Support form on the ACG Funded website or email us at{' '}
+          <a href="mailto:support@acgfunded.com">support@acgfunded.com</a>.
+        </p>
+        <p>Please include:</p>
+        <ul>
+          <li>Your full name</li>
+          <li>Email address used for registration</li>
+          <li>Account ID (if applicable)</li>
+          <li>Detailed description of the issue</li>
+          <li>Any supporting documentation or screenshots</li>
+        </ul>
+        <p>Please ensure you include a return email address or phone number.</p>
+
+        <h2>4. What Happens Next</h2>
+        <ul>
+          <li><strong>Acknowledgement:</strong> You will receive an acknowledgment within 2 business days.</li>
+          <li><strong>Investigation:</strong> We aim to resolve complaints within 10 business days. If more time is required, we will inform you.</li>
+          <li><strong>Resolution:</strong> We will provide a fair outcome and any corrective actions.</li>
+          <li><strong>Appeals:</strong> If dissatisfied, you may request an internal review within 10 business days of receiving our response.</li>
+        </ul>
+
+        <h2>5. Record-Keeping and Confidentiality</h2>
+        <p>
+          All complaints are treated with confidentiality and stored securely. Records are kept
+          for a minimum of five (5) years.
+        </p>
+
+        <h2>6. External Review or Mediation</h2>
+        <p>
+          ACG Funded is not a regulated financial institution. If you remain unsatisfied, you may
+          seek independent advice or escalate the matter through any applicable dispute-resolution
+          process described in our Terms &amp; Conditions.
+        </p>
+
+        <h2>7. Our Commitment to You</h2>
+        <p>We aim to:</p>
+        <ul>
+          <li>Handle all complaints fairly and transparently</li>
+          <li>Respond promptly and professionally</li>
+          <li>Learn from complaints to improve our services</li>
+        </ul>
+
+        <p>ACG Funded Team.</p>
+      </>
     ),
   },
   '/legal/terms-and-conditions': {
