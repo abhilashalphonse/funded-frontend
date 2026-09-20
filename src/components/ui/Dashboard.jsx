@@ -1085,7 +1085,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     setCredentialError("");
     setCredentialPasswordVisible(false);
 
-    if (!activeChallenge?.accountId || activeChallenge?.platform !== "acg-trader") return undefined;
+    if (activeTab !== "profile" || !activeChallenge?.accountId || activeChallenge?.platform !== "acg-trader") return undefined;
 
     const load = async () => {
       setCredentialLoading(true);
@@ -1108,7 +1108,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
     void load();
     return () => { cancelled = true; };
-  }, [activeChallenge?.accountId, activeChallenge?.platform, getAccessToken]);
+  }, [activeChallenge?.accountId, activeChallenge?.platform, activeTab, getAccessToken]);
 
   const revealTradingPassword = async () => {
     if (!activeChallenge?.accountId || credentialLoading) return;
