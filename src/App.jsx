@@ -7,6 +7,7 @@ import Dashboard from "./components/ui/Dashboard.jsx";
 import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
 import AdminDashboard from "./components/admin/AdminDashboard.jsx";
+import LegalPage, { getLegalPage } from "./components/ui/LegalPage.jsx";
 import { captureAttribution, getAnalyticsSessionId, trackEvent } from "./utils/analytics.js";
 
 function isAuthCallbackLocation() {
