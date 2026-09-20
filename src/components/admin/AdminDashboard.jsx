@@ -202,6 +202,8 @@ export default function AdminDashboard() {
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [action, setAction] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const [supportReply, setSupportReply] = useState("");
+  const [supportBusy, setSupportBusy] = useState(false);
 
   const adminFetch = useCallback(async (path, options = {}) => {
     const token = await getAccessToken();
@@ -282,6 +284,10 @@ export default function AdminDashboard() {
       if (page === "users") setSelectedDetail(await adminFetch(`/users/${encodeURIComponent(row.customerId)}`));
       if (["challenges", "trials", "funded", "breaches"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
       if (page === "orders" || page === "payments") setSelectedDetail({ payment: row });
+      if (page === "support") {
+        setSupportReply("");
+        setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(row.conversationId)}`));
+      }
     } catch (err) {
       setSelectedDetail({ error: err.message });
     }
@@ -312,6 +318,45 @@ export default function AdminDashboard() {
   const rows = data?.rows || [];
 
   const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
+
+
+  const sendHumanSupportReply = async () => {
+    const conversationId = selectedDetail?.conversation?.conversationId;
+    const message = supportReply.trim();
+    if (!conversationId || !message || supportBusy) return;
+    setSupportBusy(true);
+    try {
+      await adminFetch(`/support/${encodeURIComponent(conversationId)}/reply`, {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      });
+      setSupportReply("");
+      setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
+      await load();
+    } catch (err) {
+      setError(err?.message || "Unable to send support reply.");
+    } finally {
+      setSupportBusy(false);
+    }
+  };
+
+  const closeSupportCase = async () => {
+    const conversationId = selectedDetail?.conversation?.conversationId;
+    if (!conversationId || supportBusy) return;
+    setSupportBusy(true);
+    try {
+      await adminFetch(`/support/${encodeURIComponent(conversationId)}/close`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "Resolved by human support" }),
+      });
+      setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
+      await load();
+    } catch (err) {
+      setError(err?.message || "Unable to close support case.");
+    } finally {
+      setSupportBusy(false);
+    }
+  };
 
   const renderOverview = () => {
     const k = data?.kpis || {};
@@ -475,10 +520,14 @@ export default function AdminDashboard() {
     return <div className="space-y-5"><div className="grid gap-3 sm:grid-cols-3"><Kpi label="Paid events" value={paid} /><Kpi label="Activated challenges" value={activated} /><Kpi label="Window" value={`${days} days`} /></div><Empty title="Revenue ledger analytics are not yet materialized" text="The current backend stores payment records and funnel events. Revenue-by-product, country, affiliate, refunds and chargebacks should be added after the payment ledger/refund workflow is implemented." /></div>;
   };
 
-  const renderSupport = () => <DataTable rows={rows} columns={[
-    { key: "conversationId", label: "Case" }, { key: "customerId", label: "Customer" },
-    { key: "category", label: "Category" }, { key: "lastMessageAt", label: "Last Activity", render: r => dateTime(r.lastMessageAt) },
-    { key: "handoffReason", label: "Handoff" }, { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
+  const renderSupport = () => <DataTable rows={rows} onRow={openRow} columns={[
+    { key: "conversationId", label: "Case" },
+    { key: "channel", label: "Channel", render: r => <Badge>{r.channel || "WEB"}</Badge> },
+    { key: "customer", label: "Customer", render: r => r.email?.customerEmail || r.customerId || "Anonymous" },
+    { key: "subject", label: "Subject", render: r => r.email?.subject || "Web support" },
+    { key: "category", label: "Category" },
+    { key: "lastMessageAt", label: "Last Activity", render: r => dateTime(r.lastMessageAt) },
+    { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ]} />;
 
   const renderSystem = () => (
@@ -638,6 +687,67 @@ export default function AdminDashboard() {
             </button>
           )}
         </div>
+      </Inspector>}
+
+      {selected && page === "support" && <Inspector
+        title={selectedDetail?.conversation?.email?.subject || "Support case"}
+        subtitle={selectedDetail?.conversation?.email?.customerEmail || selectedDetail?.customer?.primaryEmail || selected.conversationId}
+        onClose={() => { setSelected(null); setSelectedDetail(null); setSupportReply(""); }}
+      >
+        {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load support case" text={selectedDetail.error} /> : (() => {
+          const conversation = selectedDetail.conversation;
+          return <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>{conversation.channel || "WEB"}</Badge>
+              <Badge>{conversation.category}</Badge>
+              <Badge>{conversation.status}</Badge>
+              {conversation.handoffReason && <span className="text-[11px] text-zinc-500">{conversation.handoffReason}</span>}
+            </div>
+
+            <div className="max-h-[50vh] space-y-3 overflow-y-auto rounded-xl border border-white/[0.07] bg-[#0b0b0b] p-4">
+              {(conversation.messages || []).map(message => (
+                <div key={message.messageId} className={`flex ${message.role === "user" ? "justify-start" : "justify-end"}`}>
+                  <div className={`max-w-[86%] rounded-xl px-3 py-2.5 text-xs leading-5 ${message.role === "user" ? "bg-white/[0.06] text-zinc-200" : "bg-white text-black"}`}>
+                    <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider opacity-50">
+                      {message.role === "user" ? "Customer" : message.source === "human" ? "Human support" : "ACG Support"}
+                    </div>
+                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
+                    <div className="mt-1 text-[9px] opacity-45">{dateTime(message.createdAt)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {conversation.status !== "CLOSED" && (
+              <div className="space-y-3">
+                <textarea
+                  value={supportReply}
+                  onChange={event => setSupportReply(event.target.value)}
+                  maxLength={3000}
+                  rows={5}
+                  placeholder={conversation.channel === "EMAIL" ? "Reply by email…" : "Reply to this support conversation…"}
+                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-black px-3 py-3 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-white/25"
+                />
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    onClick={closeSupportCase}
+                    disabled={supportBusy}
+                    className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-40"
+                  >
+                    Close case
+                  </button>
+                  <button
+                    onClick={sendHumanSupportReply}
+                    disabled={!supportReply.trim() || supportBusy}
+                    className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black disabled:opacity-40"
+                  >
+                    {supportBusy ? "Sending…" : conversation.channel === "EMAIL" ? "Send email reply" : "Send reply"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>;
+        })()}
       </Inspector>}
 
       {action && <ConfirmModal action={action} entity={action.id} busy={actionBusy} onClose={() => setAction(null)} onConfirm={performAction} />}
