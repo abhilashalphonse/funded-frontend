@@ -36,11 +36,23 @@ const formatFreshness = (value) => {
   return `Updated ${minutes}m ago`;
 };
 
-const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching, trialChecking, launchError }) => {
+const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching, trialChecking, launchError, loading = false }) => {
   const page = pageDetails[activeTab] || pageDetails.overview;
   const isOverview = activeTab === "overview";
   const connectionActive = activeChallenge?.provisioning?.status === "ACTIVE";
   const freshness = formatFreshness(activeChallenge?.lastPlatformSnapshotAt || activeChallenge?.updatedAt);
+
+  if (loading) {
+    return (
+      <header className="mb-5 border-b border-[#1d1d1d] pb-4">
+        <div className="animate-pulse">
+          <div className="h-3 w-28 rounded bg-white/[0.06]" />
+          <div className="mt-3 h-8 w-56 max-w-[70vw] rounded bg-white/[0.08]" />
+          <div className="mt-2 h-3 w-40 rounded bg-white/[0.05]" />
+        </div>
+      </header>
+    );
+  }
 
   if (!isOverview) {
     return (
@@ -84,10 +96,10 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
       <button
         type="button"
         onClick={onOpenTrader}
-        disabled={traderLaunching || trialChecking}
+        disabled={workspaceLoading || traderLaunching || trialChecking}
         className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50 sm:inline-flex"
       >
-        {traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
+        {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
       </button>
     </header>
   );
@@ -1104,7 +1116,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   };
 
   const handleOpenTrader = async () => {
-    if (traderLaunching || trialChecking) return;
+    if (workspaceLoading || traderLaunching || trialChecking) return;
 
     setLaunchError("");
 
@@ -1306,19 +1318,28 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               <p className="mb-2 px-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#555]">Trading account</p>
               <button
                 type="button"
-                onClick={() => setAccountMenuOpen(value => !value)}
-                className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-[#080808] px-3 py-2.5 text-left hover:border-white/[0.14]"
+                onClick={() => {
+                  if (!workspaceLoading) setAccountMenuOpen(value => !value);
+                }}
+                disabled={workspaceLoading}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-[#080808] px-3 py-2.5 text-left hover:border-white/[0.14] disabled:cursor-wait disabled:hover:border-white/[0.08]"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[12px] font-semibold text-white">{activeChallenge?.accountId || "No active account"}</p>
+                  <p className="truncate text-[12px] font-semibold text-white">
+                    {workspaceLoading ? "Loading account…" : activeChallenge?.accountId || "No active account"}
+                  </p>
                   <p className="mt-0.5 truncate text-[10px] text-[#666]">
-                    {activeChallenge ? `${money(activeChallenge.accountSize || 0)} · ${activeChallenge.accountMode === "DEMO" ? "Free Trial" : activeChallenge.status}` : "Choose or create an account"}
+                    {workspaceLoading
+                      ? "Syncing your trading workspace"
+                      : activeChallenge
+                        ? `${money(activeChallenge.accountSize || 0)} · ${activeChallenge.accountMode === "DEMO" ? "Free Trial" : activeChallenge.status}`
+                        : "Choose or create an account"}
                   </p>
                 </div>
                 <ChevronDown size={14} className={`shrink-0 text-[#666] transition ${accountMenuOpen ? "rotate-180" : ""}`} />
               </button>
 
-              {accountMenuOpen && availableAccounts.length > 0 && (
+              {!workspaceLoading && accountMenuOpen && availableAccounts.length > 0 && (
                 <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-lg border border-white/[0.1] bg-[#0a0a0a] p-1 shadow-2xl">
                   {availableAccounts.map(account => {
                     const selected = account.accountId === activeChallenge?.accountId;
@@ -1347,11 +1368,11 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
             <button
               type="button"
               onClick={handleOpenTrader}
-              disabled={traderLaunching || trialChecking}
+              disabled={workspaceLoading || traderLaunching || trialChecking}
               className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50"
             >
               <ArrowUpRight size={14} />
-              {traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
+              {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
             </button>
 
             {activeChallenge?.platform === "acg-trader" && (
@@ -1491,6 +1512,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               traderLaunching={traderLaunching}
               trialChecking={trialChecking}
               launchError={launchError}
+              loading={workspaceLoading}
             />
 
             {activeTab === "overview" && (
@@ -1498,15 +1520,15 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                 <button
                   type="button"
                   onClick={handleOpenTrader}
-                  disabled={traderLaunching || trialChecking}
+                  disabled={workspaceLoading || traderLaunching || trialChecking}
                   className="flex min-h-12 w-full items-center justify-between rounded-xl bg-white px-4 text-left text-black shadow-[0_10px_30px_rgba(0,0,0,.18)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
                 >
                   <span className="min-w-0">
                     <span className="block text-[12px] font-semibold">
-                      {traderLaunching ? "Opening ACG Trader…" : trialChecking ? "Preparing ACG Trader…" : "Open ACG Trader"}
+                      {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening ACG Trader…" : trialChecking ? "Preparing ACG Trader…" : "Open ACG Trader"}
                     </span>
                     <span className="mt-0.5 block truncate text-[9px] font-medium text-black/55">
-                      {activeChallenge ? "Trade your selected account" : "Start with a free trial"}
+                      {workspaceLoading ? "Syncing your trading workspace" : activeChallenge ? "Trade your selected account" : "Start with a free trial"}
                     </span>
                   </span>
                   <ArrowUpRight size={17} className="ml-3 shrink-0" />
@@ -1543,11 +1565,11 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         <button
           type="button"
           onClick={handleOpenTrader}
-          disabled={traderLaunching || trialChecking}
+          disabled={workspaceLoading || traderLaunching || trialChecking}
           className="flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] text-white disabled:cursor-wait disabled:text-[#555]"
         >
           <ArrowUpRight size={16} />
-          <span>{trialChecking ? "Preparing" : "Trade"}</span>
+          <span>{workspaceLoading ? "Loading" : trialChecking ? "Preparing" : "Trade"}</span>
         </button>
       </nav>
     </div>
