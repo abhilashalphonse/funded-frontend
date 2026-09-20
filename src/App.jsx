@@ -216,7 +216,13 @@ function App() {
     }
   };
 
-const isAdminPath = typeof window !== "undefined" && window.location.pathname.replace(/\/+$/, "").startsWith("/admin");
+const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
+  const legalPage = getLegalPage(currentPath);
+  const isAdminPath = currentPath.replace(/\/+$/, "").startsWith("/admin");
+
+  if (legalPage) {
+    return <LegalPage page={legalPage} />;
+  }
 
   if (isAdminPath) {
     if (!user) {
