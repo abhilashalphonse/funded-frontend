@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../AuthContext"; 
 // import acg from "../assets/ACG.png";
-import { Eye, EyeOff, Check, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Check, ArrowLeft, Mail, RefreshCw } from "lucide-react";
 import Logo from '../../assets/ACG.png';
 import { trackEvent } from '../../utils/analytics.js';
 
@@ -283,7 +283,7 @@ function LoginForm({ onSwitchToSignup, initialEmail = "" }) {
 /*  Signup                                                              */
 /* ------------------------------------------------------------------ */
 
-function SignupForm({ onSwitchToLogin, initialEmail = "" }) {
+function SignupForm({ onSwitchToLogin, onVerificationRequired, initialEmail = "" }) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -292,12 +292,11 @@ function SignupForm({ onSwitchToLogin, initialEmail = "" }) {
   const { signUp, signInWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccessMsg("");
 
     if (!ageAgree) {
       setError("Confirm that you are 18 or older and agree to the account terms.");
@@ -306,11 +305,19 @@ function SignupForm({ onSwitchToLogin, initialEmail = "" }) {
 
     setLoading(true);
     try {
-      const { error: signUpError } = await signUp(email.trim(), password, {});
+      const normalizedEmail = email.trim().toLowerCase();
+      const { data, error: signUpError } = await signUp(normalizedEmail, password, {});
       if (signUpError) throw signUpError;
 
+      // When Supabase email confirmation is enabled it creates the user but
+      // deliberately returns no active session. Show a dedicated verification
+      // screen instead of leaving the registration form looking stuck.
+      if (!data?.session) {
+        onVerificationRequired(normalizedEmail);
+        return;
+      }
+
       void trackEvent("signup_completed", { method: "email" });
-      setSuccessMsg("Account created. Check your email if verification is required.");
     } catch (err) {
       setError(err.message || "Unable to create your account.");
     } finally {
@@ -348,12 +355,6 @@ function SignupForm({ onSwitchToLogin, initialEmail = "" }) {
           {error}
         </div>
       )}
-      {successMsg && (
-        <div className="mt-5 rounded-lg border border-white/[0.18] bg-white/[0.05] px-3.5 py-2.5 text-[12.5px] font-medium text-white">
-          {successMsg}
-        </div>
-      )}
-
       <div className="mt-6">
         <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleSignup} disabled={loading} />
       </div>
@@ -422,11 +423,88 @@ function SignupForm({ onSwitchToLogin, initialEmail = "" }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Email verification                                                  */
+/* ------------------------------------------------------------------ */
+
+function VerifyEmail({ email, onBackToLogin }) {
+  const { resendSignupVerification } = useAuth();
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+
+  const resend = async () => {
+    if (!email || sending) return;
+    setSending(true);
+    setNotice("");
+    setError("");
+    try {
+      const { error: resendError } = await resendSignupVerification(email);
+      if (resendError) throw resendError;
+      setNotice("Verification email sent again.");
+    } catch (err) {
+      setError(err?.message || "Unable to resend the verification email.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="mx-auto grid size-12 place-items-center rounded-xl border border-white/[0.1] bg-white/[0.035] text-white">
+        <Mail className="h-5 w-5" strokeWidth={1.8} />
+      </div>
+      <h1 className="mt-6 text-center text-[19px] font-semibold tracking-tight text-white">
+        Verify your email
+      </h1>
+      <p className="mt-2 text-center text-[13px] leading-5 text-neutral-500">
+        We sent a verification link to
+      </p>
+      <p className="mt-1 break-all text-center text-[13px] font-medium text-neutral-200">
+        {email}
+      </p>
+      <p className="mt-5 text-center text-[12px] leading-5 text-neutral-500">
+        Open the email and select the verification link. Once verified, you&apos;ll be signed in automatically and returned to ACG.
+      </p>
+
+      {notice && (
+        <div className="mt-5 rounded-lg border border-white/[0.14] bg-white/[0.03] px-3.5 py-2.5 text-center text-[12px] font-medium text-neutral-200">
+          {notice}
+        </div>
+      )}
+      {error && (
+        <div className="mt-5 rounded-lg border border-white/[0.14] bg-white/[0.03] px-3.5 py-2.5 text-center text-[12px] font-medium text-neutral-200">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={resend}
+        disabled={sending}
+        className="mt-6 flex h-[40px] w-full items-center justify-center gap-2 rounded-lg border border-white/[0.1] bg-white/[0.02] text-[13px] font-medium text-neutral-200 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-wait disabled:opacity-50"
+      >
+        {sending && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+        {sending ? "Sending…" : "Resend verification email"}
+      </button>
+
+      <button
+        type="button"
+        onClick={onBackToLogin}
+        className="mt-4 w-full text-center text-[12.5px] font-medium text-neutral-500 transition hover:text-white"
+      >
+        Back to sign in
+      </button>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Root                                                                */
 /* ------------------------------------------------------------------ */
 
 export default function Auth({ onBack = () => {}, initialView = "login", initialEmail = "" }) {
   const [view, setView] = useState(initialView);
+  const [verificationEmail, setVerificationEmail] = useState("");
 
   useEffect(() => {
     if (view === "signup") void trackEvent("signup_started");
@@ -445,8 +523,20 @@ export default function Auth({ onBack = () => {}, initialView = "login", initial
         <Card wide={view === "signup"}>
           {view === "login" ? (
             <LoginForm onSwitchToSignup={() => setView("signup")} initialEmail={initialEmail} />
+          ) : view === "verify-email" ? (
+            <VerifyEmail
+              email={verificationEmail}
+              onBackToLogin={() => setView("login")}
+            />
           ) : (
-            <SignupForm onSwitchToLogin={() => setView("login")} initialEmail={initialEmail} />
+            <SignupForm
+              onSwitchToLogin={() => setView("login")}
+              onVerificationRequired={(email) => {
+                setVerificationEmail(email);
+                setView("verify-email");
+              }}
+              initialEmail={initialEmail}
+            />
           )}
         </Card>
         <TrustLine />
