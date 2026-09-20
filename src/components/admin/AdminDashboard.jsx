@@ -237,7 +237,7 @@ export default function AdminDashboard() {
     if (page === "payments") return `/payments?limit=100${q}${s}`;
     if (page === "risk" || page === "breaches") return "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
-    if (page === "support") return `/support?limit=100${s}`;
+    if (page === "support") return `/support?limit=100${q}${s}`;
     if (page === "audit") return "/audit?limit=100";
     if (page === "admins") return "/admin-users";
     if (["jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
