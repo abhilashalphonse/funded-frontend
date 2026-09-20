@@ -9,6 +9,14 @@ const FOOTER_LINKS = [
   { label: 'Phone', href: 'tel:+420910920310' },
 ];
 
+const LEGAL_LINKS = [
+  { label: 'Funded Account Disclaimer', href: '/legal/funded-account-disclaimer' },
+  { label: 'Refund Policy', href: '/legal/refund-policy' },
+  { label: 'Complaints Policy', href: '/legal/complaints-policy' },
+  { label: 'Terms & Conditions', href: '/legal/terms-and-conditions' },
+  { label: 'Privacy Policy', href: '/legal/privacy-policy' },
+];
+
 export default function Footer() {
   return (
     <footer className="bg-[#05060A] border-t border-white/[0.08] pt-16 pb-10">
@@ -39,10 +47,73 @@ export default function Footer() {
           </nav>
         </div>
 
-        <div className="pt-8 border-t border-white/[0.08]">
-          <p className="text-[11px] text-[#666666] max-w-2xl leading-relaxed">
-            © 2026 ACG Forex Technologies Ltd. All rights reserved. Trading financial instruments involves significant risk.
-            Past performance is not indicative of future results. Please ensure you fully understand the risks involved.
+        <section
+          aria-labelledby="footer-disclaimer-title"
+          className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-6 sm:px-7 sm:py-7"
+        >
+          <h2
+            id="footer-disclaimer-title"
+            className="text-[12px] font-semibold tracking-[-0.01em] text-[#8E8E93]"
+          >
+            Disclaimer:
+          </h2>
+
+          <div className="mt-4 space-y-4 text-[11px] leading-[1.7] text-[#666A73] sm:text-[12px]">
+            <p>
+              ACG Funded, operated by ACG Forex Technologies Ltd., provides trading evaluation,
+              education, technology and simulated funded-account services. Information made
+              available through ACG Funded is for general informational purposes only and does
+              not constitute investment advice, financial advice, an offer, recommendation or
+              solicitation to buy or sell any financial instrument.
+            </p>
+
+            <p>
+              ACG Funded is not a broker, investment adviser or financial institution and does
+              not accept client deposits for investment or trading. Trading decisions are made
+              solely by each participant, and participation in an ACG Funded program does not
+              create a brokerage, investment-management or advisory relationship.
+            </p>
+
+            <p>
+              Accounts used in ACG Funded evaluations and funded programs are simulated accounts
+              using virtual funds unless expressly stated otherwise. Results generated in a
+              simulated environment are hypothetical and have inherent limitations. They may
+              differ materially from results that could be achieved in live market conditions
+              because simulated trading may not reflect factors such as liquidity, slippage,
+              execution latency, market impact, spreads or other real-world trading conditions.
+            </p>
+
+            <p>
+              Trading leveraged products involves substantial risk. Past or simulated performance
+              is not indicative of future results, and no representation is made that any
+              participant will achieve profits or avoid losses. ACG Funded services may not be
+              available in every jurisdiction, and users are responsible for ensuring that their
+              participation is permitted under the laws and regulations applicable to them.
+            </p>
+          </div>
+        </section>
+
+        <nav
+          aria-label="Legal"
+          className="mt-7 border-b border-white/[0.08] pb-8"
+        >
+          <ul className="flex flex-wrap gap-x-7 gap-y-3">
+            {LEGAL_LINKS.map((link) => (
+              <li key={link.label}>
+                <a
+                  href={link.href}
+                  className="text-[12px] font-medium text-[#777B84] transition-colors duration-200 hover:text-white"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="pt-8">
+          <p className="text-[11px] text-[#565A63] max-w-2xl leading-relaxed">
+            © 2026 ACG Forex Technologies Ltd. All rights reserved.
           </p>
         </div>
       </div>
