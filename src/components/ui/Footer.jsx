@@ -4,6 +4,7 @@ import logo from '../../assets/ACG.png';
 const FOOTER_LINKS = [
   { label: 'Challenges', href: '#challenges' },
   { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Trading Rules', href: '/rules' },
   { label: 'Support', href: '#support' },
   { label: 'Email', href: 'mailto:support@acgforex.com' },
   { label: 'Phone', href: 'tel:+420910920310' },

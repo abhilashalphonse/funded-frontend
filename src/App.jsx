@@ -8,6 +8,7 @@ import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
 import AdminDashboard from "./components/admin/AdminDashboard.jsx";
 import LegalPage, { getLegalPage } from "./components/ui/LegalPage.jsx";
+import RulesPage from "./components/ui/RulesPage.jsx";
 import { captureAttribution, getAnalyticsSessionId, trackEvent } from "./utils/analytics.js";
 
 function isAuthCallbackLocation() {
@@ -250,6 +251,7 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
   const normalizedPath = currentPath.replace(/\/+$/, "") || "/";
   const isAdminPath = normalizedPath.startsWith("/admin");
   const isTraderLaunchingPath = normalizedPath === "/trader-launching";
+  const isRulesPath = normalizedPath === "/rules";
 
   if (isTraderLaunchingPath) {
     return <TraderLaunchingPage />;
@@ -257,6 +259,10 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
 
   if (legalPage) {
     return <LegalPage page={legalPage} />;
+  }
+
+  if (isRulesPath) {
+    return <RulesPage />;
   }
 
   if (isAdminPath) {
