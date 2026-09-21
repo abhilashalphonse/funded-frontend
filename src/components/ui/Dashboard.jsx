@@ -1260,9 +1260,11 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     let traderWindow = null;
 
     try {
-      // Open the tab synchronously from the user's click so browsers do not
-      // treat the eventual federated launch as an unsolicited popup.
-      traderWindow = window.open("about:blank", "_blank");
+      // Open a real same-origin launch page synchronously from the user's
+      // click. This preserves popup safety while avoiding the confusing blank
+      // about:blank tab during federation/session creation.
+      const launchingUrl = new URL("/trader-launching", window.location.origin);
+      traderWindow = window.open(launchingUrl.toString(), "_blank");
       if (!traderWindow) {
         throw new Error("Your browser blocked the ACG Trader tab. Allow pop-ups for ACG Funded and try again.");
       }
