@@ -710,7 +710,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
   const [activePresetId, setActivePresetId] = useState('balanced');
 
   useEffect(() => {
-    void trackEvent("challenge_builder_view", {
+    void trackEvent("challenge_builder_viewed", {
       mode: actionLabel === "Start Free Trial" ? "trial" : "paid",
     }, { entryIntent: actionLabel === "Start Free Trial" ? "trial" : "paid" });
   }, [actionLabel]);
@@ -838,14 +838,21 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
     pricingPreview: pricing,
   };
 
-  void trackEvent("challenge_configured", {
+  const funnelProperties = {
     mode: actionLabel === "Start Free Trial" ? "trial" : "paid",
     step,
     accountSize,
     profitSplit: advanced.profitSplit,
     payoutFrequency: advanced.payoutFrequency,
     price: pricing?.finalPrice ?? 0,
-  }, { entryIntent: actionLabel === "Start Free Trial" ? "trial" : "paid" });
+  };
+
+  void trackEvent("challenge_configured", funnelProperties, {
+    entryIntent: actionLabel === "Start Free Trial" ? "trial" : "paid",
+  });
+  void trackEvent("challenge_selected", funnelProperties, {
+    entryIntent: actionLabel === "Start Free Trial" ? "trial" : "paid",
+  });
 
   if (actionLabel !== "Start Free Trial") {
     void trackEvent("checkout_started", {
