@@ -30,6 +30,35 @@ function cleanAuthCallbackUrl() {
   window.history.replaceState({}, document.title, "/");
 }
 
+function TraderLaunchingPage() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = "Opening ACG Trader…";
+    return () => { document.title = previousTitle; };
+  }, []);
+
+  return (
+    <main className="grid min-h-[100dvh] place-items-center bg-black px-6 text-white antialiased">
+      <div className="w-full max-w-sm text-center">
+        <div className="mx-auto flex h-12 w-20 items-center justify-center rounded-xl border border-white/[0.10] bg-white/[0.035] text-[17px] font-black tracking-[-0.05em]">
+          ACG
+        </div>
+        <div className="mx-auto mt-7 size-7 animate-spin rounded-full border-2 border-white/15 border-t-white" />
+        <h1 className="mt-6 text-[18px] font-semibold tracking-[-0.025em]">Opening ACG Trader</h1>
+        <p className="mx-auto mt-2 max-w-xs text-[12px] leading-5 text-neutral-500">
+          Securing your trading session and connecting the selected account.
+        </p>
+        <div className="mx-auto mt-7 h-px w-36 overflow-hidden bg-white/[0.08]">
+          <div className="h-full w-1/2 animate-pulse bg-white/60" />
+        </div>
+        <p className="mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-700">
+          ACG Funded · Secure launch
+        </p>
+      </div>
+    </main>
+  );
+}
+
 function App() {
   const [screen, setScreen] = useState(() => {
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment")) return "payment";
@@ -218,7 +247,13 @@ function App() {
 
 const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
   const legalPage = getLegalPage(currentPath);
-  const isAdminPath = currentPath.replace(/\/+$/, "").startsWith("/admin");
+  const normalizedPath = currentPath.replace(/\/+$/, "") || "/";
+  const isAdminPath = normalizedPath.startsWith("/admin");
+  const isTraderLaunchingPath = normalizedPath === "/trader-launching";
+
+  if (isTraderLaunchingPath) {
+    return <TraderLaunchingPage />;
+  }
 
   if (legalPage) {
     return <LegalPage page={legalPage} />;
