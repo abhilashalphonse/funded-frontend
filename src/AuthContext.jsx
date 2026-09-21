@@ -67,10 +67,20 @@ const signUp = useCallback((email, password, metadata) => {
     supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback`,
     }), []);
-  const getAccessToken = useCallback(async () => {
+  const getAccessToken = useCallback(async ({ forceRefresh = false } = {}) => {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) throw error;
-    return session?.access_token || null;
+    if (!session) return null;
+
+    const expiresAtMs = Number(session.expires_at || 0) * 1000;
+    const expiresSoon = expiresAtMs > 0 && expiresAtMs - Date.now() <= 60_000;
+    if (!forceRefresh && session.access_token && !expiresSoon) {
+      return session.access_token;
+    }
+
+    const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) throw refreshError;
+    return refreshedSession?.access_token || null;
   }, []);
 
   const value = useMemo(
