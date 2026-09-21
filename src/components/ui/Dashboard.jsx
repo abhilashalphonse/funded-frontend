@@ -1075,6 +1075,8 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [workspaceError, setWorkspaceError] = useState("");
   const [authSessionExpired, setAuthSessionExpired] = useState(false);
+  const [authVerificationFailed, setAuthVerificationFailed] = useState(false);
+  const [workspaceReloadKey, setWorkspaceReloadKey] = useState(0);
   const [traderLaunching, setTraderLaunching] = useState(false);
   const [launchError, setLaunchError] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("");
@@ -1132,13 +1134,28 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
         if (!cancelled) {
           setAuthSessionExpired(false);
+          setAuthVerificationFailed(false);
           setWorkspace(payload?.data || null);
         }
       } catch (error) {
         if (!cancelled) {
-          const isAuthFailure = error?.status === 401 || error?.code === "AUTH_SESSION_INVALID" || error?.code === "AUTH_REQUIRED";
-          if (isAuthFailure) {
+          const isVerificationFailure =
+            error?.code === "AUTH_VERIFICATION_FAILED"
+            || error?.code === "AUTH_PROVIDER_UNAVAILABLE"
+            || error?.code === "AUTH_PROVIDER_INVALID_RESPONSE";
+          const isAuthFailure =
+            error?.code === "AUTH_SESSION_INVALID"
+            || error?.code === "AUTH_REQUIRED"
+            || (error?.status === 401 && !isVerificationFailure);
+
+          if (isVerificationFailure) {
             setWorkspace(null);
+            setAuthSessionExpired(false);
+            setAuthVerificationFailed(true);
+            setWorkspaceError("");
+          } else if (isAuthFailure) {
+            setWorkspace(null);
+            setAuthVerificationFailed(false);
             setAuthSessionExpired(true);
             setWorkspaceError("");
           } else {
@@ -1171,7 +1188,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       window.removeEventListener("focus", refreshOnFocus);
       document.removeEventListener("visibilitychange", refreshOnVisibility);
     };
-  }, [getAccessToken]);
+  }, [getAccessToken, workspaceReloadKey]);
 
   useEffect(() => {
     if (!availableAccounts.length) {
@@ -1433,6 +1450,14 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     }
   };
 
+  const handleRetrySessionVerification = () => {
+    setWorkspaceLoading(true);
+    setWorkspaceError("");
+    setAuthSessionExpired(false);
+    setAuthVerificationFailed(false);
+    setWorkspaceReloadKey(value => value + 1);
+  };
+
   return (
     // Outer shell: Pure black
     <div className="relative min-h-[100dvh] bg-[#000000] text-[#EDEDED] font-sans flex flex-col antialiased overflow-x-clip selection:bg-white/20 lg:h-[100dvh] lg:overflow-hidden">
@@ -1578,7 +1603,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
             <button
               type="button"
               onClick={handlePrimaryAccountAction}
-              disabled={authSessionExpired || workspaceLoading || traderLaunching || trialChecking}
+              disabled={authSessionExpired || authVerificationFailed || workspaceLoading || traderLaunching || trialChecking}
               className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50"
             >
               <ArrowUpRight size={14} />
@@ -1705,12 +1730,40 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         {/* --- MAIN CONTENT AREA --- */}
         <main className="min-h-0 min-w-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">
           <div className="dashboard-surface mx-auto w-full max-w-[1560px] px-4 py-5 pb-24 sm:px-6 sm:py-6 sm:pb-24 lg:px-7 lg:py-7 lg:pb-8 xl:px-8">
-            {!authSessionExpired && workspaceError && (
+            {!authSessionExpired && !authVerificationFailed && workspaceError && (
               <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-[12px] text-red-300">
                 {workspaceError}
               </div>
             )}
-            {authSessionExpired ? (
+            {authVerificationFailed ? (
+              <div className="grid min-h-[360px] place-items-center rounded-xl border border-white/[0.08] bg-[#080808] px-6 text-center">
+                <div className="max-w-sm">
+                  <div className="mx-auto grid size-11 place-items-center rounded-lg border border-amber-500/20 bg-amber-500/[0.05] text-amber-300">
+                    <RefreshCw size={18} />
+                  </div>
+                  <h1 className="mt-4 text-lg font-semibold text-white">Unable to verify your session</h1>
+                  <p className="mt-2 text-[12px] leading-5 text-[#777]">
+                    We could not verify your login with our authentication provider. Your ACG Funded session has not been cleared.
+                  </p>
+                  <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={handleRetrySessionVerification}
+                      className="min-h-10 rounded-lg bg-white px-5 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8]"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSessionSignIn}
+                      className="min-h-10 rounded-lg border border-white/[0.12] bg-white/[0.03] px-5 text-[12px] font-semibold text-white transition hover:bg-white/[0.06]"
+                    >
+                      Sign in again
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : authSessionExpired ? (
               <div className="grid min-h-[360px] place-items-center rounded-xl border border-white/[0.08] bg-[#080808] px-6 text-center">
                 <div className="max-w-sm">
                   <div className="mx-auto grid size-11 place-items-center rounded-lg border border-red-500/20 bg-red-500/[0.05] text-red-300">
@@ -1813,7 +1866,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         <button
           type="button"
           onClick={handlePrimaryAccountAction}
-          disabled={authSessionExpired || workspaceLoading || traderLaunching || trialChecking}
+          disabled={authSessionExpired || authVerificationFailed || workspaceLoading || traderLaunching || trialChecking}
           className="flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] text-white disabled:cursor-wait disabled:text-[#555]"
         >
           <ArrowUpRight size={16} />
