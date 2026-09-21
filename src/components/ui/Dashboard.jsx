@@ -1293,6 +1293,32 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     }
   };
 
+  const handlePrimaryAccountAction = () => {
+    if (isTerminalAccount(activeChallenge)) {
+      setIsSidebarOpen(false);
+      if (activeChallenge?.accountMode === "DEMO") onFreeTrial();
+      else onNewChallenge();
+      return;
+    }
+    void handleOpenTrader();
+  };
+
+  const primaryAccountActionLabel = workspaceLoading
+    ? "Loading account…"
+    : traderLaunching
+      ? "Opening…"
+      : trialChecking
+        ? "Preparing…"
+        : isTerminalAccount(activeChallenge)
+          ? (activeChallenge?.accountMode === "DEMO" ? "Start New Trial" : "New Challenge")
+          : "Open ACG Trader";
+
+  const primaryAccountActionHelper = isTerminalAccount(activeChallenge)
+    ? (activeChallenge?.accountMode === "DEMO" ? "This trial is closed" : "This evaluation is closed")
+    : activeChallenge
+      ? "Trade your selected account"
+      : "Start with a free trial";
+
   const renderTabContent = () => {
     const propsPayload = {
       userName,
@@ -1451,7 +1477,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                     {workspaceLoading
                       ? "Syncing your trading workspace"
                       : activeChallenge
-                        ? `${money(activeChallenge.accountSize || 0)} · ${activeChallenge.accountMode === "DEMO" ? "Free Trial" : activeChallenge.status}`
+                        ? `${money(activeChallenge.accountSize || 0)} · ${getTraderAccountLabel(activeChallenge)} · ${formatAccountStatus(activeChallenge.status)}`
                         : "Choose or create an account"}
                   </p>
                 </div>
@@ -1474,9 +1500,9 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                       >
                         <div className="min-w-0">
                           <p className="truncate text-[11px] font-medium text-white">{account.accountId}</p>
-                          <p className="mt-0.5 text-[9px] text-[#666]">{money(account.accountSize || 0)} · {account.accountMode === "DEMO" ? "Free Trial" : account.status}</p>
+                          <p className="mt-0.5 text-[9px] text-[#666]">{money(account.accountSize || 0)} · {getTraderAccountLabel(account)} · {formatAccountStatus(account.status)}</p>
                         </div>
-                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${account.enabled ? "bg-emerald-400" : "bg-zinc-600"}`} />
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isTradableAccount(account) ? "bg-emerald-400" : account.status === "BREACHED" ? "bg-rose-400" : "bg-zinc-600"}`} />
                       </button>
                     );
                   })}
@@ -1486,12 +1512,12 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
 
             <button
               type="button"
-              onClick={handleOpenTrader}
+              onClick={handlePrimaryAccountAction}
               disabled={workspaceLoading || traderLaunching || trialChecking}
               className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50"
             >
               <ArrowUpRight size={14} />
-              {workspaceLoading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
+              {primaryAccountActionLabel}
             </button>
 
             {/* Primary actions */}
@@ -1661,16 +1687,16 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                   <div className="mb-4 sm:hidden">
                     <button
                       type="button"
-                      onClick={handleOpenTrader}
+                      onClick={handlePrimaryAccountAction}
                       disabled={traderLaunching || trialChecking}
                       className="flex min-h-12 w-full items-center justify-between rounded-xl bg-white px-4 text-left text-black shadow-[0_10px_30px_rgba(0,0,0,.18)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
                     >
                       <span className="min-w-0">
                         <span className="block text-[12px] font-semibold">
-                          {traderLaunching ? "Opening ACG Trader…" : trialChecking ? "Preparing ACG Trader…" : "Open ACG Trader"}
+                          {primaryAccountActionLabel}
                         </span>
                         <span className="mt-0.5 block truncate text-[9px] font-medium text-black/55">
-                          {activeChallenge ? "Trade your selected account" : "Start with a free trial"}
+                          {primaryAccountActionHelper}
                         </span>
                       </span>
                       <ArrowUpRight size={17} className="ml-3 shrink-0" />
@@ -1702,12 +1728,20 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         })}
         <button
           type="button"
-          onClick={handleOpenTrader}
+          onClick={handlePrimaryAccountAction}
           disabled={workspaceLoading || traderLaunching || trialChecking}
           className="flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] text-white disabled:cursor-wait disabled:text-[#555]"
         >
           <ArrowUpRight size={16} />
-          <span>{workspaceLoading ? "Loading" : trialChecking ? "Preparing" : "Trade"}</span>
+          <span>
+            {workspaceLoading
+              ? "Loading"
+              : trialChecking
+                ? "Preparing"
+                : isTerminalAccount(activeChallenge)
+                  ? (activeChallenge?.accountMode === "DEMO" ? "New Trial" : "New")
+                  : "Trade"}
+          </span>
         </button>
       </nav>
     </div>
