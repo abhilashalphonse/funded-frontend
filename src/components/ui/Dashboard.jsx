@@ -26,9 +26,9 @@ const pageDetails = {
 };
 
 const formatFreshness = (value) => {
-  if (!value) return "Waiting for live data";
+  if (!value) return "Waiting for account data";
   const ageMs = Math.max(0, Date.now() - new Date(value).getTime());
-  if (!Number.isFinite(ageMs)) return "Waiting for live data";
+  if (!Number.isFinite(ageMs)) return "Waiting for account data";
   const seconds = Math.floor(ageMs / 1000);
   if (seconds < 5) return "Updated just now";
   if (seconds < 60) return `Updated ${seconds}s ago`;
