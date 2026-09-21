@@ -1103,8 +1103,12 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       try {
         setWorkspaceError("");
 
-        const requestWorkspace = async (forceRefresh = false) => {
-          const token = await getAccessToken({ forceRefresh });
+        const requestWorkspace = async () => {
+          // getAccessToken already refreshes naturally when the Supabase session
+          // is close to expiry. Do not force-refresh on every upstream 401:
+          // during provider incidents that rotates refresh tokens repeatedly and
+          // can create refresh_token_not_found races across retries/tabs.
+          const token = await getAccessToken();
           if (!token) {
             const error = new Error("Your session has expired. Please sign in again.");
             error.code = "AUTH_SESSION_INVALID";
@@ -1119,10 +1123,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
           });
         };
 
-        let response = await requestWorkspace(false);
-        if (response.status === 401) {
-          response = await requestWorkspace(true);
-        }
+        const response = await requestWorkspace();
 
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
