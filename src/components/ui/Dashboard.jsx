@@ -36,11 +36,15 @@ const formatFreshness = (value) => {
   return `Updated ${minutes}m ago`;
 };
 
-const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching, trialChecking, launchError, loading = false }) => {
+const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, onNewChallenge, traderLaunching, trialChecking, launchError, loading = false }) => {
   const page = pageDetails[activeTab] || pageDetails.overview;
   const isOverview = activeTab === "overview";
-  const connectionActive = activeChallenge?.provisioning?.status === "ACTIVE";
+  const tradable = isTradableAccount(activeChallenge);
+  const terminal = isTerminalAccount(activeChallenge);
+  const isTrial = activeChallenge?.accountMode === "DEMO";
   const freshness = formatFreshness(activeChallenge?.lastPlatformSnapshotAt || activeChallenge?.updatedAt);
+  const accountLabel = getTraderAccountLabel(activeChallenge);
+  const statusLabel = formatAccountStatus(activeChallenge?.status);
 
   if (loading) {
     return (
@@ -68,19 +72,23 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
           <span className="inline-flex items-center gap-1.5 text-[#9a9a9a]">
-            <span className={`h-1.5 w-1.5 rounded-full ${connectionActive ? "bg-emerald-400" : "bg-zinc-600"}`} />
-            {connectionActive ? "Live" : "Offline"}
+            <span className={`h-1.5 w-1.5 rounded-full ${tradable ? "bg-emerald-400" : activeChallenge?.status === "BREACHED" ? "bg-rose-400" : "bg-zinc-600"}`} />
+            {activeChallenge ? accountLabel : "No account"}
           </span>
-          <span className="text-[#4f4f4f]">•</span>
-          <span className="text-[#6f6f6f]">{freshness}</span>
           {activeChallenge && (
             <>
               <span className="text-[#4f4f4f]">•</span>
-              <span className="text-[#6f6f6f]">Phase {activeChallenge.currentPhase || 1}</span>
-              <span className="text-[#4f4f4f]">•</span>
-              <span className="text-[#6f6f6f]">{activeChallenge.status}</span>
+              <span className={activeChallenge.status === "BREACHED" ? "text-rose-400" : "text-[#6f6f6f]"}>{statusLabel}</span>
+              {activeChallenge.accountMode !== "DEMO" && activeChallenge.status !== "FUNDED" && (
+                <>
+                  <span className="text-[#4f4f4f]">•</span>
+                  <span className="text-[#6f6f6f]">Phase {activeChallenge.currentPhase || 1}</span>
+                </>
+              )}
             </>
           )}
+          <span className="text-[#4f4f4f]">•</span>
+          <span className="text-[#6f6f6f]">{freshness}</span>
         </div>
         <h1 className="truncate text-[clamp(1.45rem,3.5vw,2rem)] font-semibold tracking-[-0.04em] text-white">
           {activeChallenge?.accountId || "No active trading account"}
@@ -95,11 +103,19 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, traderLaunching,
 
       <button
         type="button"
-        onClick={onOpenTrader}
+        onClick={terminal ? (isTrial ? onStartTrial : onNewChallenge) : onOpenTrader}
         disabled={loading || traderLaunching || trialChecking}
         className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50 sm:inline-flex"
       >
-        {loading ? "Loading account…" : traderLaunching ? "Opening…" : trialChecking ? "Preparing…" : "Open ACG Trader"}
+        {loading
+          ? "Loading account…"
+          : traderLaunching
+            ? "Opening…"
+            : trialChecking
+              ? "Preparing…"
+              : terminal
+                ? (isTrial ? "Start New Trial" : "New Challenge")
+                : "Open ACG Trader"}
       </button>
     </header>
   );
@@ -119,6 +135,41 @@ const pct = (value) => {
 };
 
 const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 0));
+
+const TERMINAL_ACCOUNT_STATUSES = new Set(["BREACHED", "LOCKED", "CLOSED"]);
+
+const isTerminalAccount = (account) =>
+  Boolean(account && TERMINAL_ACCOUNT_STATUSES.has(String(account.status || "").toUpperCase()));
+
+const isTradableAccount = (account) =>
+  Boolean(
+    account?.enabled
+    && ["ACTIVE", "PHASE_2", "FUNDED"].includes(String(account.status || "").toUpperCase())
+  );
+
+const getTraderAccountLabel = (account) => {
+  if (!account) return "Trading Account";
+  if (account.accountMode === "DEMO") return "Trial Account";
+  if (String(account.status || "").toUpperCase() === "FUNDED") return "Master Account";
+  return "Evaluation Account";
+};
+
+const formatAccountStatus = (status) => {
+  const value = String(status || "").trim().toUpperCase();
+  if (!value) return "Unknown";
+  const labels = {
+    NEW: "New",
+    ACTIVE: "Active",
+    BREACHED: "Breached",
+    LOCKED: "Locked",
+    PASSED: "Passed",
+    PHASE_2: "Active",
+    FUNDED_REVIEW: "Funded Review",
+    FUNDED: "Active",
+    CLOSED: "Closed",
+  };
+  return labels[value] || value.replaceAll("_", " ");
+};
 
 const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyLesson }) => {
   if (!account) {
@@ -170,18 +221,22 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
   const usedMargin = Number(account.margin || 0);
   const dailyRemaining = Math.max(0, dailyLossLimit - dailyLoss);
   const maxRemaining = Math.max(0, maxLossLimit - totalLoss);
+  const terminal = isTerminalAccount(account);
+  const equityLabel = terminal ? "Final equity" : "Current equity";
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
       <section className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#080808]">
         <div className="grid gap-5 px-4 py-5 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">Current equity</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#666]">{equityLabel}</p>
             <div className="mt-1 flex flex-wrap items-end gap-x-3 gap-y-1">
               <strong className="text-[clamp(2rem,6vw,3.1rem)] font-semibold leading-none tracking-[-0.055em] text-white tabular-nums">{money(equity)}</strong>
-              <span className={`pb-1 text-[12px] font-medium tabular-nums ${floating > 0 ? "text-emerald-400" : floating < 0 ? "text-rose-400" : "text-[#777]"}`}>
-                {floating >= 0 ? "+" : ""}{money(floating)} floating
-              </span>
+              {!terminal && (
+                <span className={`pb-1 text-[12px] font-medium tabular-nums ${floating > 0 ? "text-emerald-400" : floating < 0 ? "text-rose-400" : "text-[#777]"}`}>
+                  {floating >= 0 ? "+" : ""}{money(floating)} floating
+                </span>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4 lg:text-right">
@@ -260,7 +315,7 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
             <Zap size={15} className="text-[#707070]" />
           </div>
           <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
-            <CompactStat label="Status" value={String(account.status || "—")} />
+            <CompactStat label="Status" value={formatAccountStatus(account.status)} />
             <CompactStat label="Phase" value={`Phase ${account.currentPhase || 1}`} />
             <CompactStat label="Platform" value={account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—")} />
             <CompactStat label="Account size" value={money(initial)} />
@@ -1595,6 +1650,8 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                   activeTab={activeTab}
                   activeChallenge={activeChallenge}
                   onOpenTrader={handleOpenTrader}
+                  onStartTrial={onFreeTrial}
+                  onNewChallenge={onNewChallenge}
                   traderLaunching={traderLaunching}
                   trialChecking={trialChecking}
                   launchError={launchError}
