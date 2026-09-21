@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LayoutDashboard, LogOut } from 'lucide-react';
+import { Menu, X, LayoutDashboard, LogOut, ChevronRight, UserRound } from 'lucide-react';
 import logo from '../../assets/ACG.png';
 import { useAuth } from '../../AuthContext.jsx';
 
@@ -107,54 +107,76 @@ export default function Navbar({
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-x-0 bottom-0 top-14 overflow-y-auto overscroll-contain bg-[#05060A] p-6 flex flex-col gap-6 animate-in fade-in duration-150">
-          {['Challenges', 'How It Works', 'Support'].map((link) => (
-            <a
-              key={link}
-              href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-base text-white font-medium hover:text-[#888888] transition-colors"
-            >
-              {link}
-            </a>
-          ))}
-          <div className="pt-6 border-t border-white/[0.08] flex flex-col gap-4">
-            {user ? (
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={() => closeAndRun(onDashboard)}
-                  className="flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.05]"
-                >
-                  <LayoutDashboard size={17} strokeWidth={1.9} className="text-white/70" />
-                  <span>Dashboard</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-medium text-white/55 transition-colors hover:bg-white/[0.04] hover:text-white"
-                >
-                  <LogOut size={16} strokeWidth={1.8} />
-                  <span>Sign out</span>
-                </button>
-              </div>
-            ) : (
-              <>
+        <div className="md:hidden fixed inset-x-0 bottom-0 top-14 overflow-y-auto overscroll-contain bg-[#05060A] animate-in fade-in duration-150">
+          <div className="flex min-h-full flex-col px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-5">
+            <div>
+              <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">Explore</p>
+              <nav className="mt-2 divide-y divide-white/[0.06]">
+                {['Challenges', 'How It Works', 'Support'].map((link) => (
+                  <a
+                    key={link}
+                    href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-12 items-center justify-between px-1 text-[14px] font-semibold text-white transition-colors hover:text-white/65"
+                  >
+                    <span>{link}</span>
+                    <ChevronRight size={16} strokeWidth={1.8} className="text-white/25" />
+                  </a>
+                ))}
+              </nav>
+            </div>
+
+            <div className="mt-6 border-t border-white/[0.08] pt-5">
+              <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">Account</p>
+
+              {user ? (
+                <div className="mt-2 divide-y divide-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => closeAndRun(onDashboard)}
+                    className="flex min-h-12 w-full items-center justify-between px-1 text-left text-[14px] font-semibold text-white transition-colors hover:text-white/65"
+                  >
+                    <span className="flex items-center gap-3">
+                      <LayoutDashboard size={17} strokeWidth={1.8} className="text-white/55" />
+                      Dashboard
+                    </span>
+                    <ChevronRight size={16} strokeWidth={1.8} className="text-white/25" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="flex min-h-12 w-full items-center gap-3 px-1 text-left text-[13px] font-medium text-white/45 transition-colors hover:text-white/70"
+                  >
+                    <LogOut size={16} strokeWidth={1.8} />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
                   onClick={() => closeAndRun(onSignIn)}
-                  className="w-full text-left text-white font-medium"
+                  className="mt-2 flex min-h-12 w-full items-center justify-between px-1 text-left text-[14px] font-semibold text-white transition-colors hover:text-white/65"
                 >
-                  Sign In
+                  <span className="flex items-center gap-3">
+                    <UserRound size={17} strokeWidth={1.8} className="text-white/55" />
+                    Sign In
+                  </span>
+                  <ChevronRight size={16} strokeWidth={1.8} className="text-white/25" />
                 </button>
+              )}
+            </div>
+
+            {!user && (
+              <div className="mt-auto pt-8">
                 <button
                   type="button"
                   onClick={() => closeAndRun(onGetStarted)}
-                  className="w-full bg-white text-black py-2 rounded-full font-medium text-sm"
+                  className="flex min-h-12 w-full items-center justify-center rounded-xl bg-white px-4 text-[14px] font-semibold text-black transition active:scale-[0.99]"
                 >
-                  Get Started
+                  Start Your Challenge
                 </button>
-              </>
+                <p className="mt-2 text-center text-[10px] text-white/30">Choose your account size and evaluation rules</p>
+              </div>
             )}
           </div>
         </div>
