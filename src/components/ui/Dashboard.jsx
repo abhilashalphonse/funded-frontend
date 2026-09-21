@@ -1118,10 +1118,24 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     };
 
     void loadWorkspace();
-    const interval = window.setInterval(loadWorkspace, 5000);
+
+    // The dashboard is not a trading terminal, so repeatedly fetching the
+    // entire authenticated workspace every five seconds only amplifies auth,
+    // customer-resolution and account-query load. Refresh the workspace when
+    // the user actually returns to the dashboard instead. ACG Trader remains
+    // responsible for realtime execution/valuation while this page is open.
+    const refreshOnFocus = () => { void loadWorkspace(); };
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === "visible") void loadWorkspace();
+    };
+
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnVisibility);
+
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnVisibility);
     };
   }, [getAccessToken]);
 
