@@ -40,13 +40,13 @@ const PLATFORM_RULES = [
   },
   {
     name: 'Single-order exposure',
-    value: '20% of available margin capacity',
-    detail: 'A single new order must not consume more than 20% of the account\'s available margin capacity at the time the order is evaluated.',
+    value: '20% of remaining permitted margin capacity',
+    detail: 'A single new order must not consume more than 20% of the margin capacity still available inside the account\'s 50% maximum margin-usage limit at the time the order is evaluated.',
   },
   {
-    name: 'Per-symbol gross exposure',
-    value: '30% of permitted account exposure',
-    detail: 'Gross exposure on one instrument must not exceed 30% of the total exposure permitted for the account. Opposing exposure is not netted down for this calculation.',
+    name: 'Per-symbol margin exposure',
+    value: '30% of permitted account margin',
+    detail: 'The margin allocated to one instrument must not exceed 30% of the total margin permitted for the account under the 50% margin-usage ceiling.',
   },
 ];
 
@@ -228,7 +228,7 @@ export default function RulesPage() {
               ACG does not require a Stop Loss and does not automatically create or modify one.
               The 1% per-trade and 2% aggregate risk limits are measured from entry to Stop Loss
               only where a trader has chosen to set a Stop Loss. Positions without a Stop Loss
-              remain subject to margin, single-order exposure, symbol exposure and position-count
+              remain subject to margin, single-order capacity, per-symbol margin exposure and position-count
               limits.
             </p>
           </div>
