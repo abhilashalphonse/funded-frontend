@@ -1578,7 +1578,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
             <button
               type="button"
               onClick={handlePrimaryAccountAction}
-              disabled={workspaceLoading || traderLaunching || trialChecking}
+              disabled={authSessionExpired || workspaceLoading || traderLaunching || trialChecking}
               className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50"
             >
               <ArrowUpRight size={14} />
@@ -1813,7 +1813,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         <button
           type="button"
           onClick={handlePrimaryAccountAction}
-          disabled={workspaceLoading || traderLaunching || trialChecking}
+          disabled={authSessionExpired || workspaceLoading || traderLaunching || trialChecking}
           className="flex min-h-12 flex-col items-center justify-center gap-1 py-1 text-[10px] text-white disabled:cursor-wait disabled:text-[#555]"
         >
           <ArrowUpRight size={16} />
