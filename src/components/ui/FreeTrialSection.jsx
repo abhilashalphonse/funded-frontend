@@ -101,9 +101,9 @@ function TerminalPreview() {
           <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[#60798b]">Challenge risk</span>
           <div className="mt-4 space-y-4">
             {[
-              ['Daily loss', '10%'],
-              ['Max loss', '5%'],
-              ['Profit target', '0%'],
+              ['Daily loss', '5%'],
+              ['Max loss', '10%'],
+              ['Profit target', '8%'],
             ].map(([label, value], index) => (
               <div key={label}>
                 <div className="flex items-center justify-between text-[8px]">
