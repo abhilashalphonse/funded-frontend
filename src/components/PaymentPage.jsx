@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, CreditCard, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
 import { useAuth } from "../AuthContext.jsx";
-import { getAnalyticsSessionId, getAttribution } from "../utils/analytics.js";
+import { getAnalyticsSessionId, getAttribution, trackEvent } from "../utils/analytics.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", ACTIVATING: "ACTIVATING", ACTIVE: "ACTIVE", ACTIVATION_FAILED: "ACTIVATION_FAILED" };
@@ -180,6 +180,12 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     if (!canSubmit) return;
     setStatus(STATUS.PROCESSING);
     setNotice("");
+    void trackEvent("checkout_submitted", {
+      step: definition?.step,
+      accountSize: definition?.accountSize,
+      paymentMethod: method,
+      amount,
+    }, { entryIntent: "paid" });
     try {
       const token = await getAccessToken?.().catch(() => null);
       const response = await fetch(`${API_URL}/api/payments/crypto/create`, {
@@ -208,6 +214,12 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     } catch (error) {
       setStatus(STATUS.IDLE);
       setNotice(error.message || "Payment could not be started.");
+      void trackEvent("payment_failed", {
+        stage: "payment_create",
+        paymentMethod: method,
+        accountSize: definition?.accountSize,
+        message: error?.message || "Payment could not be started.",
+      }, { entryIntent: "paid" });
     }
   };
 
@@ -245,7 +257,11 @@ function PaymentReturn({ onHome, onDashboard }) {
   const [state, setState] = useState({ status: "PROCESSING", message: "Checking your payment…", paymentId: null });
 
   useEffect(() => {
-    const paymentId = new URLSearchParams(window.location.search).get("payment");
+    const params = new URLSearchParams(window.location.search);
+    const paymentId = params.get("payment");
+    if (params.get("status") === "cancelled") {
+      void trackEvent("payment_cancelled", { paymentId }, { entryIntent: "paid" });
+    }
     if (!paymentId) {
       setState({ status: "ERROR", message: "Payment reference is missing.", paymentId: null });
       return undefined;
@@ -319,6 +335,16 @@ export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}
     if (user?.email) setEmail(current => current || user.email);
   }, [user?.email]);
   const hasPlan = useMemo(() => Boolean(plan?.challengeDefinition && plan?.commercialConfig), [plan]);
+
+  useEffect(() => {
+    if (!hasPlan) return;
+    void trackEvent("checkout_viewed", {
+      step: plan?.challengeDefinition?.step,
+      accountSize: plan?.challengeDefinition?.accountSize,
+      amount: plan?.pricingPreview?.finalPrice ?? 0,
+    }, { entryIntent: "paid" });
+  }, [hasPlan, plan]);
+
   const returningPayment = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment");
   if (!hasPlan && returningPayment) return <PaymentReturn onHome={onHome} onDashboard={onDashboard} />;
   if (!hasPlan) return null;
