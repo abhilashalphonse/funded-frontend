@@ -1450,13 +1450,15 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     }
   };
 
-  const handleRetrySessionVerification = () => {
-    setWorkspaceLoading(true);
-    setWorkspaceError("");
-    setAuthSessionExpired(false);
-    setAuthVerificationFailed(false);
-    setWorkspaceReloadKey(value => value + 1);
-  };
+  useEffect(() => {
+    if (!authVerificationFailed) return undefined;
+
+    const retryTimer = window.setInterval(() => {
+      setWorkspaceReloadKey(value => value + 1);
+    }, 25_000);
+
+    return () => window.clearInterval(retryTimer);
+  }, [authVerificationFailed]);
 
   return (
     // Outer shell: Pure black
@@ -1619,7 +1621,8 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                     setIsSidebarOpen(false);
                     onNewChallenge();
                   }}
-                  className="h-10 w-full rounded-lg bg-white px-3 text-[12px] font-semibold text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 lg:h-8"
+                  disabled={authVerificationFailed || authSessionExpired || workspaceLoading}
+                  className="h-10 w-full rounded-lg bg-white px-3 text-[12px] font-semibold text-black transition-colors hover:bg-[#EBEBEB] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40 lg:h-8"
                 >
                   New Challenge
                 </button>
@@ -1628,8 +1631,8 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                     setIsSidebarOpen(false);
                     onFreeTrial();
                   }}
-                  disabled={trialChecking}
-                  className="h-10 w-full rounded-lg border border-[#333] bg-[#0A0A0A] px-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#111] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-wait disabled:opacity-50 lg:h-8"
+                  disabled={authVerificationFailed || authSessionExpired || workspaceLoading || trialChecking}
+                  className="h-10 w-full rounded-lg border border-[#333] bg-[#0A0A0A] px-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#111] focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-40 lg:h-8"
                 >
                   {trialChecking ? "Checking…" : "Free Trial"}
                 </button>
@@ -1646,8 +1649,9 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               <nav className="space-y-0.5">
                 <button
                   type="button"
-                  onClick={() => { setActiveTab("billing"); setIsSidebarOpen(false); }}
-                  className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${activeTab === "billing" ? "bg-[#111] text-white" : "text-[#888] hover:bg-[#0A0A0A] hover:text-[#EDEDED]"}`}
+                  onClick={() => { if (authVerificationFailed || authSessionExpired) return; setActiveTab("billing"); setIsSidebarOpen(false); }}
+                  disabled={authVerificationFailed || authSessionExpired}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${activeTab === "billing" ? "bg-[#111] text-white" : "text-[#888] hover:bg-[#0A0A0A] hover:text-[#EDEDED]"}`}
                 >
                   <Wallet size={16} />
                   Payouts
@@ -1737,29 +1741,20 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
             )}
             {authVerificationFailed ? (
               <div className="grid min-h-[360px] place-items-center rounded-xl border border-white/[0.08] bg-[#080808] px-6 text-center">
-                <div className="max-w-sm">
-                  <div className="mx-auto grid size-11 place-items-center rounded-lg border border-amber-500/20 bg-amber-500/[0.05] text-amber-300">
-                    <RefreshCw size={18} />
+                <div className="max-w-md">
+                  <div className="mx-auto grid size-11 place-items-center rounded-lg border border-white/[0.10] bg-white/[0.03] text-[#bdbdbd]">
+                    <RefreshCw size={18} className="animate-spin" />
                   </div>
-                  <h1 className="mt-4 text-lg font-semibold text-white">Unable to verify your session</h1>
+                  <h1 className="mt-4 text-lg font-semibold text-white">We're restoring ACG Funded</h1>
                   <p className="mt-2 text-[12px] leading-5 text-[#777]">
-                    We could not verify your login with our authentication provider. Your ACG Funded session has not been cleared.
+                    Some dashboard services are temporarily unavailable. We're working to restore access as quickly as possible.
                   </p>
-                  <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={handleRetrySessionVerification}
-                      className="min-h-10 rounded-lg bg-white px-5 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8]"
-                    >
-                      Retry
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSessionSignIn}
-                      className="min-h-10 rounded-lg border border-white/[0.12] bg-white/[0.03] px-5 text-[12px] font-semibold text-white transition hover:bg-white/[0.06]"
-                    >
-                      Sign in again
-                    </button>
+                  <p className="mt-2 text-[12px] leading-5 text-[#8a8a8a]">
+                    Your trading account and challenge progress are unaffected. No action is required from you.
+                  </p>
+                  <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[10px] font-medium text-[#777]">
+                    <span className="size-1.5 rounded-full bg-amber-300/80" />
+                    Checking again automatically…
                   </div>
                 </div>
               </div>
