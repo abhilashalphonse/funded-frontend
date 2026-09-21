@@ -67,6 +67,8 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
     );
   }
 
+  if (!activeChallenge) return null;
+
   return (
     <header className="mb-5 flex min-w-0 flex-col gap-4 border-b border-[#1d1d1d] pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
@@ -1072,6 +1074,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const [workspace, setWorkspace] = useState(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [workspaceError, setWorkspaceError] = useState("");
+  const [authSessionExpired, setAuthSessionExpired] = useState(false);
   const [traderLaunching, setTraderLaunching] = useState(false);
   const [launchError, setLaunchError] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("");
@@ -1097,20 +1100,51 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       inFlight = true;
       try {
         setWorkspaceError("");
-        const token = await getAccessToken();
-        if (!token) throw new Error("Your ACG Funded session has expired.");
-        const response = await fetch(`${API_URL}/api/customer/workspace`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "x-acg-session-id": getAnalyticsSessionId(),
-          },
-          cache: "no-store",
-        });
+
+        const requestWorkspace = async (forceRefresh = false) => {
+          const token = await getAccessToken({ forceRefresh });
+          if (!token) {
+            const error = new Error("Your session has expired. Please sign in again.");
+            error.code = "AUTH_SESSION_INVALID";
+            throw error;
+          }
+          return fetch(`${API_URL}/api/customer/workspace`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "x-acg-session-id": getAnalyticsSessionId(),
+            },
+            cache: "no-store",
+          });
+        };
+
+        let response = await requestWorkspace(false);
+        if (response.status === 401) {
+          response = await requestWorkspace(true);
+        }
+
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload?.message || "Unable to load your trading workspace.");
-        if (!cancelled) setWorkspace(payload?.data || null);
+        if (!response.ok) {
+          const error = new Error(payload?.message || "Unable to load your trading workspace.");
+          error.status = response.status;
+          error.code = payload?.code || (response.status === 401 ? "AUTH_SESSION_INVALID" : "");
+          throw error;
+        }
+
+        if (!cancelled) {
+          setAuthSessionExpired(false);
+          setWorkspace(payload?.data || null);
+        }
       } catch (error) {
-        if (!cancelled) setWorkspaceError(error?.message || "Unable to load your trading workspace.");
+        if (!cancelled) {
+          const isAuthFailure = error?.status === 401 || error?.code === "AUTH_SESSION_INVALID" || error?.code === "AUTH_REQUIRED";
+          if (isAuthFailure) {
+            setWorkspace(null);
+            setAuthSessionExpired(true);
+            setWorkspaceError("");
+          } else {
+            setWorkspaceError(error?.message || "Unable to load your trading workspace.");
+          }
+        }
       } finally {
         inFlight = false;
         if (!cancelled) setWorkspaceLoading(false);
@@ -1391,6 +1425,14 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
     }
   };
 
+  const handleSessionSignIn = async () => {
+    try {
+      await signOut();
+    } catch {
+      // AuthContext will route the cleared or replaced session back to sign-in.
+    }
+  };
+
   return (
     // Outer shell: Pure black
     <div className="relative min-h-[100dvh] bg-[#000000] text-[#EDEDED] font-sans flex flex-col antialiased overflow-x-clip selection:bg-white/20 lg:h-[100dvh] lg:overflow-hidden">
@@ -1663,12 +1705,31 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
         {/* --- MAIN CONTENT AREA --- */}
         <main className="min-h-0 min-w-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">
           <div className="dashboard-surface mx-auto w-full max-w-[1560px] px-4 py-5 pb-24 sm:px-6 sm:py-6 sm:pb-24 lg:px-7 lg:py-7 lg:pb-8 xl:px-8">
-            {workspaceError && (
+            {!authSessionExpired && workspaceError && (
               <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/[0.05] px-4 py-3 text-[12px] text-red-300">
                 {workspaceError}
               </div>
             )}
-            {workspaceLoading ? (
+            {authSessionExpired ? (
+              <div className="grid min-h-[360px] place-items-center rounded-xl border border-white/[0.08] bg-[#080808] px-6 text-center">
+                <div className="max-w-sm">
+                  <div className="mx-auto grid size-11 place-items-center rounded-lg border border-red-500/20 bg-red-500/[0.05] text-red-300">
+                    <Lock size={18} />
+                  </div>
+                  <h1 className="mt-4 text-lg font-semibold text-white">Your session has expired</h1>
+                  <p className="mt-2 text-[12px] leading-5 text-[#777]">
+                    Sign in again to access your ACG Funded account and trading workspace.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSessionSignIn}
+                    className="mt-5 min-h-10 rounded-lg bg-white px-5 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8]"
+                  >
+                    Sign in again
+                  </button>
+                </div>
+              </div>
+            ) : workspaceLoading ? (
               <div className="animate-pulse space-y-4" aria-label="Loading trading workspace">
                 <div className="border-b border-[#1d1d1d] pb-4">
                   <div className="h-3 w-28 rounded bg-white/[0.06]" />
@@ -1706,7 +1767,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
                   launchError={launchError}
                 />
 
-                {activeTab === "overview" && (
+                {activeTab === "overview" && activeChallenge && (
                   <div className="mb-4 sm:hidden">
                     <button
                       type="button"
