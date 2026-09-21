@@ -10,7 +10,7 @@ import {
    Layers, ShieldCheck, Flame, AlertCircle, LogOut, Eye, EyeOff, Copy, RefreshCw
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
-import { getAnalyticsSessionId } from "../../utils/analytics.js";
+import { getAnalyticsSessionId, trackEvent } from "../../utils/analytics.js";
 import Academy from "../academy/Academy.jsx";
 import NewsCalendar from "../calendar/NewsCalendar.jsx";
 
@@ -1303,7 +1303,14 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       if (traderWindow && !traderWindow.closed) {
         traderWindow.close();
       }
-      setLaunchError(error?.message || "Unable to open ACG Trader.");
+      const launchMessage = error?.message || "Unable to open ACG Trader.";
+      setLaunchError(launchMessage);
+      void trackEvent("trader_launch_failed", {
+        accountId: activeChallenge?.accountId || null,
+        accountMode: activeChallenge?.accountMode || null,
+        status: activeChallenge?.status || null,
+        message: launchMessage,
+      }, { getAccessToken });
     } finally {
       setTraderLaunching(false);
     }
