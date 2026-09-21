@@ -18,6 +18,17 @@ export default function Navbar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
   const closeAndRun = (action) => {
     setMobileMenuOpen(false);
     action?.();
@@ -29,7 +40,7 @@ export default function Navbar({
   };
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out ${isScrolled ? 'bg-[#05060A]/70 backdrop-blur-xl border-b border-white/[0.08]' : 'bg-transparent border-transparent'}`}>
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'bg-[#05060A] border-b border-white/[0.08]' : isScrolled ? 'bg-[#05060A]/70 backdrop-blur-xl border-b border-white/[0.08]' : 'bg-transparent border-transparent'}`}>
       <div className="max-w-[1224px] mx-auto px-6 h-14 flex items-center justify-between">
         <a href="#top" className="flex items-center gap-2 cursor-pointer group" aria-label="ACG Funded home">
           <img src={logo} width={80} alt="ACG Funded" />
@@ -96,7 +107,7 @@ export default function Navbar({
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-14 left-0 max-h-[calc(100vh-3.5rem)] w-full overflow-y-auto bg-[#05060A]/95 backdrop-blur-lg border-b border-white/[0.08] p-6 flex flex-col gap-6 animate-in slide-in-from-top-2 fade-in">
+        <div className="md:hidden fixed inset-x-0 bottom-0 top-14 overflow-y-auto overscroll-contain bg-[#05060A] p-6 flex flex-col gap-6 animate-in fade-in duration-150">
           {['Challenges', 'How It Works', 'Support'].map((link) => (
             <a
               key={link}
