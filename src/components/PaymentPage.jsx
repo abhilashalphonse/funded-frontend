@@ -219,7 +219,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.data?.checkoutUrl) throw new Error(data?.message || "Unable to create crypto payment.");
+      if (!response.ok || !data?.data?.checkoutUrl) throw new Error(data?.message || "Unable to create payment.");
       setPaymentId(data.data.paymentId);
       if (typeof window !== "undefined") {
         window.sessionStorage.setItem("acg:lastCheckoutEmail", email.trim().toLowerCase());
