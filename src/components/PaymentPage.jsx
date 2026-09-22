@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, CreditCard, LogIn } from "lucide-react";
+import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, QrCode, LogIn } from "lucide-react";
 import logo from "../assets/ACG.png";
 import { useAuth } from "../AuthContext.jsx";
 import { getAnalyticsSessionId, getAttribution, trackEvent } from "../utils/analytics.js";
@@ -79,28 +79,41 @@ function EmailField({ email, onChange, locked = false }) {
   </div>;
 }
 
-function PaymentMethodSelector() {
+function PaymentMethodSelector({ method, onChange }) {
+  const methods = [
+    { id: "UPI", label: "UPI", icon: QrCode },
+    { id: "CRYPTO", label: "Crypto", icon: Bitcoin },
+  ];
   return (
     <div className="grid grid-cols-2 gap-2" aria-label="Payment methods">
-      <button
-        type="button"
-        disabled
-        aria-disabled="true"
-        className="flex min-h-12 cursor-not-allowed items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.01] px-3.5 text-left opacity-45"
-      >
-        <span className="flex items-center gap-2 text-xs font-semibold text-zinc-400">
-          <CreditCard className="h-4 w-4" />
-          Card
-        </span>
-        <span className="text-[9px] font-semibold uppercase tracking-wider text-zinc-600">Unavailable</span>
-      </button>
-      <div className="flex min-h-12 items-center justify-between rounded-lg border border-white bg-white px-3.5 text-left text-black">
-        <span className="flex items-center gap-2 text-xs font-semibold">
-          <Bitcoin className="h-4 w-4" />
-          Crypto
-        </span>
-        <Check className="h-3.5 w-3.5" />
-      </div>
+      {methods.map((item) => {
+        const active = method === item.id;
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onChange(item.id)}
+            className={`flex min-h-12 items-center justify-between rounded-lg border px-3.5 text-left transition-colors ${active ? "border-white bg-white text-black" : "border-white/[0.09] bg-white/[0.01] text-zinc-400 hover:text-white"}`}
+          >
+            <span className="flex items-center gap-2 text-xs font-semibold">
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </span>
+            {active && <Check className="h-3.5 w-3.5" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function UpiPaymentPanel() {
+  return (
+    <div className="rounded-lg border border-white/[0.09] bg-white/[0.015] p-5">
+      <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-widest text-zinc-500"><QrCode className="h-4 w-4" /> UPI Payment</div>
+      <p className="text-sm font-medium text-white">Pay instantly with UPI</p>
+      <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">You’ll be redirected to the secure Rupayex payment page. The INR amount is calculated by the backend from the final EUR challenge price.</p>
     </div>
   );
 }
@@ -127,7 +140,7 @@ function Terms({ checked, onChange }) {
 }
 
 function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSignIn, getAccessToken }) {
-  const [method, setMethod] = useState("BTC");
+  const [method, setMethod] = useState("UPI");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [status, setStatus] = useState(STATUS.IDLE);
   const [notice, setNotice] = useState("");
@@ -188,7 +201,8 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     }, { entryIntent: "paid" });
     try {
       const token = await getAccessToken?.().catch(() => null);
-      const response = await fetch(`${API_URL}/api/payments/crypto/create`, {
+      const isUpi = method === "UPI";
+      const response = await fetch(`${API_URL}${isUpi ? "/api/payments/upi/create" : "/api/payments/crypto/create"}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -199,7 +213,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
           email,
           challengeDefinition: definition,
           commercialConfig: commercial,
-          paymentMethod: method,
+          ...(isUpi ? {} : { paymentMethod: method }),
           analyticsSessionId: getAnalyticsSessionId(),
           attribution: getAttribution(),
         }),
@@ -240,15 +254,15 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     <p className="mb-6 text-xs text-zinc-500">Complete your payment to activate your challenge.</p>
     <div className="space-y-5">
       <EmailField email={email} onChange={onEmailChange} locked={emailLocked} />
-      <PaymentMethodSelector />
-      <CryptoPaymentPanel method={method} onMethodChange={setMethod} />
+      <PaymentMethodSelector method={method === "UPI" ? "UPI" : "CRYPTO"} onChange={(next) => setMethod(next === "UPI" ? "UPI" : "BTC")} />
+      {method === "UPI" ? <UpiPaymentPanel /> : <CryptoPaymentPanel method={method} onMethodChange={setMethod} />}
       <Terms checked={termsAccepted} onChange={setTermsAccepted} />
       {notice && <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{notice}</span></div>}
       <button type="button" onClick={createPayment} disabled={!canSubmit} className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-[13.5px] font-semibold uppercase tracking-wide text-black hover:bg-neutral-200 disabled:opacity-40">
-        {status === STATUS.PROCESSING ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating secure payment...</> : `Pay ${formatMoney(amount, { symbol: "€" })} with ${method === "BTC" ? "BTC" : "USDT TRC20"} →`}
+        {status === STATUS.PROCESSING ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating secure payment...</> : `Pay ${formatMoney(amount, { symbol: "€" })} with ${method === "UPI" ? "UPI" : method === "BTC" ? "BTC" : "USDT TRC20"} →`}
       </button>
       {paymentId && <p className="text-center text-[10px] text-zinc-700">Payment ID: {paymentId}</p>}
-      <div className="space-y-1.5 text-xs text-zinc-500"><div className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> Secure crypto payment</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> Challenge activated after confirmation</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> ACG Trader access after activation</div></div>
+      <div className="space-y-1.5 text-xs text-zinc-500"><div className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> Secure {method === "UPI" ? "UPI" : "crypto"} payment</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> Challenge activated after confirmation</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> ACG Trader access after activation</div></div>
     </div>
   </motion.div>;
 }
