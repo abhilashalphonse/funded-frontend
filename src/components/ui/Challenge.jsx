@@ -34,22 +34,12 @@ const ICON_STROKE = 1.5;
 // Static data
 // ---------------------------------------------------------------------------
 
-// USD is the canonical ACG commercial currency. The non-USD rates below are
-// display-only legacy conversions; checkout and stored prices remain USD.
+// USD is the only ACG commercial/display currency.
 const CURRENCIES = [
   { code: "USD", symbol: "$", label: "USD", rate: 1, countryCode: "us" },
-  { code: "GBP", symbol: "£", label: "GBP", rate: 0.787037, countryCode: "gb" },
-  { code: "EUR", symbol: "€", label: "EUR", rate: 0.925926, countryCode: "eu" },
 ];
 
-const MORE_CURRENCIES = [
-  { code: "CHF", symbol: "CHF ", label: "CHF", rate: 0.87963 },
-  { code: "AUD", symbol: "A$", label: "AUD", rate: 1.527778 },
-  { code: "CAD", symbol: "C$", label: "CAD", rate: 1.361111 },
-  { code: "PLN", symbol: "zł", label: "PLN", rate: 3.981481 },
-];
-
-const ALL_CURRENCIES = [...CURRENCIES, ...MORE_CURRENCIES];
+const ALL_CURRENCIES = CURRENCIES;
 
 const STEP_MODES = [
   { id: "2-step", label: "2-Step", sub: "Standard 2-phase evaluation", icon: Rocket },
