@@ -268,6 +268,10 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     if (!canSubmit) return;
     const isUpi = method === "UPI";
     const paymentWindow = isUpi ? window.open("about:blank", "_blank") : null;
+    if (isUpi && !paymentWindow) {
+      setNotice("Your browser blocked the secure payment window. Allow pop-ups for ACG Funded and try again.");
+      return;
+    }
     if (paymentWindow) paymentWindow.opener = null;
 
     setStatus(STATUS.PROCESSING);
