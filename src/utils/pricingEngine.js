@@ -761,8 +761,8 @@ export function calculatePrice(
    *
    * Example:
    *
-   * $269 × 0.96 = €258
-   * $269 × 1.02 = €274
+   * $269 × 0.96 = $258
+   * $269 × 1.02 = $274
    *
    * Both must remain different prices.
    */
