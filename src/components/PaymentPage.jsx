@@ -9,8 +9,8 @@ const API_URL = import.meta.env.VITE_API_URL || "";
 const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", ACTIVATING: "ACTIVATING", ACTIVE: "ACTIVE", ACTIVATION_FAILED: "ACTIVATION_FAILED" };
 
 const formatAccountSize = (size) => Number.isFinite(size) ? `$${Math.round(size / 1000)}K` : "";
-const formatMoney = (amount, currency = { symbol: "€" }) => {
-  const symbol = currency?.symbol ?? "€";
+const formatMoney = (amount, currency = { symbol: "$" }) => {
+  const symbol = currency?.symbol ?? "$";
   return `${symbol}${Number(amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 const formatINR = (amount) => `₹${Number(amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -59,8 +59,8 @@ function ChallengeSummary({ plan }) {
       </div>
 
       <div className="mt-6 border-t border-white/[0.06] pt-5">
-        <div className="flex items-center justify-between text-sm text-zinc-400"><span>Challenge</span><span className="text-white">{formatMoney(total, plan.pricingPreview?.currency === "EUR" ? { symbol: "€" } : plan.currency)}</span></div>
-        <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3"><span className="font-semibold text-white">Total</span><span className="text-2xl font-semibold text-white">{formatMoney(total, { symbol: "€" })}</span></div>
+        <div className="flex items-center justify-between text-sm text-zinc-400"><span>Challenge</span><span className="text-white">{formatMoney(total, plan.pricingPreview?.currency === "USD" ? { symbol: "$" } : plan.currency)}</span></div>
+        <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3"><span className="font-semibold text-white">Total</span><span className="text-2xl font-semibold text-white">{formatMoney(total, { symbol: "$" })}</span></div>
       </div>
     </motion.div>
   );
@@ -129,7 +129,7 @@ function UpiPaymentPanel({ quote, loading, error }) {
       </div>
       {error
         ? <p className="mt-4 text-xs leading-relaxed text-amber-400">{error}</p>
-        : <p className="mt-4 text-xs leading-relaxed text-zinc-500">Your challenge is priced in EUR. Rupayex charges the server-calculated INR equivalent shown above.</p>}
+        : <p className="mt-4 text-xs leading-relaxed text-zinc-500">Your challenge is priced in USD. Rupayex charges the server-calculated INR equivalent shown above.</p>}
     </div>
   );
 }
@@ -319,7 +319,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
       <Terms checked={termsAccepted} onChange={setTermsAccepted} />
       {notice && <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{notice}</span></div>}
       <button type="button" onClick={createPayment} disabled={!canSubmit} className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-[13.5px] font-semibold uppercase tracking-wide text-black hover:bg-neutral-200 disabled:opacity-40">
-        {status === STATUS.PROCESSING ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating secure payment...</> : method === "UPI" ? `Pay ${formatINR(upiQuote?.providerAmount)} INR with UPI →` : `Pay ${formatMoney(amount, { symbol: "€" })} with ${method === "BTC" ? "BTC" : "USDT TRC20"} →`}
+        {status === STATUS.PROCESSING ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating secure payment...</> : method === "UPI" ? `Pay ${formatINR(upiQuote?.providerAmount)} INR with UPI →` : `Pay ${formatMoney(amount, { symbol: "$" })} with ${method === "BTC" ? "BTC" : "USDT TRC20"} →`}
       </button>
       {paymentId && <p className="text-center text-[10px] text-zinc-700">Payment ID: {paymentId}</p>}
       <div className="space-y-1.5 text-xs text-zinc-500"><div className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> Secure {method === "UPI" ? "UPI" : "crypto"} payment</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> Challenge activated after confirmation</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> ACG Trader access after activation</div></div>
