@@ -13,6 +13,7 @@ const formatMoney = (amount, currency = { symbol: "€" }) => {
   const symbol = currency?.symbol ?? "€";
   return `${symbol}${Number(amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
+const formatINR = (amount) => `₹${Number(amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function CheckoutHeader({ onSignIn }) {
   return (
@@ -108,12 +109,27 @@ function PaymentMethodSelector({ method, onChange }) {
   );
 }
 
-function UpiPaymentPanel() {
+function UpiPaymentPanel({ quote, loading, error }) {
   return (
     <div className="rounded-lg border border-white/[0.09] bg-white/[0.015] p-5">
       <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-widest text-zinc-500"><QrCode className="h-4 w-4" /> UPI Payment</div>
-      <p className="text-sm font-medium text-white">Pay instantly with UPI</p>
-      <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">You’ll be redirected to the secure Rupayex payment page. The INR amount is calculated by the backend from the final EUR challenge price.</p>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-white">Pay in Indian Rupees</p>
+          <p className="mt-1 text-xs text-zinc-500">Processed securely by Rupayex</p>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-widest text-zinc-600">Amount payable</div>
+          {loading
+            ? <div className="mt-1 flex items-center justify-end gap-1.5 text-sm text-zinc-400"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Calculating…</div>
+            : error
+              ? <div className="mt-1 text-xs text-amber-400">Unavailable</div>
+              : <div className="mt-1 text-xl font-semibold tracking-tight text-white">{formatINR(quote?.providerAmount)} <span className="text-xs font-medium text-zinc-500">INR</span></div>}
+        </div>
+      </div>
+      {error
+        ? <p className="mt-4 text-xs leading-relaxed text-amber-400">{error}</p>
+        : <p className="mt-4 text-xs leading-relaxed text-zinc-500">Your challenge is priced in EUR. Rupayex charges the server-calculated INR equivalent shown above.</p>}
     </div>
   );
 }
@@ -145,12 +161,56 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   const [status, setStatus] = useState(STATUS.IDLE);
   const [notice, setNotice] = useState("");
   const [paymentId, setPaymentId] = useState(null);
+  const [upiQuote, setUpiQuote] = useState(null);
+  const [upiQuoteLoading, setUpiQuoteLoading] = useState(false);
+  const [upiQuoteError, setUpiQuoteError] = useState("");
 
   const definition = plan.challengeDefinition;
   const commercial = plan.commercialConfig;
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
-  const canSubmit = emailValid && termsAccepted && status !== STATUS.PROCESSING;
   const amount = plan.pricingPreview?.finalPrice ?? 0;
+  const upiReady = method !== "UPI" || (Boolean(upiQuote?.providerAmount) && !upiQuoteLoading && !upiQuoteError);
+  const canSubmit = emailValid && termsAccepted && status !== STATUS.PROCESSING && upiReady;
+
+  useEffect(() => {
+    if (method !== "UPI") {
+      setUpiQuote(null);
+      setUpiQuoteError("");
+      setUpiQuoteLoading(false);
+      return undefined;
+    }
+
+    let active = true;
+    setUpiQuoteLoading(true);
+    setUpiQuoteError("");
+    const loadQuote = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/payments/upi/quote`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            challengeDefinition: definition,
+            commercialConfig: commercial,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!active) return;
+        if (!response.ok || !payload?.data?.providerAmount) {
+          throw new Error(payload?.message || "Unable to calculate the INR amount.");
+        }
+        setUpiQuote(payload.data);
+      } catch (error) {
+        if (active) {
+          setUpiQuote(null);
+          setUpiQuoteError(error?.message || "Unable to calculate the INR amount.");
+        }
+      } finally {
+        if (active) setUpiQuoteLoading(false);
+      }
+    };
+    void loadQuote();
+    return () => { active = false; };
+  }, [method, definition, commercial]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -255,11 +315,11 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     <div className="space-y-5">
       <EmailField email={email} onChange={onEmailChange} locked={emailLocked} />
       <PaymentMethodSelector method={method === "UPI" ? "UPI" : "CRYPTO"} onChange={(next) => setMethod(next === "UPI" ? "UPI" : "BTC")} />
-      {method === "UPI" ? <UpiPaymentPanel /> : <CryptoPaymentPanel method={method} onMethodChange={setMethod} />}
+      {method === "UPI" ? <UpiPaymentPanel quote={upiQuote} loading={upiQuoteLoading} error={upiQuoteError} /> : <CryptoPaymentPanel method={method} onMethodChange={setMethod} />}
       <Terms checked={termsAccepted} onChange={setTermsAccepted} />
       {notice && <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{notice}</span></div>}
       <button type="button" onClick={createPayment} disabled={!canSubmit} className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-[13.5px] font-semibold uppercase tracking-wide text-black hover:bg-neutral-200 disabled:opacity-40">
-        {status === STATUS.PROCESSING ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating secure payment...</> : `Pay ${formatMoney(amount, { symbol: "€" })} with ${method === "UPI" ? "UPI" : method === "BTC" ? "BTC" : "USDT TRC20"} →`}
+        {status === STATUS.PROCESSING ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating secure payment...</> : method === "UPI" ? `Pay ${formatINR(upiQuote?.providerAmount)} INR with UPI →` : `Pay ${formatMoney(amount, { symbol: "€" })} with ${method === "BTC" ? "BTC" : "USDT TRC20"} →`}
       </button>
       {paymentId && <p className="text-center text-[10px] text-zinc-700">Payment ID: {paymentId}</p>}
       <div className="space-y-1.5 text-xs text-zinc-500"><div className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> Secure {method === "UPI" ? "UPI" : "crypto"} payment</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> Challenge activated after confirmation</div><div className="flex items-center gap-1.5"><Check className="h-3 w-3" /> ACG Trader access after activation</div></div>
