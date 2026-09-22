@@ -34,17 +34,19 @@ const ICON_STROKE = 1.5;
 // Static data
 // ---------------------------------------------------------------------------
 
+// USD is the canonical ACG commercial currency. The non-USD rates below are
+// display-only legacy conversions; checkout and stored prices remain USD.
 const CURRENCIES = [
-  { code: "USD", symbol: "$", label: "USD", rate: 1.08, countryCode: "us" },
-  { code: "GBP", symbol: "£", label: "GBP", rate: 0.85, countryCode: "gb" },
-  { code: "EUR", symbol: "€", label: "EUR", rate: 1, countryCode: "eu" },
+  { code: "USD", symbol: "$", label: "USD", rate: 1, countryCode: "us" },
+  { code: "GBP", symbol: "£", label: "GBP", rate: 0.787037, countryCode: "gb" },
+  { code: "EUR", symbol: "€", label: "EUR", rate: 0.925926, countryCode: "eu" },
 ];
 
 const MORE_CURRENCIES = [
-  { code: "CHF", symbol: "CHF ", label: "CHF", rate: 0.95 },
-  { code: "AUD", symbol: "A$", label: "AUD", rate: 1.65 },
-  { code: "CAD", symbol: "C$", label: "CAD", rate: 1.47 },
-  { code: "PLN", symbol: "zł", label: "PLN", rate: 4.3 },
+  { code: "CHF", symbol: "CHF ", label: "CHF", rate: 0.87963 },
+  { code: "AUD", symbol: "A$", label: "AUD", rate: 1.527778 },
+  { code: "CAD", symbol: "C$", label: "CAD", rate: 1.361111 },
+  { code: "PLN", symbol: "zł", label: "PLN", rate: 3.981481 },
 ];
 
 const ALL_CURRENCIES = [...CURRENCIES, ...MORE_CURRENCIES];
@@ -54,11 +56,7 @@ const STEP_MODES = [
   { id: "1-step", label: "1-Step", sub: "Single pass to funded", icon: Zap },
 ];
 
-// All prices below are sourced in USD and stored internally as EUR-base
-// (priceEUR = usdPrice / USD.rate) so the existing multi-currency converter
-// keeps working unchanged for every currency option.
-const USD_RATE = CURRENCIES.find((c) => c.code === "USD").rate;
-const toEurBase = (usd) => usd / USD_RATE;
+// All challenge prices below are stored canonically in USD.
 
 // Avg. Reward figures are not provided by the new pricing sheet, so they are
 // estimated at ~6% of account size (in line with the previous data's ratio).
@@ -66,19 +64,19 @@ const toEurBase = (usd) => usd / USD_RATE;
 const estimateAvgReward = (size) => Math.round((size * 0.06) / 5) * 5;
 
 const ACCOUNTS_1STEP = [
-  { id: "10k", size: 10000, priceEUR: toEurBase(89), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(10000), badge: null },
-  { id: "25k", size: 25000, priceEUR: toEurBase(98), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(25000), badge: null },
-  { id: "50k", size: 50000, priceEUR: toEurBase(301), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(50000), badge: null },
-  { id: "100k", size: 100000, priceEUR: toEurBase(549), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(100000), badge: "best" },
-  { id: "200k", size: 200000, priceEUR: toEurBase(910), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(200000), badge: null },
+  { id: "10k", size: 10000, priceUSD: 89, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(10000), badge: null },
+  { id: "25k", size: 25000, priceUSD: 98, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(25000), badge: null },
+  { id: "50k", size: 50000, priceUSD: 301, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(50000), badge: null },
+  { id: "100k", size: 100000, priceUSD: 549, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(100000), badge: "best" },
+  { id: "200k", size: 200000, priceUSD: 910, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(200000), badge: null },
 ];
 
 const ACCOUNTS_2STEP = [
-  { id: "5k", size: 5000, priceEUR: toEurBase(49), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(5000), badge: null },
-  { id: "10k", size: 10000, priceEUR: toEurBase(69), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(10000), badge: null },
-  { id: "25k", size: 25000, priceEUR: toEurBase(129), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(25000), badge: null },
-  { id: "50k", size: 50000, priceEUR: toEurBase(249), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(50000), badge: null },
-  { id: "100k", size: 100000, priceEUR: toEurBase(448), oldPriceEUR: null, avgRewardEUR: estimateAvgReward(100000), badge: "best" },
+  { id: "5k", size: 5000, priceUSD: 49, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(5000), badge: null },
+  { id: "10k", size: 10000, priceUSD: 69, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(10000), badge: null },
+  { id: "25k", size: 25000, priceUSD: 129, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(25000), badge: null },
+  { id: "50k", size: 50000, priceUSD: 249, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(50000), badge: null },
+  { id: "100k", size: 100000, priceUSD: 448, oldPriceUSD: null, avgRewardUSD: estimateAvgReward(100000), badge: "best" },
 ];
 
 const ACCOUNTS_BY_MODE = {
@@ -138,14 +136,14 @@ const HEADER_HEIGHT = "112px";
 // ---------------------------------------------------------------------------
 const fmtInt = (n) => Math.round(n).toLocaleString("en-US");
 const money = (amount, currency) => `${currency.symbol}${fmtInt(amount)}`;
-const convert = (eurAmount, currency) => eurAmount * currency.rate;
+const convert = (usdAmount, currency) => usdAmount * currency.rate;
 
 // ---------------------------------------------------------------------------
 // Phase Table View
 // ---------------------------------------------------------------------------
 function PhaseTableView({ currency, showNumbers, accounts, selectedAccountId, onSelect, objectives, onStart }) {
   const account = accounts.find((a) => a.id === selectedAccountId) ?? accounts[0];
-  const price = convert(account.priceEUR, currency);
+  const price = convert(account.priceUSD, currency);
   const isBest = account.badge === "best";
 
   if (!objectives) return null;
@@ -348,8 +346,8 @@ export default function ChallengeSection({ onSelectPlan }) {
         currencyCode,
         accountId: account.id,
         accountSize: account.size,
-        priceEUR: account.priceEUR,
-        price: convert(account.priceEUR, currency), // price in currently selected display currency
+        priceUSD: account.priceUSD,
+        price: convert(account.priceUSD, currency), // price in currently selected display currency
         currency, // full currency object {code, symbol, rate,...}
       });
     }
@@ -501,8 +499,8 @@ export default function ChallengeSection({ onSelectPlan }) {
                 {/* Scrolling Matrix Layout Block */}
                 <div className="w-full flex flex-row gap-4 overflow-x-auto pb-6 pt-4 snap-x snap-mandatory mask-scroll-edge lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 px-2 sm:px-4 lg:px-0">
                   {accounts.map((account, idx) => {
-                    const price = convert(account.priceEUR, currency);
-                    const oldPrice = account.oldPriceEUR ? convert(account.oldPriceEUR, currency) : null;
+                    const price = convert(account.priceUSD, currency);
+                    const oldPrice = account.oldPriceUSD ? convert(account.oldPriceUSD, currency) : null;
                     const dailyLossValue = showNumbers ? money((account.size * currentObjectives.maxDailyLoss) / 100, currency) : `${currentObjectives.maxDailyLoss}%`;
                     const maxLossValue = showNumbers ? money((account.size * currentObjectives.maxLoss) / 100, currency) : `${currentObjectives.maxLoss}%`;
                     const isBest = account.badge === "best";
@@ -631,7 +629,7 @@ export default function ChallengeSection({ onSelectPlan }) {
                         {/* Segregated Detached Reward Metric Segment */}
                         <div className="w-full rounded-xl bg-[#0A0A0B] border border-white/[0.08] p-3.5 flex flex-col items-center justify-center text-center">
                           <span className="text-xs font-semibold text-white tracking-wide mb-1 tabular-nums">
-                            {money(convert(account.avgRewardEUR, currency), currency)}
+                            {money(convert(account.avgRewardUSD, currency), currency)}
                           </span>
                           <div className="flex items-center gap-1 text-[10px] font-medium text-zinc-500 tracking-wider uppercase">
                             <span>Avg. Reward</span>
