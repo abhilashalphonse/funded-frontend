@@ -77,7 +77,7 @@ const TITLES = {
   audit: ["Audit Log", "Immutable record of privileged admin actions"],
 };
 
-const money = (value, currency = "EUR") => {
+const money = (value, currency = "USD") => {
   const number = Number(value || 0);
   return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(number);
 };
@@ -667,7 +667,7 @@ export default function AdminDashboard() {
 
       {selected && ["orders","payments"].includes(page) && <Inspector title={selected.orderId || "Payment"} subtitle={selected.email || selected._id} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Kpi label="Amount" value={money(selected.amount, selected.currency || "EUR")} />
+          <Kpi label="Amount" value={money(selected.amount, selected.currency || "USD")} />
           <Kpi label="Payment" value={selected.status || "—"} />
           <Kpi label="Activation" value={selected.activation?.status || "NOT_STARTED"} />
         </div>
