@@ -94,9 +94,9 @@ const lossBase = account => Number(account?.initialDeposit || account?.accountSi
 const lossLimitAmount = (account, rulePercent) => lossBase(account) * Number(rulePercent || 0) / 100;
 const statusTone = status => {
   const s = String(status || "").toUpperCase();
-  if (["PAID", "ACTIVE", "FUNDED", "PASSED", "HEALTHY", "CONFIGURED", "OPEN"].includes(s)) return "text-emerald-300 bg-emerald-400/10 border-emerald-400/20";
+  if (["PAID", "ACTIVE", "FUNDED", "PASSED", "HEALTHY", "CONFIGURED", "READY", "OPEN"].includes(s)) return "text-emerald-300 bg-emerald-400/10 border-emerald-400/20";
   if (["FAILED", "BREACHED", "BLOCKED", "CLOSED", "NOT_CONFIGURED"].includes(s)) return "text-red-300 bg-red-400/10 border-red-400/20";
-  if (["PENDING", "WAITING", "CONFIRMING", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
+  if (["PENDING", "WAITING", "CONFIRMING", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT", "NOT_INTEGRATED"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
   return "text-zinc-300 bg-white/5 border-white/10";
 };
 
@@ -301,6 +301,8 @@ export default function AdminDashboard() {
         await adminFetch(`/users/${encodeURIComponent(action.id)}/status`, { method: "POST", body: JSON.stringify({ status: action.value, reason }) });
       } else if (action.type === "payment") {
         await adminFetch(`/payments/${encodeURIComponent(action.id)}/retry-activation`, { method: "POST", body: JSON.stringify({ reason }) });
+      } else if (action.type === "upiGateway") {
+        await adminFetch("/upi-gateways/active", { method: "POST", body: JSON.stringify({ gatewayId: action.value, reason }) });
       } else {
         await adminFetch(`/challenges/${encodeURIComponent(action.id)}/action`, { method: "POST", body: JSON.stringify({ action: action.value, reason }) });
       }
@@ -533,6 +535,54 @@ export default function AdminDashboard() {
   const renderSystem = () => (
     <div className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{(data?.services || []).map(item => <div key={item.name} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-[#111] px-4 py-4"><div><p className="text-sm font-medium text-zinc-200">{item.name}</p><p className="mt-1 text-[11px] text-zinc-600">Operational configuration</p></div><Badge>{item.status}</Badge></div>)}</div>
+
+      {page === "integrations" && (
+        <section className="rounded-xl border border-white/[0.07] bg-[#111] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">UPI payment routing</h3>
+              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-500">The active gateway is used only for new UPI checkouts. Existing and pending payments remain pinned to the gateway that created them.</p>
+            </div>
+            <Badge>{data?.upiGateways?.find(item => item.active)?.label || "NO ACTIVE GATEWAY"}</Badge>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {(data?.upiGateways || []).map(gateway => {
+              const canActivate = gateway.implemented && gateway.configured && !gateway.active;
+              const detail = gateway.active
+                ? "Used for new UPI payments"
+                : !gateway.implemented
+                  ? "Adapter not integrated yet"
+                  : !gateway.configured
+                    ? "Backend configuration is incomplete"
+                    : "Configured and ready to activate";
+              return (
+                <div key={gateway.id} className={`rounded-xl border p-4 ${gateway.active ? "border-emerald-400/20 bg-emerald-400/[0.04]" : "border-white/[0.07] bg-black/20"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-100">{gateway.label}</p>
+                      <p className="mt-1 text-[11px] text-zinc-500">{detail}</p>
+                    </div>
+                    <Badge>{gateway.status}</Badge>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-600">{gateway.active ? "Current route" : "Available route"}</span>
+                    <button
+                      type="button"
+                      disabled={!canActivate}
+                      onClick={() => setAction({ type: "upiGateway", id: gateway.id, value: gateway.id, label: `Activate ${gateway.label}` })}
+                      className="rounded-lg border border-white/[0.09] px-3 py-2 text-[11px] font-semibold text-zinc-200 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      {gateway.active ? "Active" : gateway.implemented && gateway.configured ? "Activate" : "Unavailable"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="rounded-xl border border-white/[0.07] bg-[#111] p-5"><h3 className="text-sm font-semibold text-white">Runtime</h3><div className="mt-4 grid gap-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Environment</p><p className="mt-1 text-sm text-zinc-300">{data?.environment}</p></div><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Trading provider</p><p className="mt-1 text-sm text-zinc-300">{data?.tradingProvider}</p></div></div></div>
     </div>
   );
