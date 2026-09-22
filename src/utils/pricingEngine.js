@@ -60,7 +60,7 @@ function isPlainObject(value) {
  * Piecewise-linear interpolation across the account-size curve.
  *
  * Example:
- * $50,000 1-Step => €269
+ * $50,000 1-Step => $269
  *
  * Custom account sizes between anchors are interpolated.
  */
@@ -145,7 +145,7 @@ export function roundToPsychologicalPrice(rawPrice) {
    * Extend the ladder above its configured maximum.
    *
    * Example:
-   * €1265.55 -> €1300 -> €1299
+   * $1265.55 -> $1300 -> $1299
    */
   const ceilTo50 =
     Math.ceil(rawPrice / 50) * 50;
@@ -707,8 +707,8 @@ export function calculatePrice(
    * Psychological pricing applies to the BASE product price.
    *
    * Example:
-   * interpolated base = €267.40
-   * displayed base = €269
+   * interpolated base = $267.40
+   * displayed base = $269
    */
 
   const basePrice =
@@ -761,8 +761,8 @@ export function calculatePrice(
    *
    * Example:
    *
-   * €269 × 0.96 = €258
-   * €269 × 1.02 = €274
+   * $269 × 0.96 = €258
+   * $269 × 1.02 = €274
    *
    * Both must remain different prices.
    */
@@ -838,7 +838,7 @@ export function calculatePrice(
 
     finalPrice,
 
-    currency: 'EUR',
+    currency: 'USD',
 
     multiplier:
       finalMultiplier,
