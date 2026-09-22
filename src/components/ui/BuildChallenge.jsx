@@ -22,11 +22,11 @@ import { trackEvent } from '../../utils/analytics.js';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const formatAccountSize = (value) => `$${Math.round(value).toLocaleString('en-US')}`;
-const formatEUR = (amount) => `€${Math.round(amount).toLocaleString('en-US')}`;
-const formatSignedEUR = (amount) => {
+const formatUSD = (amount) => `${Math.round(amount).toLocaleString('en-US')}`;
+const formatSignedUSD = (amount) => {
   const rounded = Math.round(amount);
   if (rounded === 0) return null;
-  return rounded > 0 ? `+${formatEUR(rounded)}` : `-${formatEUR(Math.abs(rounded))}`;
+  return rounded > 0 ? `+${formatUSD(rounded)}` : `-${formatUSD(Math.abs(rounded))}`;
 };
 
 /* ============================================================================
@@ -563,7 +563,7 @@ function AdvancedOptions({ advanced, onAdvancedChange }) {
 
 function PriceBreakdown({ pricing }) {
   const [open, setOpen] = useState(false);
-  const customizationLabel = formatSignedEUR(pricing.customizationPrice);
+  const customizationLabel = formatSignedUSD(pricing.customizationPrice);
 
   return (
     <div className="mb-6 -mt-2">
@@ -582,7 +582,7 @@ function PriceBreakdown({ pricing }) {
           <div className="mt-3 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Base Challenge</span>
-              <span className="text-gray-300 font-mono">{formatEUR(pricing.basePrice)}</span>
+              <span className="text-gray-300 font-mono">{formatUSD(pricing.basePrice)}</span>
             </div>
             {customizationLabel && (
               <div className="flex items-center justify-between">
@@ -593,12 +593,12 @@ function PriceBreakdown({ pricing }) {
             {pricing.promotionDiscount > 0 && (
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Promotion</span>
-                <span className="text-gray-300 font-mono">-{formatEUR(pricing.promotionDiscount)}</span>
+                <span className="text-gray-300 font-mono">-{formatUSD(pricing.promotionDiscount)}</span>
               </div>
             )}
             <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
               <span className="text-gray-400">Total</span>
-              <span className="text-white font-mono">{formatEUR(pricing.finalPrice)}</span>
+              <span className="text-white font-mono">{formatUSD(pricing.finalPrice)}</span>
             </div>
           </div>
         </div>
@@ -643,7 +643,7 @@ function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid
 
       <div className="rounded-lg border border-white/[0.06] bg-white/[0.01] px-4 py-4 mb-3">
         <div className="text-2xl font-medium tracking-tight text-white">
-          {actionLabel === "Start Free Trial" ? "Free" : pricing ? formatEUR(pricing.finalPrice) : "—"}
+          {actionLabel === "Start Free Trial" ? "Free" : pricing ? formatUSD(pricing.finalPrice) : "—"}
         </div>
         <div className="text-xs text-gray-500 mt-0.5">
           {actionLabel === "Start Free Trial" ? "No payment required" : "One-time fee"}
