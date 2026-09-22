@@ -116,7 +116,7 @@ function UpiPaymentPanel({ quote, loading, error }) {
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-white">Pay in Indian Rupees</p>
-          <p className="mt-1 text-xs text-zinc-500">Processed securely by Rupayex</p>
+          <p className="mt-1 text-xs text-zinc-500">Secure UPI payment</p>
         </div>
         <div className="text-right">
           <div className="text-[10px] uppercase tracking-widest text-zinc-600">Amount payable</div>
@@ -129,7 +129,7 @@ function UpiPaymentPanel({ quote, loading, error }) {
       </div>
       {error
         ? <p className="mt-4 text-xs leading-relaxed text-amber-400">{error}</p>
-        : <p className="mt-4 text-xs leading-relaxed text-zinc-500">Your challenge is priced in USD. Rupayex charges the server-calculated INR equivalent shown above.</p>}
+        : <p className="mt-4 text-xs leading-relaxed text-zinc-500">Your challenge is priced in USD. The INR amount shown above is calculated securely by the server.</p>}
     </div>
   );
 }
@@ -161,6 +161,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   const [status, setStatus] = useState(STATUS.IDLE);
   const [notice, setNotice] = useState("");
   const [paymentId, setPaymentId] = useState(null);
+  const [statusToken, setStatusToken] = useState(null);
   const [upiQuote, setUpiQuote] = useState(null);
   const [upiQuoteLoading, setUpiQuoteLoading] = useState(false);
   const [upiQuoteError, setUpiQuoteError] = useState("");
@@ -214,16 +215,27 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const returnedPaymentId = params.get("payment");
-    if (!returnedPaymentId) return;
-    setPaymentId(returnedPaymentId);
+    const returnedPaymentId = params.get("payment") || paymentId;
+    const returnedStatusToken = params.get("token")
+      || statusToken
+      || (returnedPaymentId ? window.sessionStorage.getItem(`acg:payment-status:${returnedPaymentId}`) : null);
+    if (!returnedPaymentId || !returnedStatusToken) return undefined;
+
+    if (returnedPaymentId !== paymentId) setPaymentId(returnedPaymentId);
+    if (returnedStatusToken !== statusToken) setStatusToken(returnedStatusToken);
     setStatus(STATUS.PROCESSING);
+
     let active = true;
     const check = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/payments/${returnedPaymentId}/status`);
-        const data = await response.json();
+        const response = await fetch(
+          `${API_URL}/api/payments/${encodeURIComponent(returnedPaymentId)}/status?token=${encodeURIComponent(returnedStatusToken)}`,
+          { cache: "no-store" },
+        );
+        const data = await response.json().catch(() => ({}));
         if (!active) return;
+        if (!response.ok) throw new Error(data?.message || "Unable to check payment status.");
+
         if (data?.data?.status === "PAID") {
           const activationStatus = data?.data?.activation?.status;
           if (activationStatus === "ACTIVE" && data?.data?.accountId) {
@@ -236,21 +248,28 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
             setStatus(STATUS.ACTIVATING);
             setNotice("Payment confirmed. Activating your ACG Trader challenge...");
           }
-        } else if (["FAILED", "EXPIRED", "UNDERPAID"].includes(data?.data?.status)) {
+        } else if (["FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"].includes(data?.data?.status)) {
           setStatus(STATUS.IDLE);
           setNotice(`Payment status: ${data.data.status}.`);
         } else {
-          setNotice("Payment received by the provider. Waiting for confirmation...");
+          setNotice("Waiting for secure payment confirmation...");
         }
-      } catch { if (active) setNotice("Unable to check payment status. Please refresh in a moment."); }
+      } catch (error) {
+        if (active) setNotice(error?.message || "Unable to check payment status. Please refresh in a moment.");
+      }
     };
-    check();
+
+    void check();
     const interval = window.setInterval(check, 5000);
     return () => { active = false; window.clearInterval(interval); };
-  }, []);
+  }, [paymentId, statusToken]);
 
   const createPayment = async () => {
     if (!canSubmit) return;
+    const isUpi = method === "UPI";
+    const paymentWindow = isUpi ? window.open("about:blank", "_blank") : null;
+    if (paymentWindow) paymentWindow.opener = null;
+
     setStatus(STATUS.PROCESSING);
     setNotice("");
     void trackEvent("checkout_submitted", {
@@ -261,7 +280,6 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     }, { entryIntent: "paid" });
     try {
       const token = await getAccessToken?.().catch(() => null);
-      const isUpi = method === "UPI";
       const response = await fetch(`${API_URL}${isUpi ? "/api/payments/upi/create" : "/api/payments/crypto/create"}`, {
         method: "POST",
         headers: {
@@ -273,19 +291,30 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
           email,
           challengeDefinition: definition,
           commercialConfig: commercial,
-          ...(isUpi ? {} : { paymentMethod: method }),
+          ...(isUpi ? { quoteToken: upiQuote?.quoteToken } : { paymentMethod: method }),
           analyticsSessionId: getAnalyticsSessionId(),
           attribution: getAttribution(),
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.data?.checkoutUrl) throw new Error(data?.message || "Unable to create payment.");
+      if (!response.ok || !data?.data?.checkoutUrl || !data?.data?.statusToken) throw new Error(data?.message || "Unable to create payment.");
       setPaymentId(data.data.paymentId);
+      setStatusToken(data.data.statusToken);
       if (typeof window !== "undefined") {
         window.sessionStorage.setItem("acg:lastCheckoutEmail", email.trim().toLowerCase());
+        window.sessionStorage.setItem(`acg:payment-status:${data.data.paymentId}`, data.data.statusToken);
       }
+
+      if (isUpi) {
+        if (!paymentWindow) throw new Error("Your browser blocked the secure payment window. Allow pop-ups for ACG Funded and try again.");
+        paymentWindow.location.replace(data.data.checkoutUrl);
+        setNotice("Complete the UPI payment in the secure payment window. This page will update automatically.");
+        return;
+      }
+
       window.location.href = data.data.checkoutUrl;
     } catch (error) {
+      if (typeof paymentWindow !== "undefined" && paymentWindow && !paymentWindow.closed) paymentWindow.close();
       setStatus(STATUS.IDLE);
       setNotice(error.message || "Payment could not be started.");
       void trackEvent("payment_failed", {
@@ -333,18 +362,20 @@ function PaymentReturn({ onHome, onDashboard }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentId = params.get("payment");
+    const statusToken = params.get("token")
+      || (paymentId ? window.sessionStorage.getItem(`acg:payment-status:${paymentId}`) : null);
     if (params.get("status") === "cancelled") {
       void trackEvent("payment_cancelled", { paymentId }, { entryIntent: "paid" });
     }
-    if (!paymentId) {
-      setState({ status: "ERROR", message: "Payment reference is missing.", paymentId: null });
+    if (!paymentId || !statusToken) {
+      setState({ status: "ERROR", message: "Payment reference is missing or invalid.", paymentId: null });
       return undefined;
     }
 
     let active = true;
     const check = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/payments/${encodeURIComponent(paymentId)}/status`);
+        const response = await fetch(`${API_URL}/api/payments/${encodeURIComponent(paymentId)}/status?token=${encodeURIComponent(statusToken)}`, { cache: "no-store" });
         const payload = await response.json().catch(() => ({}));
         if (!active) return;
         if (!response.ok) throw new Error(payload?.message || "Unable to check payment status.");
