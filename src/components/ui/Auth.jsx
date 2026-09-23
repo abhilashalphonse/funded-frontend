@@ -283,7 +283,7 @@ function LoginForm({ onSwitchToSignup, initialEmail = "" }) {
 /*  Signup                                                              */
 /* ------------------------------------------------------------------ */
 
-function SignupForm({ onSwitchToLogin, onVerificationRequired, initialEmail = "" }) {
+function SignupForm({ onSwitchToLogin, onVerificationRequired, initialEmail = "", lockEmail = false }) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -347,7 +347,7 @@ function SignupForm({ onSwitchToLogin, onVerificationRequired, initialEmail = ""
         Create your account
       </h1>
       <p className="mt-1.5 text-center text-[13px] text-neutral-500">
-        Start with just your login. Complete profile details only when needed.
+        {lockEmail ? "Create your account with the email used for your purchase to claim your Challenge." : "Start with just your login. Complete profile details only when needed."}
       </p>
 
       {error && (
@@ -355,15 +355,17 @@ function SignupForm({ onSwitchToLogin, onVerificationRequired, initialEmail = ""
           {error}
         </div>
       )}
-      <div className="mt-6">
-        <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleSignup} disabled={loading} />
-      </div>
+      {!lockEmail && <>
+        <div className="mt-6">
+          <SocialButton icon={GoogleMark} label="Continue with Google" onClick={handleGoogleSignup} disabled={loading} />
+        </div>
 
-      <div className="my-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-white/[0.08]" />
-        <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-neutral-600">or</span>
-        <span className="h-px flex-1 bg-white/[0.08]" />
-      </div>
+        <div className="my-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-white/[0.08]" />
+          <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-neutral-600">or</span>
+          <span className="h-px flex-1 bg-white/[0.08]" />
+        </div>
+      </>}
 
       <form className="flex flex-col gap-3.5" onSubmit={handleSignup}>
         <Field label="Email" htmlFor="signupEmail">
@@ -373,8 +375,9 @@ function SignupForm({ onSwitchToLogin, onVerificationRequired, initialEmail = ""
             autoComplete="email"
             placeholder="you@company.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClasses}
+            onChange={(e) => { if (!lockEmail) setEmail(e.target.value); }}
+            readOnly={lockEmail}
+            className={inputClasses + (lockEmail ? " cursor-default text-neutral-400" : "")}
             required
           />
         </Field>
@@ -502,7 +505,7 @@ function VerifyEmail({ email, onBackToLogin }) {
 /*  Root                                                                */
 /* ------------------------------------------------------------------ */
 
-export default function Auth({ onBack = () => {}, initialView = "login", initialEmail = "" }) {
+export default function Auth({ onBack = () => {}, initialView = "login", initialEmail = "", lockInitialEmail = false }) {
   const [view, setView] = useState(initialView);
   const [verificationEmail, setVerificationEmail] = useState("");
 
@@ -536,6 +539,7 @@ export default function Auth({ onBack = () => {}, initialView = "login", initial
                 setView("verify-email");
               }}
               initialEmail={initialEmail}
+              lockEmail={lockInitialEmail}
             />
           )}
         </Card>
