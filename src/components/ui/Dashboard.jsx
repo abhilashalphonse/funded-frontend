@@ -97,7 +97,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
         </h1>
         <p className="mt-1.5 text-[12px] text-[#737373]">
           {activeChallenge
-            ? `${activeChallenge.accountMode === "DEMO" ? "Free Trial" : activeChallenge.challengeType === "TWO_STEP" ? "2-Step Evaluation" : "1-Step Evaluation"} · ${money(activeChallenge.accountSize || 0)}`
+            ? `${getAccountDescriptor(activeChallenge)} · ${money(activeChallenge.accountSize || 0)}`
             : "Start a challenge or free trial to begin trading."}
         </p>
         {launchError && <p className="mt-2 text-[12px] text-red-400">{launchError}</p>}
@@ -153,7 +153,27 @@ const getTraderAccountLabel = (account) => {
   if (!account) return "Trading Account";
   if (account.accountMode === "DEMO") return "Trial Account";
   if (String(account.status || "").toUpperCase() === "FUNDED") return "Master Account";
-  return "Evaluation Account";
+  return "Challenge Account";
+};
+
+const getAccountTypeKey = (account) => {
+  if (account?.accountMode === "DEMO") return "TRIAL";
+  if (String(account?.status || "").toUpperCase() === "FUNDED") return "MASTER";
+  return "CHALLENGE";
+};
+
+const getAccountDescriptor = (account) => {
+  const type = getAccountTypeKey(account);
+  if (type === "TRIAL") return "Trial Account";
+  if (type === "MASTER") return "Master Account";
+  return account?.challengeType === "TWO_STEP" ? "2-Step Challenge" : "1-Step Challenge";
+};
+
+const getAccountPnlLabel = (account) => {
+  const type = getAccountTypeKey(account);
+  if (type === "TRIAL") return "Trial P&L";
+  if (type === "MASTER") return "Account P&L";
+  return "Challenge P&L";
 };
 
 const formatAccountStatus = (status) => {
@@ -166,7 +186,7 @@ const formatAccountStatus = (status) => {
     LOCKED: "Locked",
     PASSED: "Passed",
     PHASE_2: "Active",
-    FUNDED_REVIEW: "Funded Review",
+    FUNDED_REVIEW: "Master Review",
     FUNDED: "Active",
     CLOSED: "Closed",
   };
@@ -224,7 +244,21 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
   const dailyRemaining = Math.max(0, dailyLossLimit - dailyLoss);
   const maxRemaining = Math.max(0, maxLossLimit - totalLoss);
   const terminal = isTerminalAccount(account);
+  const accountType = getAccountTypeKey(account);
+  const isTrial = accountType === "TRIAL";
+  const isMaster = accountType === "MASTER";
   const equityLabel = terminal ? "Final equity" : "Current equity";
+  const progressTitle = isTrial ? "Trial progress" : isMaster ? "Master Account" : "Challenge progress";
+  const progressDescription = isTrial
+    ? "What remains before this trial phase is complete."
+    : isMaster
+      ? "Evaluation complete. This account is now governed by Master Account risk limits."
+      : "What remains before this challenge phase is complete.";
+  const riskDescription = isTrial
+    ? "Distance from trial limits."
+    : isMaster
+      ? "Remaining room within Master Account risk limits."
+      : "{riskDescription}";
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -253,23 +287,29 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.8fr)]">
         <div className="rounded-xl border border-white/[0.08] bg-[#080808]">
           <div className="border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
-            <h2 className="text-[12px] font-semibold text-white">Evaluation progress</h2>
-            <p className="mt-0.5 text-[10px] text-[#666]">What remains before this phase is complete.</p>
+            <h2 className="text-[12px] font-semibold text-white">{progressTitle}</h2>
+            <p className="mt-0.5 text-[10px] text-[#666]">{progressDescription}</p>
           </div>
-          <div className="divide-y divide-white/[0.06]">
-            <ProgressRow
-              label={`Profit target · ${profitTargetPct || 0}%`}
-              value={money(Math.max(0, profit))}
-              target={money(profitTargetAmount)}
-              progress={profitProgressPct}
-            />
-            <ProgressRow
-              label="Minimum trading days"
-              value={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
-              target={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
-              progress={tradingDaysPct}
-            />
-          </div>
+          {!isMaster ? (
+            <div className="divide-y divide-white/[0.06]">
+              <ProgressRow
+                label={`Profit target · ${profitTargetPct || 0}%`}
+                value={money(Math.max(0, profit))}
+                target={money(profitTargetAmount)}
+                progress={profitProgressPct}
+              />
+              <ProgressRow
+                label="Minimum trading days"
+                value={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
+                target={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
+                progress={tradingDaysPct}
+              />
+            </div>
+          ) : (
+            <div className="px-4 py-5 text-[11px] leading-5 text-[#777] sm:px-5">
+              No evaluation target or phase progression applies to this Master Account.
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4 sm:p-5">
@@ -312,13 +352,14 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-[12px] font-semibold text-white">Account details</h2>
-              <p className="mt-0.5 text-[10px] text-[#666]">Platform and evaluation state.</p>
+              <p className="mt-0.5 text-[10px] text-[#666]">{isMaster ? "Platform and account state." : isTrial ? "Platform and trial state." : "Platform and challenge state."}</p>
             </div>
             <Zap size={15} className="text-[#707070]" />
           </div>
           <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+            <CompactStat label="Type" value={getTraderAccountLabel(account)} />
             <CompactStat label="Status" value={formatAccountStatus(account.status)} />
-            <CompactStat label="Phase" value={`Phase ${account.currentPhase || 1}`} />
+            {!isMaster && <CompactStat label="Phase" value={`Phase ${account.currentPhase || 1}`} />}
             <CompactStat label="Platform" value={account.platform === "acg-trader" ? "ACG Trader" : (account.platform || "—")} />
             <CompactStat label="Account size" value={money(initial)} />
             {account.accountMode !== "DEMO" && account.commercialTerms?.profitSplit != null && (
@@ -501,7 +542,7 @@ const AnalyticsSection = ({ account }) => {
     ["Winning trades", winningTrades.toLocaleString("en-US")],
     ["Losing trades", losingTrades.toLocaleString("en-US")],
     ["Win rate", pct(winRate)],
-    ["Realized challenge P&L", money(profit)],
+    [getAccountTypeKey(account) === "TRIAL" ? "Realized trial P&L" : getAccountTypeKey(account) === "MASTER" ? "Realized account P&L" : "Realized challenge P&L", money(profit)],
     ["Return on starting balance", pct(returnPct)],
     ["Current balance", money(balance)],
     ["Current equity", money(equity)],
@@ -514,7 +555,7 @@ const AnalyticsSection = ({ account }) => {
     <div className="space-y-6 animate-fade-in">
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <ModernMetricCard icon={BarChart3} label="Win Rate" value={pct(winRate)} helper="Trades" helperValue={String(totalTrades)} />
-        <ModernMetricCard icon={TrendingUp} label="Challenge P&L" value={money(profit)} helper="Return" helperValue={pct(returnPct)} />
+        <ModernMetricCard icon={TrendingUp} label={getAccountPnlLabel(account)} value={money(profit)} helper="Return" helperValue={pct(returnPct)} />
         <ModernMetricCard icon={Activity} label="Equity" value={money(equity)} helper="Balance" helperValue={money(balance)} />
       </section>
 
@@ -566,7 +607,7 @@ const ProfileSection = ({
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">{userName}</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Account: <span className="font-mono text-gray-300">{activeChallenge?.accountId || "No active challenge"}</span></p>
+            <p className="text-xs text-gray-400 mt-0.5">Account: <span className="font-mono text-gray-300">{activeChallenge?.accountId || "No active trading account"}</span></p>
 
           </div>
         </div>
@@ -799,8 +840,8 @@ const BillingSection = ({ activeChallenge }) => {
 
     if (status === "FUNDED") {
       return {
-        badge: "Funded",
-        title: "Your payout eligibility is being tracked",
+        badge: "Master Account",
+        title: "Your Master Account payout eligibility is being tracked",
         description: "The payout option unlocks automatically when your funded account reaches its selected payout cycle and satisfies the applicable account rules.",
         step: 3,
       };
@@ -843,8 +884,8 @@ const BillingSection = ({ activeChallenge }) => {
 
   const steps = [
     { label: "Evaluation", hint: isDemo ? "Trial" : "Complete challenge" },
-    { label: "Funded review", hint: "Account review" },
-    { label: "Funded", hint: "Funded activation" },
+    { label: "Master review", hint: "Account review" },
+    { label: "Funded", hint: "Master Account activation" },
     { label: "Payout eligible", hint: "Unlocks automatically" },
   ];
 
