@@ -307,7 +307,7 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
             </div>
           ) : (
             <div className="px-4 py-5 text-[11px] leading-5 text-[#777] sm:px-5">
-              No evaluation target or phase progression applies to this Master Account.
+              No challenge target or phase progression applies to this Master Account.
             </div>
           )}
         </div>
@@ -1058,7 +1058,7 @@ const LeaderboardSection = () => {
         <div className="p-5 sm:p-6 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-white">Payout Cycle Standings</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Live performance updates for active certified evaluation accounts.</p>
+            <p className="text-xs text-gray-400 mt-0.5">Live performance updates for active trading accounts.</p>
           </div>
           <div className="relative max-w-xs w-full">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500"><Search size={14} /></span>
@@ -1918,7 +1918,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
               : trialChecking
                 ? "Preparing"
                 : isTerminalAccount(activeChallenge)
-                  ? (activeChallenge?.accountMode === "DEMO" ? "New Trial" : "New")
+                  ? (activeChallenge?.accountMode === "DEMO" ? "New Trial" : "New Challenge")
                   : "Trade"}
           </span>
         </button>
