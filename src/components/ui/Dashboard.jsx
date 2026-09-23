@@ -81,7 +81,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
             <>
               <span className="text-[#4f4f4f]">•</span>
               <span className={activeChallenge.status === "BREACHED" ? "text-rose-400" : "text-[#6f6f6f]"}>{statusLabel}</span>
-              {activeChallenge.accountMode !== "DEMO" && activeChallenge.status !== "FUNDED" && (
+              {activeChallenge.status !== "FUNDED" && (
                 <>
                   <span className="text-[#4f4f4f]">•</span>
                   <span className="text-[#6f6f6f]">Phase {activeChallenge.currentPhase || 1}</span>
@@ -860,7 +860,7 @@ const BillingSection = ({ activeChallenge }) => {
       return {
         badge: "Phase 2",
         title: "Complete Phase 2 to progress toward funding",
-        description: "Payout eligibility starts after the evaluation is completed and your funded account is activated.",
+        description: "Payout eligibility starts after the challenge is completed and your Master Account is activated.",
         step: 1,
       };
     }
@@ -869,7 +869,7 @@ const BillingSection = ({ activeChallenge }) => {
       return {
         badge: "Not eligible",
         title: "This account is not eligible for payouts",
-        description: "Payout eligibility applies to funded accounts that remain within the applicable account rules.",
+        description: "Payout eligibility applies to Master Accounts that remain within the applicable account rules.",
         step: 0,
       };
     }
@@ -917,12 +917,12 @@ const BillingSection = ({ activeChallenge }) => {
           <div className="bg-[#080A0E] p-5">
             <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Profit split</span>
             <strong className="mt-2 block text-lg font-semibold text-white">{profitSplit != null ? `${profitSplit}%` : "—"}</strong>
-            <p className="mt-1 text-[10px] text-zinc-600">{profitSplit != null ? "Selected with this challenge" : "Applies to funded accounts"}</p>
+            <p className="mt-1 text-[10px] text-zinc-600">{profitSplit != null ? "Selected with this challenge" : "Applies to Master Accounts"}</p>
           </div>
           <div className="bg-[#080A0E] p-5">
             <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Payout schedule</span>
             <strong className="mt-2 block text-lg font-semibold text-white">{payoutFrequency || "—"}</strong>
-            <p className="mt-1 text-[10px] text-zinc-600">{payoutFrequency ? "Selected payout cycle" : "Applies to funded accounts"}</p>
+            <p className="mt-1 text-[10px] text-zinc-600">{payoutFrequency ? "Selected payout cycle" : "Applies to Master Accounts"}</p>
           </div>
           <div className="bg-[#080A0E] p-5">
             <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Available reward</span>
