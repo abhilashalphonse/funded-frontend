@@ -258,7 +258,7 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
     ? "Distance from trial limits."
     : isMaster
       ? "Remaining room within Master Account risk limits."
-      : "{riskDescription}";
+      : "Distance from challenge limits.";
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -316,7 +316,7 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-[12px] font-semibold text-white">Risk buffer</h2>
-              <p className="mt-0.5 text-[10px] text-[#666]">Distance from challenge limits.</p>
+              <p className="mt-0.5 text-[10px] text-[#666]">{riskDescription}</p>
             </div>
             <ShieldCheck size={16} className="text-[#777]" />
           </div>
@@ -808,7 +808,7 @@ const TradersSection = () => {
           </table>
         </div>
       </section>
-      <p className="text-[10px] text-gray-600 leading-relaxed">* All account values represent simulated evaluations matching prop-firm models.</p>
+      <p className="text-[10px] text-gray-600 leading-relaxed">* All ACG Trader accounts use simulated execution and market data.</p>
     </div>
   );
 };
@@ -823,8 +823,8 @@ const BillingSection = ({ activeChallenge }) => {
     if (!account) {
       return {
         badge: "No active account",
-        title: "Payouts begin with a funded account",
-        description: "Complete an evaluation and progress to a funded account to unlock payout eligibility.",
+        title: "Payouts begin with a Master Account",
+        description: "Complete an evaluation and progress to a Master Account to unlock payout eligibility.",
         step: 0,
       };
     }
@@ -833,7 +833,7 @@ const BillingSection = ({ activeChallenge }) => {
       return {
         badge: "Free Trial",
         title: "Payouts are not available on trial accounts",
-        description: "Free Trials let you experience the evaluation rules. Payout eligibility starts after completing a paid evaluation and receiving a funded account.",
+        description: "Free Trials let you experience the evaluation rules. Payout eligibility starts after completing a paid evaluation and receiving a Master Account.",
         step: 0,
       };
     }
@@ -842,16 +842,16 @@ const BillingSection = ({ activeChallenge }) => {
       return {
         badge: "Master Account",
         title: "Your Master Account payout eligibility is being tracked",
-        description: "The payout option unlocks automatically when your funded account reaches its selected payout cycle and satisfies the applicable account rules.",
+        description: "The payout option unlocks automatically when your Master Account reaches its selected payout cycle and satisfies the applicable account rules.",
         step: 3,
       };
     }
 
     if (status === "FUNDED_REVIEW" || status === "PASSED") {
       return {
-        badge: status === "PASSED" ? "Evaluation passed" : "Funded review",
+        badge: status === "PASSED" ? "Challenge passed" : "Master Review",
         title: "You're progressing toward payout eligibility",
-        description: "Your evaluation is complete. Once funded activation is complete, your selected profit split and payout cycle will apply.",
+        description: "Your challenge is complete. Once Master Account activation is complete, your selected profit split and payout cycle will apply.",
         step: 2,
       };
     }
@@ -877,7 +877,7 @@ const BillingSection = ({ activeChallenge }) => {
     return {
       badge: "Evaluation",
       title: "Complete your evaluation to unlock funded status",
-      description: "Your selected payout terms stay attached to this challenge and become relevant after you progress to a funded account.",
+      description: "Your selected payout terms stay attached to this challenge and become relevant after you progress to a Master Account.",
       step: 1,
     };
   })();
@@ -999,7 +999,7 @@ const BillingSection = ({ activeChallenge }) => {
             </div>
           </div>
           <p className="mt-4 border-t border-white/[0.06] pt-4 text-[9px] leading-4 text-zinc-600">
-            Payout availability is determined by funded-account status, the selected payout cycle and applicable account rules.
+            Payout availability is determined by Master Account status, the selected payout cycle and applicable account rules.
           </p>
         </section>
       </div>
