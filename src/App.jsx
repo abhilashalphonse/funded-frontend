@@ -108,6 +108,21 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const intent = params.get("postPurchase");
+    if (!["claim", "dashboard"].includes(intent)) return;
+
+    const accountId = params.get("accountId") || "";
+    const email = String(params.get("email") || "").trim().toLowerCase();
+    const destination = intent === "claim" ? "claim-purchase" : "dashboard";
+
+    window.sessionStorage.setItem("acg:postAuthScreen", destination);
+    if (accountId) window.sessionStorage.setItem("acg:postPurchaseAccountId", accountId);
+    if (email) window.sessionStorage.setItem("acg:lastCheckoutEmail", email);
+  }, []);
+
+  useEffect(() => {
     if (screen !== "auth-callback" || authLoading) return;
     if (user) {
       cleanAuthCallbackUrl();
