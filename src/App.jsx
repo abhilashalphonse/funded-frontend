@@ -324,7 +324,7 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
   }
 
   if (screen === "auth") {
-    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent || postAuthScreen === "claim-purchase" ? "signup" : "login"} initialEmail={authEmailHint} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent || postAuthScreen === "claim-purchase" ? "signup" : "login"} initialEmail={authEmailHint} lockInitialEmail={postAuthScreen === "claim-purchase"} />;
   }
 
   if (screen === "builder") {
