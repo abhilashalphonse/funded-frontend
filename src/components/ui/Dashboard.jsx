@@ -833,7 +833,7 @@ const BillingSection = ({ activeChallenge }) => {
       return {
         badge: "Free Trial",
         title: "Payouts are not available on trial accounts",
-        description: "Free Trials let you experience the evaluation rules. Payout eligibility starts after completing a paid evaluation and receiving a Master Account.",
+        description: "Free Trials let you experience the evaluation rules. Payout eligibility starts after completing a paid challenge and receiving a Master Account.",
         step: 0,
       };
     }
@@ -875,17 +875,17 @@ const BillingSection = ({ activeChallenge }) => {
     }
 
     return {
-      badge: "Evaluation",
-      title: "Complete your evaluation to unlock funded status",
+      badge: "Challenge",
+      title: "Complete your challenge to unlock a Master Account",
       description: "Your selected payout terms stay attached to this challenge and become relevant after you progress to a Master Account.",
       step: 1,
     };
   })();
 
   const steps = [
-    { label: "Evaluation", hint: isDemo ? "Trial" : "Complete challenge" },
+    { label: isDemo ? "Trial" : "Challenge", hint: isDemo ? "Trial account" : "Complete challenge" },
     { label: "Master review", hint: "Account review" },
-    { label: "Funded", hint: "Master Account activation" },
+    { label: "Master Account", hint: "Account activation" },
     { label: "Payout eligible", hint: "Unlocks automatically" },
   ];
 
@@ -927,7 +927,7 @@ const BillingSection = ({ activeChallenge }) => {
           <div className="bg-[#080A0E] p-5">
             <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Available reward</span>
             <strong className="mt-2 block text-lg font-semibold text-white">—</strong>
-            <p className="mt-1 text-[10px] text-zinc-600">{status === "FUNDED" ? "Updates when payout eligibility is reached" : "Available after funded eligibility"}</p>
+            <p className="mt-1 text-[10px] text-zinc-600">{status === "FUNDED" ? "Updates when payout eligibility is reached" : "Available after Master Account eligibility"}</p>
           </div>
         </div>
       </section>
@@ -987,7 +987,7 @@ const BillingSection = ({ activeChallenge }) => {
             </div>
             <div className="flex items-center justify-between gap-4 py-3">
               <span className="text-[10px] text-zinc-600">Account status</span>
-              <span className="text-right text-[11px] font-medium text-zinc-300">{account ? (isDemo ? "Free Trial" : account.status || "—") : "—"}</span>
+              <span className="text-right text-[11px] font-medium text-zinc-300">{account ? `${getTraderAccountLabel(account)} · ${formatAccountStatus(account.status)}` : "—"}</span>
             </div>
             <div className="flex items-center justify-between gap-4 py-3">
               <span className="text-[10px] text-zinc-600">Destination</span>
