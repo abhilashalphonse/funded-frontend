@@ -321,6 +321,7 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
     return (
       <Dashboard
         initialAccountId={postPurchaseAccountId}
+        onInitialAccountConsumed={() => setPostPurchaseAccountId("")}
         onBack={() => setScreen("homepage")}
         onNewChallenge={() => {
           setBuilderMode("paid");
