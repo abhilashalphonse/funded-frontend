@@ -22,7 +22,7 @@ import { trackEvent } from '../../utils/analytics.js';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const formatAccountSize = (value) => `$${Math.round(value).toLocaleString('en-US')}`;
-const formatUSD = (amount) => `${Math.round(amount).toLocaleString('en-US')}`;
+const formatUSD = (amount) => `$${Math.round(amount).toLocaleString('en-US')}`;
 const formatSignedUSD = (amount) => {
   const rounded = Math.round(amount);
   if (rounded === 0) return null;
