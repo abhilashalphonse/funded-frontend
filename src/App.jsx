@@ -62,8 +62,13 @@ function TraderLaunchingPage() {
 
 function App() {
   const [screen, setScreen] = useState(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment")) return "payment";
-    if (isAuthCallbackLocation()) return "auth-callback";
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("payment")) return "payment";
+      if (isAuthCallbackLocation()) return "auth-callback";
+      if (params.get("postPurchase") === "claim") return "auth";
+      if (params.get("postPurchase") === "dashboard") return "dashboard";
+    }
     return "homepage";
   });
   const [selectedPlan, setSelectedPlan] = useState(() => {
@@ -82,13 +87,21 @@ function App() {
   });
   const [postAuthScreen, setPostAuthScreen] = useState(() => {
     if (typeof window === "undefined") return null;
-    return window.sessionStorage.getItem("acg:postAuthScreen");
+    const stored = window.sessionStorage.getItem("acg:postAuthScreen");
+    if (stored) return stored;
+    const intent = new URLSearchParams(window.location.search).get("postPurchase");
+    return intent === "claim" ? "claim-purchase" : intent === "dashboard" ? "dashboard" : null;
+  });
+  const [postPurchaseAccountId, setPostPurchaseAccountId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("accountId") || window.sessionStorage.getItem("acg:postPurchaseAccountId") || "";
   });
   const { user, loading: authLoading, getAccessToken } = useAuth();
   const checkoutEmailHint = typeof window !== "undefined"
-    ? window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""
+    ? new URLSearchParams(window.location.search).get("email") || window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""
     : "";
-  const authEmailHint = ["dashboard", "payment"].includes(postAuthScreen) ? checkoutEmailHint : "";
+  const authEmailHint = ["dashboard", "payment", "claim-purchase"].includes(postAuthScreen) ? checkoutEmailHint : "";
 
   useEffect(() => {
     captureAttribution();
@@ -182,12 +195,18 @@ function App() {
       return;
     }
 
-    if (postAuthScreen === "dashboard") {
+    if (postAuthScreen === "dashboard" || postAuthScreen === "claim-purchase") {
+      const completedClaim = postAuthScreen === "claim-purchase";
       setPostAuthScreen(null);
       if (typeof window !== "undefined") {
         window.sessionStorage.removeItem("acg:postAuthScreen");
         window.sessionStorage.removeItem("acg:lastCheckoutEmail");
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
+      if (completedClaim) {
+        void trackEvent("post_purchase_signup_completed", { accountId: postPurchaseAccountId || null }, { getAccessToken });
+      }
+      void trackEvent("dashboard_opened_after_purchase", { accountId: postPurchaseAccountId || null }, { getAccessToken });
       setScreen("dashboard");
       return;
     }
@@ -204,7 +223,7 @@ function App() {
     if (screen === "auth") {
       setScreen("dashboard");
     }
-  }, [user, pendingTrialIntent, postAuthScreen, selectedPlan, screen, handleOpenTrialBuilder]);
+  }, [user, pendingTrialIntent, postAuthScreen, postPurchaseAccountId, selectedPlan, screen, handleOpenTrialBuilder, getAccessToken]);
 
   const handleAuthBack = () => {
     setPendingTrialIntent(false);
@@ -286,6 +305,7 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
   if (screen === "dashboard" && user) {
     return (
       <Dashboard
+        initialAccountId={postPurchaseAccountId}
         onBack={() => setScreen("homepage")}
         onNewChallenge={() => {
           setBuilderMode("paid");
@@ -300,11 +320,11 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
   }
 
   if (screen === "dashboard" && !user) {
-    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={authEmailHint} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent || postAuthScreen === "claim-purchase" ? "signup" : "login"} initialEmail={authEmailHint} />;
   }
 
   if (screen === "auth") {
-    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent ? "signup" : "login"} initialEmail={authEmailHint} />;
+    return <Auth onBack={handleAuthBack} initialView={pendingTrialIntent || postAuthScreen === "claim-purchase" ? "signup" : "login"} initialEmail={authEmailHint} />;
   }
 
   if (screen === "builder") {
@@ -332,16 +352,32 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
           window.history.replaceState({}, document.title, window.location.pathname);
           setScreen("homepage");
         }}
-        onDashboard={() => {
+        onDashboard={(accountId = "") => {
           window.history.replaceState({}, document.title, window.location.pathname);
+          if (accountId) {
+            setPostPurchaseAccountId(accountId);
+            window.sessionStorage.setItem("acg:postPurchaseAccountId", accountId);
+          }
           if (user) {
+            void trackEvent("dashboard_opened_after_purchase", { accountId: accountId || null }, { getAccessToken });
             setScreen("dashboard");
             return;
           }
           setPostAuthScreen("dashboard");
-          if (typeof window !== "undefined") {
-            window.sessionStorage.setItem("acg:postAuthScreen", "dashboard");
+          window.sessionStorage.setItem("acg:postAuthScreen", "dashboard");
+          setScreen("auth");
+        }}
+        onSetupAccount={(purchaseEmail = "", accountId = "") => {
+          const normalizedEmail = String(purchaseEmail || "").trim().toLowerCase();
+          if (normalizedEmail) window.sessionStorage.setItem("acg:lastCheckoutEmail", normalizedEmail);
+          if (accountId) {
+            setPostPurchaseAccountId(accountId);
+            window.sessionStorage.setItem("acg:postPurchaseAccountId", accountId);
           }
+          setPostAuthScreen("claim-purchase");
+          window.sessionStorage.setItem("acg:postAuthScreen", "claim-purchase");
+          void trackEvent("post_purchase_signup_started", { accountId: accountId || null }, { entryIntent: "paid" });
+          window.history.replaceState({}, document.title, window.location.pathname);
           setScreen("auth");
         }}
         onSignIn={() => {
