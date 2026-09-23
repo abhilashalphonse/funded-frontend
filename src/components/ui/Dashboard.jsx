@@ -41,6 +41,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
   const isOverview = activeTab === "overview";
   const tradable = isTradableAccount(activeChallenge);
   const terminal = isTerminalAccount(activeChallenge);
+  const transitionLocked = isAccountTransitionLocked(activeChallenge);
   const isTrial = activeChallenge?.accountMode === "DEMO";
   const freshness = formatFreshness(activeChallenge?.lastPlatformSnapshotAt || activeChallenge?.updatedAt);
   const accountLabel = getTraderAccountLabel(activeChallenge);
@@ -105,8 +106,8 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
 
       <button
         type="button"
-        onClick={terminal ? (isTrial ? onStartTrial : onNewChallenge) : onOpenTrader}
-        disabled={loading || traderLaunching || trialChecking}
+        onClick={transitionLocked ? undefined : terminal ? (isTrial ? onStartTrial : onNewChallenge) : onOpenTrader}
+        disabled={loading || traderLaunching || trialChecking || transitionLocked}
         className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50 sm:inline-flex"
       >
         {loading
@@ -115,9 +116,13 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
             ? "Opening…"
             : trialChecking
               ? "Preparing…"
-              : terminal
-                ? (isTrial ? "Start New Trial" : "New Challenge")
-                : "Open ACG Trader"}
+              : isPhaseTwoPreparing(activeChallenge)
+                ? "Preparing Phase 2…"
+                : isMasterReview(activeChallenge)
+                  ? "Master Review"
+                  : terminal
+                    ? (isTrial ? "Start New Trial" : "New Challenge")
+                    : "Open ACG Trader"}
       </button>
     </header>
   );
@@ -140,8 +145,27 @@ const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number
 
 const TERMINAL_ACCOUNT_STATUSES = new Set(["BREACHED", "LOCKED", "CLOSED"]);
 
-const isTerminalAccount = (account) =>
-  Boolean(account && TERMINAL_ACCOUNT_STATUSES.has(String(account.status || "").toUpperCase()));
+const isPhaseTwoPreparing = (account) =>
+  Boolean(
+    account
+    && String(account.status || "").toUpperCase() === "PASSED"
+    && String(account.challengeType || "").toUpperCase() === "TWO_STEP"
+    && Number(account.currentPhase || 1) === 1
+  );
+
+const isMasterReview = (account) =>
+  String(account?.status || "").toUpperCase() === "FUNDED_REVIEW";
+
+const isAccountTransitionLocked = (account) =>
+  isPhaseTwoPreparing(account) || isMasterReview(account);
+
+const isTerminalAccount = (account) => {
+  if (!account) return false;
+  const status = String(account.status || "").toUpperCase();
+  if (TERMINAL_ACCOUNT_STATUSES.has(status)) return true;
+  if (status === "PASSED" && !isPhaseTwoPreparing(account)) return true;
+  return false;
+};
 
 const isTradableAccount = (account) =>
   Boolean(
@@ -1423,6 +1447,7 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
   };
 
   const handlePrimaryAccountAction = () => {
+    if (isAccountTransitionLocked(activeChallenge)) return;
     if (isTerminalAccount(activeChallenge)) {
       setIsSidebarOpen(false);
       if (activeChallenge?.accountMode === "DEMO") onFreeTrial();
@@ -1438,20 +1463,28 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
       ? "Opening…"
       : trialChecking
         ? "Preparing…"
-        : isTerminalAccount(activeChallenge)
-          ? (getAccountTypeKey(activeChallenge) === "TRIAL" ? "Start New Trial" : "New Challenge")
-          : "Open ACG Trader";
+        : isPhaseTwoPreparing(activeChallenge)
+          ? "Preparing Phase 2…"
+          : isMasterReview(activeChallenge)
+            ? "Master Review"
+            : isTerminalAccount(activeChallenge)
+              ? (getAccountTypeKey(activeChallenge) === "TRIAL" ? "Start New Trial" : "New Challenge")
+              : "Open ACG Trader";
 
   const activeAccountType = getAccountTypeKey(activeChallenge);
-  const primaryAccountActionHelper = isTerminalAccount(activeChallenge)
-    ? activeAccountType === "TRIAL"
-      ? "This trial is closed"
-      : activeAccountType === "MASTER"
-        ? "This Master Account is closed"
-        : "This challenge is closed"
-    : activeChallenge
-      ? `Trade your selected ${getTraderAccountLabel(activeChallenge).toLowerCase()}`
-      : "Start with a free trial";
+  const primaryAccountActionHelper = isPhaseTwoPreparing(activeChallenge)
+    ? "Phase 1 passed. Your Phase 2 account is being prepared."
+    : isMasterReview(activeChallenge)
+      ? "Challenge passed. Trading is paused while your Master Account is reviewed."
+      : isTerminalAccount(activeChallenge)
+        ? activeAccountType === "TRIAL"
+          ? "This trial is closed"
+          : activeAccountType === "MASTER"
+            ? "This Master Account is closed"
+            : "This challenge is closed"
+        : activeChallenge
+          ? `Trade your selected ${getTraderAccountLabel(activeChallenge).toLowerCase()}`
+          : "Start with a free trial";
 
   const renderTabContent = () => {
     const propsPayload = {
@@ -1665,7 +1698,7 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
             <button
               type="button"
               onClick={handlePrimaryAccountAction}
-              disabled={authSessionExpired || authVerificationFailed || workspaceLoading || traderLaunching || trialChecking}
+              disabled={authSessionExpired || authVerificationFailed || workspaceLoading || traderLaunching || trialChecking || isAccountTransitionLocked(activeChallenge)}
               className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-white text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50"
             >
               <ArrowUpRight size={14} />
@@ -1930,9 +1963,13 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
               ? "Loading"
               : trialChecking
                 ? "Preparing"
-                : isTerminalAccount(activeChallenge)
-                  ? (activeChallenge?.accountMode === "DEMO" ? "New Trial" : "New Challenge")
-                  : "Trade"}
+                : isPhaseTwoPreparing(activeChallenge)
+                  ? "Phase 2"
+                  : isMasterReview(activeChallenge)
+                    ? "Review"
+                    : isTerminalAccount(activeChallenge)
+                      ? (activeChallenge?.accountMode === "DEMO" ? "New Trial" : "New Challenge")
+                      : "Trade"}
           </span>
         </button>
       </nav>
