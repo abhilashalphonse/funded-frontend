@@ -15,14 +15,16 @@ const formatMoney = (amount, currency = { symbol: "$" }) => {
 };
 const formatINR = (amount) => `₹${Number(amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-function CheckoutHeader({ onSignIn }) {
+function CheckoutHeader({ onSignIn, userEmail = "" }) {
   return (
     <header className="flex items-center justify-between gap-3 py-4 sm:py-5">
       <img src={logo} alt="ACG Funded" className="h-6 w-auto object-contain" />
       <div className="flex items-center gap-2 sm:gap-4">
-        <button type="button" onClick={onSignIn} className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-zinc-500 hover:bg-white/[0.03] hover:text-white">
-          <LogIn className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Already have an account?</span> Sign in
-        </button>
+        {userEmail
+          ? <div className="max-w-[220px] truncate text-[12px] font-medium text-zinc-500">Signed in as <span className="text-zinc-300">{userEmail}</span></div>
+          : <button type="button" onClick={onSignIn} className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-zinc-500 hover:bg-white/[0.03] hover:text-white">
+              <LogIn className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Already have an account?</span> Sign in
+            </button>}
         <div className="hidden items-center gap-1.5 text-[12px] text-gray-400 sm:flex"><Lock className="h-3.5 w-3.5" /> Secure Checkout</div>
       </div>
     </header>
@@ -155,7 +157,7 @@ function Terms({ checked, onChange }) {
   </label>;
 }
 
-function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSignIn, getAccessToken }) {
+function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSignIn, getAccessToken, isAuthenticated = false, onDashboard, onSetupAccount }) {
   const [method, setMethod] = useState("UPI");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [status, setStatus] = useState(STATUS.IDLE);
@@ -165,6 +167,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   const [upiQuote, setUpiQuote] = useState(null);
   const [upiQuoteLoading, setUpiQuoteLoading] = useState(false);
   const [upiQuoteError, setUpiQuoteError] = useState("");
+  const [activatedAccountId, setActivatedAccountId] = useState("");
 
   const definition = plan.challengeDefinition;
   const commercial = plan.commercialConfig;
@@ -226,6 +229,11 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     setStatus(STATUS.PROCESSING);
 
     let active = true;
+    let interval = null;
+    const stopPolling = () => {
+      if (interval) window.clearInterval(interval);
+      interval = null;
+    };
     const check = async () => {
       try {
         const response = await fetch(
@@ -239,11 +247,14 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
         if (data?.data?.status === "PAID") {
           const activationStatus = data?.data?.activation?.status;
           if (activationStatus === "ACTIVE" && data?.data?.accountId) {
+            setActivatedAccountId(data.data.accountId);
             setStatus(STATUS.ACTIVE);
             setNotice("Payment confirmed and your ACG Trader challenge is active.");
+            stopPolling();
           } else if (activationStatus === "FAILED") {
             setStatus(STATUS.ACTIVATION_FAILED);
             setNotice("Payment confirmed, but trading-account activation needs to be retried.");
+            stopPolling();
           } else {
             setStatus(STATUS.ACTIVATING);
             setNotice("Payment confirmed. Activating your ACG Trader challenge...");
@@ -251,6 +262,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
         } else if (["FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"].includes(data?.data?.status)) {
           setStatus(STATUS.IDLE);
           setNotice(`Payment status: ${data.data.status}.`);
+          stopPolling();
         } else {
           setNotice("Waiting for secure payment confirmation...");
         }
@@ -260,9 +272,17 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     };
 
     void check();
-    const interval = window.setInterval(check, 5000);
-    return () => { active = false; window.clearInterval(interval); };
+    interval = window.setInterval(check, 5000);
+    return () => { active = false; stopPolling(); };
   }, [paymentId, statusToken]);
+
+  useEffect(() => {
+    if (status !== STATUS.ACTIVE || !activatedAccountId || !isAuthenticated) return undefined;
+    const timer = window.setTimeout(() => {
+      onDashboard?.(activatedAccountId);
+    }, 1600);
+    return () => window.clearTimeout(timer);
+  }, [status, activatedAccountId, isAuthenticated, onDashboard]);
 
   const createPayment = async () => {
     if (!canSubmit) return;
@@ -331,7 +351,26 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   };
 
   if (status === STATUS.ACTIVE) {
-    return <div className="rounded-2xl border border-emerald-500/20 bg-[#0A0C12] p-7"><Check className="mb-3 h-6 w-6 text-emerald-400" /><h2 className="text-xl font-semibold text-white">Challenge active</h2><p className="mt-2 text-sm text-zinc-500">Payment is confirmed and your ACG Trader account is ready. Trading access is linked to {email}.</p></div>;
+    const program = definition?.step === "2step" ? "2-Step Challenge" : "1-Step Challenge";
+    return <div className="rounded-2xl border border-emerald-500/20 bg-[#0A0C12] p-7">
+      <Check className="mb-3 h-6 w-6 text-emerald-400" />
+      <h2 className="text-xl font-semibold text-white">Challenge active</h2>
+      <p className="mt-2 text-sm text-zinc-400">{formatAccountSize(definition?.accountSize)} · {program}</p>
+      <div className="mt-5 rounded-lg border border-white/[0.07] bg-black/20 px-4 py-3 text-sm">
+        <div className="flex justify-between gap-4"><span className="text-zinc-600">Account</span><span className="font-mono font-semibold text-white">{activatedAccountId || "Ready"}</span></div>
+        <div className="mt-2 flex justify-between gap-4"><span className="text-zinc-600">Platform</span><span className="font-semibold text-white">ACG Trader</span></div>
+        <div className="mt-2 flex justify-between gap-4"><span className="text-zinc-600">Status</span><span className="font-semibold text-emerald-400">Active</span></div>
+      </div>
+      {isAuthenticated
+        ? <>
+            <p className="mt-4 text-sm text-zinc-500">Taking you to your dashboard…</p>
+            <button type="button" onClick={() => onDashboard?.(activatedAccountId)} className="mt-5 w-full rounded-lg bg-white px-4 py-3 text-sm font-semibold text-black">Go to Dashboard</button>
+          </>
+        : <>
+            <p className="mt-4 text-sm leading-6 text-zinc-500">Your purchase is secured to <span className="text-zinc-300">{email}</span>. Set up your ACG Funded account with this email to access your Challenge.</p>
+            <button type="button" onClick={() => onSetupAccount?.(email, activatedAccountId)} className="mt-5 w-full rounded-lg bg-white px-4 py-3 text-sm font-semibold text-black">Set Up My Account</button>
+          </>}
+    </div>;
   }
 
   if (status === STATUS.ACTIVATING) {
@@ -360,8 +399,8 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   </motion.div>;
 }
 
-function PaymentReturn({ onHome, onDashboard }) {
-  const [state, setState] = useState({ status: "PROCESSING", message: "Checking your payment…", paymentId: null });
+function PaymentReturn({ onHome, onDashboard, onSetupAccount, isAuthenticated = false, email = "" }) {
+  const [state, setState] = useState({ status: "PROCESSING", message: "Checking your payment…", paymentId: null, accountId: "" });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -377,6 +416,11 @@ function PaymentReturn({ onHome, onDashboard }) {
     }
 
     let active = true;
+    let interval = null;
+    const stopPolling = () => {
+      if (interval) window.clearInterval(interval);
+      interval = null;
+    };
     const check = async () => {
       try {
         const response = await fetch(`${API_URL}/api/payments/${encodeURIComponent(paymentId)}/status?token=${encodeURIComponent(statusToken)}`, { cache: "no-store" });
@@ -386,36 +430,45 @@ function PaymentReturn({ onHome, onDashboard }) {
 
         const payment = payload?.data || {};
         if (payment.status === "PAID" && payment.activation?.status === "ACTIVE" && payment.accountId) {
-          setState({ status: "ACTIVE", message: "Your ACG Trader challenge is active.", paymentId });
+          setState({ status: "ACTIVE", message: "Your ACG Trader challenge is active.", paymentId, accountId: payment.accountId });
+          stopPolling();
           return;
         }
         if (payment.status === "PAID" && payment.activation?.status === "FAILED") {
-          setState({ status: "ACTIVATION_FAILED", message: "Payment is confirmed, but account activation needs attention.", paymentId });
+          setState({ status: "ACTIVATION_FAILED", message: "Payment is confirmed, but account activation needs attention.", paymentId, accountId: "" });
+          stopPolling();
           return;
         }
         if (payment.status === "PAID") {
-          setState({ status: "ACTIVATING", message: "Payment confirmed. Activating your ACG Trader challenge…", paymentId });
+          setState({ status: "ACTIVATING", message: "Payment confirmed. Activating your ACG Trader challenge…", paymentId, accountId: "" });
           return;
         }
         if (["FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"].includes(payment.status)) {
-          setState({ status: "ERROR", message: `Payment status: ${payment.status}.`, paymentId });
+          setState({ status: "ERROR", message: `Payment status: ${payment.status}.`, paymentId, accountId: "" });
+          stopPolling();
           return;
         }
-        setState({ status: "PROCESSING", message: "Waiting for payment confirmation…", paymentId });
+        setState({ status: "PROCESSING", message: "Waiting for payment confirmation…", paymentId, accountId: "" });
       } catch (error) {
-        if (active) setState({ status: "ERROR", message: error?.message || "Unable to check payment status.", paymentId });
+        if (active) setState({ status: "ERROR", message: error?.message || "Unable to check payment status.", paymentId, accountId: "" });
       }
     };
 
     void check();
-    const interval = window.setInterval(check, 5000);
+    interval = window.setInterval(check, 5000);
     return () => {
       active = false;
-      window.clearInterval(interval);
+      stopPolling();
     };
   }, []);
 
   const complete = state.status === "ACTIVE";
+
+  useEffect(() => {
+    if (!complete || !state.accountId || !isAuthenticated) return undefined;
+    const timer = window.setTimeout(() => onDashboard?.(state.accountId), 1600);
+    return () => window.clearTimeout(timer);
+  }, [complete, state.accountId, isAuthenticated, onDashboard]);
   return (
     <section className="grid min-h-screen place-items-center bg-[#05060A] px-5 font-sans text-zinc-300">
       <div className="w-full max-w-lg rounded-2xl border border-white/[0.08] bg-[#0A0C12] p-7">
@@ -427,8 +480,11 @@ function PaymentReturn({ onHome, onDashboard }) {
         <h1 className="text-2xl font-semibold text-white">{complete ? "Challenge active" : "Payment status"}</h1>
         <p className="mt-2 text-sm text-zinc-400">{state.message}</p>
         {state.paymentId && <p className="mt-3 text-[10px] text-zinc-600">Payment ID: {state.paymentId}</p>}
-        <div className="mt-6 flex gap-3">
-          {complete && <button type="button" onClick={onDashboard} className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black">Access my challenge</button>}
+        {complete && state.accountId && <div className="mt-4 rounded-lg border border-white/[0.07] bg-black/20 px-4 py-3"><div className="flex justify-between gap-4 text-sm"><span className="text-zinc-600">Account</span><span className="font-mono font-semibold text-white">{state.accountId}</span></div></div>}
+        {complete && <p className="mt-4 text-sm text-zinc-500">{isAuthenticated ? "Taking you to your dashboard…" : `Set up your ACG Funded account with ${email || "your purchase email"} to access this Challenge.`}</p>}
+        <div className="mt-6 flex flex-wrap gap-3">
+          {complete && isAuthenticated && <button type="button" onClick={() => onDashboard?.(state.accountId)} className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black">Go to Dashboard</button>}
+          {complete && !isAuthenticated && <button type="button" onClick={() => onSetupAccount?.(email, state.accountId)} className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black">Set Up My Account</button>}
           <button type="button" onClick={onHome} className="rounded-lg border border-white/[0.1] px-4 py-2.5 text-sm text-zinc-300">Homepage</button>
         </div>
       </div>
@@ -436,7 +492,7 @@ function PaymentReturn({ onHome, onDashboard }) {
   );
 }
 
-export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}, onDashboard = () => {}, onSignIn = () => {} }) {
+export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}, onDashboard = () => {}, onSetupAccount = () => {}, onSignIn = () => {} }) {
   const { user, getAccessToken } = useAuth();
   const [email, setEmail] = useState(user?.email || "");
 
@@ -455,12 +511,12 @@ export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}
   }, [hasPlan, plan]);
 
   const returningPayment = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment");
-  if (!hasPlan && returningPayment) return <PaymentReturn onHome={onHome} onDashboard={onDashboard} />;
+  if (!hasPlan && returningPayment) return <PaymentReturn onHome={onHome} onDashboard={onDashboard} onSetupAccount={onSetupAccount} isAuthenticated={Boolean(user)} email={email || window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""} />;
   if (!hasPlan) return null;
 
   return <section className="relative min-h-screen bg-[#05060A] font-sans text-zinc-300">
     <div className="relative z-10 mx-auto w-full max-w-[1240px] px-5 sm:px-8">
-      <CheckoutHeader onSignIn={onSignIn} />
+      <CheckoutHeader onSignIn={onSignIn} userEmail={user?.email || ""} />
       <div className="mb-8 sm:mb-10">
         <button type="button" onClick={onBack} className="mb-5 flex items-center gap-1.5 text-[12.5px] text-neutral-500 hover:text-white"><ChevronLeft className="h-3.5 w-3.5" /> Change challenge</button>
         <div className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Challenge Activation</div>
@@ -472,10 +528,10 @@ export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}
           <ChallengeSummary plan={plan} />
         </div>
         <div className="order-1 lg:order-2">
-          <PaymentSection plan={plan} email={email} onEmailChange={setEmail} emailLocked={Boolean(user?.email)} onSignIn={onSignIn} getAccessToken={getAccessToken} />
+          <PaymentSection plan={plan} email={email} onEmailChange={setEmail} emailLocked={Boolean(user?.email)} onSignIn={onSignIn} getAccessToken={getAccessToken} isAuthenticated={Boolean(user)} onDashboard={onDashboard} onSetupAccount={onSetupAccount} />
         </div>
       </div>
-      <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="mailto:support@acgforex.com" className="hover:text-zinc-400">Support</a></div>
+      <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="mailto:support@acgfunded.com" className="hover:text-zinc-400">Support</a></div>
     </div>
   </section>;
 }
