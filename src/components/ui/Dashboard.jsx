@@ -1107,7 +1107,7 @@ const navItems = [
  
 
 
-export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}, onFreeTrial = () => {}, trialChecking = false, trialError = "" }) {
+export default function Dashboard({ initialAccountId = "", onBack = () => {}, onNewChallenge = () => {}, onFreeTrial = () => {}, trialChecking = false, trialError = "" }) {
   const { user, signOut, getAccessToken } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1120,7 +1120,7 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const [workspaceReloadKey, setWorkspaceReloadKey] = useState(0);
   const [traderLaunching, setTraderLaunching] = useState(false);
   const [launchError, setLaunchError] = useState("");
-  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState(() => initialAccountId || (typeof window !== "undefined" ? window.sessionStorage.getItem("acg:postPurchaseAccountId") || "" : ""));
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [academyInitialLesson, setAcademyInitialLesson] = useState(null);
   const [tradingCredential, setTradingCredential] = useState(null);
@@ -1133,6 +1133,18 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
   const availableAccounts = Array.isArray(workspace?.accounts) ? workspace.accounts : [];
   const defaultAccount = workspace?.activeChallenge || workspace?.demos?.find(account => account.enabled && ["NEW", "ACTIVE", "PHASE_2"].includes(account.status)) || availableAccounts[0] || null;
   const activeChallenge = availableAccounts.find(account => account.accountId === selectedAccountId) || defaultAccount;
+
+  useEffect(() => {
+    if (!initialAccountId) return;
+    setSelectedAccountId(initialAccountId);
+  }, [initialAccountId]);
+
+  useEffect(() => {
+    if (!selectedAccountId || !availableAccounts.some(account => account.accountId === selectedAccountId)) return;
+    if (typeof window !== "undefined" && window.sessionStorage.getItem("acg:postPurchaseAccountId") === selectedAccountId) {
+      window.sessionStorage.removeItem("acg:postPurchaseAccountId");
+    }
+  }, [availableAccounts, selectedAccountId]);
 
   useEffect(() => {
     let cancelled = false;
