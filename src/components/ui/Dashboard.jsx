@@ -1107,7 +1107,7 @@ const navItems = [
  
 
 
-export default function Dashboard({ initialAccountId = "", onBack = () => {}, onNewChallenge = () => {}, onFreeTrial = () => {}, trialChecking = false, trialError = "" }) {
+export default function Dashboard({ initialAccountId = "", onInitialAccountConsumed = () => {}, onBack = () => {}, onNewChallenge = () => {}, onFreeTrial = () => {}, trialChecking = false, trialError = "" }) {
   const { user, signOut, getAccessToken } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1144,7 +1144,8 @@ export default function Dashboard({ initialAccountId = "", onBack = () => {}, on
     if (typeof window !== "undefined" && window.sessionStorage.getItem("acg:postPurchaseAccountId") === selectedAccountId) {
       window.sessionStorage.removeItem("acg:postPurchaseAccountId");
     }
-  }, [availableAccounts, selectedAccountId]);
+    if (initialAccountId === selectedAccountId) onInitialAccountConsumed(selectedAccountId);
+  }, [availableAccounts, selectedAccountId, initialAccountId, onInitialAccountConsumed]);
 
   useEffect(() => {
     let cancelled = false;
