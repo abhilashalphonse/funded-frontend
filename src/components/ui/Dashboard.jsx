@@ -252,7 +252,7 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
   const progressDescription = isTrial
     ? "What remains before this trial phase is complete."
     : isMaster
-      ? "Evaluation complete. This account is now governed by Master Account risk limits."
+      ? "Challenge complete. This account is now governed by Master Account risk limits."
       : "What remains before this challenge phase is complete.";
   const riskDescription = isTrial
     ? "Distance from trial limits."
@@ -824,7 +824,7 @@ const BillingSection = ({ activeChallenge }) => {
       return {
         badge: "No active account",
         title: "Payouts begin with a Master Account",
-        description: "Complete an evaluation and progress to a Master Account to unlock payout eligibility.",
+        description: "Complete a challenge and progress to a Master Account to unlock payout eligibility.",
         step: 0,
       };
     }
@@ -833,7 +833,7 @@ const BillingSection = ({ activeChallenge }) => {
       return {
         badge: "Free Trial",
         title: "Payouts are not available on trial accounts",
-        description: "Free Trials let you experience the evaluation rules. Payout eligibility starts after completing a paid challenge and receiving a Master Account.",
+        description: "Free Trials let you experience the challenge rules. Payout eligibility starts after completing a paid challenge and receiving a Master Account.",
         step: 0,
       };
     }
@@ -1426,13 +1426,18 @@ export default function Dashboard({ onBack = () => {}, onNewChallenge = () => {}
       : trialChecking
         ? "Preparing…"
         : isTerminalAccount(activeChallenge)
-          ? (activeChallenge?.accountMode === "DEMO" ? "Start New Trial" : "New Challenge")
+          ? (getAccountTypeKey(activeChallenge) === "TRIAL" ? "Start New Trial" : "New Challenge")
           : "Open ACG Trader";
 
+  const activeAccountType = getAccountTypeKey(activeChallenge);
   const primaryAccountActionHelper = isTerminalAccount(activeChallenge)
-    ? (activeChallenge?.accountMode === "DEMO" ? "This trial is closed" : "This evaluation is closed")
+    ? activeAccountType === "TRIAL"
+      ? "This trial is closed"
+      : activeAccountType === "MASTER"
+        ? "This Master Account is closed"
+        : "This challenge is closed"
     : activeChallenge
-      ? "Trade your selected account"
+      ? `Trade your selected ${getTraderAccountLabel(activeChallenge).toLowerCase()}`
       : "Start with a free trial";
 
   const renderTabContent = () => {
