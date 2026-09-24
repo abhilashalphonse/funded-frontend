@@ -141,6 +141,12 @@ const pct = (value) => {
   return `${number.toFixed(2)}%`;
 };
 
+const formatDashboardDateTime = (value) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+};
+
 const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 0));
 
 const TERMINAL_ACCOUNT_STATUSES = new Set(["BREACHED", "LOCKED", "CLOSED"]);
@@ -236,13 +242,26 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
     );
   }
 
-  const initial = Number(account.accountSize || 0);
+  const initial = Number(account.initialDeposit || account.accountSize || 0);
   const balance = Number(account.balance || 0);
   const equity = Number(account.equity || 0);
   const floating = Number(account.floatingProfit || 0);
-  const dailyLoss = Number(account.projections?.dailyLoss || 0);
-  const totalLoss = Number(account.projections?.totalLoss || 0);
-  const profit = Number(account.projections?.profit ?? (balance - initial));
+  const status = String(account.status || "").toUpperCase();
+  const terminal = isTerminalAccount(account);
+  const isBreached = status === "BREACHED";
+  const breach = account.breach || null;
+
+  const dailyStartEquity = Number(breach?.dailyStartEquity ?? account.dailyStartEquity ?? initial);
+  const reconstructedDailyLoss = Math.max(0, dailyStartEquity - equity);
+  const reconstructedTotalLoss = Math.max(0, initial - equity);
+  const storedDailyLoss = Number(account.projections?.dailyLoss || 0);
+  const storedTotalLoss = Number(account.projections?.totalLoss || 0);
+  const dailyLoss = isBreached ? Math.max(storedDailyLoss, reconstructedDailyLoss) : storedDailyLoss;
+  const totalLoss = isBreached ? Math.max(storedTotalLoss, reconstructedTotalLoss) : storedTotalLoss;
+
+  const balanceProfit = balance - initial;
+  const storedProfit = Number(account.projections?.profit);
+  const profit = terminal || !Number.isFinite(storedProfit) ? balanceProfit : storedProfit;
   const tradingDays = Number(account.projections?.tradingDays || 0);
   const totalTrades = Number(account.totalTrades || 0);
   const winningTrades = Number(account.winningTrades || 0);
@@ -267,7 +286,6 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
   const usedMargin = Number(account.margin || 0);
   const dailyRemaining = Math.max(0, dailyLossLimit - dailyLoss);
   const maxRemaining = Math.max(0, maxLossLimit - totalLoss);
-  const terminal = isTerminalAccount(account);
   const accountType = getAccountTypeKey(account);
   const isTrial = accountType === "TRIAL";
   const isMaster = accountType === "MASTER";
@@ -283,6 +301,37 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
     : isMaster
       ? "Remaining room within Master Account risk limits."
       : "Distance from challenge limits.";
+
+  const breachReason = String(breach?.primaryReason || "").toUpperCase();
+  const isMaxBreach = breachReason === "MAX_DRAWDOWN";
+  const breachLimit = Number(
+    breach?.limitAmount
+    ?? (isMaxBreach ? maxLossLimit : dailyLossLimit)
+  );
+  const breachReference = Number(
+    isMaxBreach
+      ? (breach?.initialBalance ?? initial)
+      : (breach?.dailyStartEquity ?? dailyStartEquity)
+  );
+  const breachThreshold = Number.isFinite(Number(breach?.thresholdEquity))
+    ? Number(breach.thresholdEquity)
+    : breachReference - breachLimit;
+  const recordedActualLoss = Number(breach?.actualLoss);
+  const breachActualLoss = Number.isFinite(recordedActualLoss) && recordedActualLoss > 0
+    ? recordedActualLoss
+    : (isMaxBreach ? reconstructedTotalLoss : reconstructedDailyLoss);
+  const recordedBreachAmount = Number(breach?.breachAmount);
+  const breachAmount = Number.isFinite(recordedBreachAmount) && recordedBreachAmount > 0
+    ? recordedBreachAmount
+    : Math.max(0, breachActualLoss - breachLimit);
+  const evidenceSource = String(breach?.evidenceSource || "").toUpperCase();
+  const exactTraderEvidence = evidenceSource === "TRADER_TRIGGER";
+  const authoritativeSnapshotEvidence = evidenceSource === "FUNDED_SNAPSHOT";
+  const legacyEvidence = isBreached && !exactTraderEvidence && !authoritativeSnapshotEvidence;
+  const breachRuleLabel = isMaxBreach ? "Maximum Loss Limit" : "Daily Loss Limit";
+  const triggerEquity = Number.isFinite(Number(breach?.equity)) ? Number(breach.equity) : null;
+  const triggerFloating = Number.isFinite(Number(breach?.floatingPnl)) ? Number(breach.floatingPnl) : null;
+  const breachTime = breach?.valuedAt || breach?.breachedAt;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -308,52 +357,105 @@ const OverviewSection = ({ account, onStartTrial, onNewChallenge, onOpenAcademyL
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.8fr)]">
-        <div className="rounded-xl border border-white/[0.08] bg-[#080808]">
-          <div className="border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
-            <h2 className="text-[12px] font-semibold text-white">{progressTitle}</h2>
-            <p className="mt-0.5 text-[10px] text-[#666]">{progressDescription}</p>
+      {isBreached ? (
+        <section className="overflow-hidden rounded-xl border border-rose-400/20 bg-[#080808]">
+          <div className="border-b border-rose-400/15 bg-rose-400/[0.035] px-4 py-4 sm:px-5">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg border border-rose-400/20 bg-rose-400/[0.08] text-rose-300">
+                <AlertTriangle size={15} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">{isTrial ? "Trial breached" : "Account breached"}</p>
+                <h2 className="mt-1 text-[15px] font-semibold text-white">{breachRuleLabel}</h2>
+                <p className="mt-1 text-[10px] text-[#777]">
+                  {breachTime ? `Triggered ${formatDashboardDateTime(breachTime)}` : "The account crossed its permitted loss threshold."}
+                </p>
+              </div>
+            </div>
           </div>
-          {!isMaster ? (
-            <div className="divide-y divide-white/[0.06]">
-              <ProgressRow
-                label={`Profit target · ${profitTargetPct || 0}%`}
-                value={money(Math.max(0, profit))}
-                target={money(profitTargetAmount)}
-                progress={profitProgressPct}
-              />
-              <ProgressRow
-                label="Minimum trading days"
-                value={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
-                target={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
-                progress={tradingDaysPct}
-              />
-            </div>
-          ) : (
-            <div className="px-4 py-5 text-[11px] leading-5 text-[#777] sm:px-5">
-              No challenge target or phase progression applies to this Master Account.
-            </div>
-          )}
-        </div>
 
-        <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-[12px] font-semibold text-white">Risk buffer</h2>
-              <p className="mt-0.5 text-[10px] text-[#666]">{riskDescription}</p>
+          <div className="px-4 py-4 sm:px-5">
+            {legacyEvidence && (
+              <div className="mb-4 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2.5 text-[10px] leading-5 text-amber-200">
+                This account breached before exact trigger valuations were stored. The loss figures below are reconstructed from the final post-breach account state; the exact trigger tick is unavailable.
+              </div>
+            )}
+            {authoritativeSnapshotEvidence && (
+              <div className="mb-4 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-[10px] leading-5 text-[#8a8a8a]">
+                Breach evidence was recorded from an authoritative ACG Trader account valuation.
+              </div>
+            )}
+
+            <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+              <CompactStat label={isMaxBreach ? "Initial balance" : "Daily start equity"} value={money(breachReference)} />
+              <CompactStat label="Loss limit" value={money(breachLimit)} />
+              <CompactStat label="Breach threshold" value={money(breachThreshold)} />
+              <CompactStat label={legacyEvidence ? "Final equity" : "Trigger equity"} value={money(legacyEvidence ? equity : (triggerEquity ?? equity))} />
+              <CompactStat label={legacyEvidence ? "Reconstructed loss" : "Loss at trigger"} value={money(breachActualLoss)} tone="negative" />
+              <CompactStat label="Beyond limit" value={money(breachAmount)} tone={breachAmount > 0 ? "negative" : "neutral"} />
+              <CompactStat label="Final equity" value={money(equity)} />
+              <CompactStat label="Final P&L" value={money(profit)} tone={profit < 0 ? "negative" : profit > 0 ? "positive" : "neutral"} />
+              {exactTraderEvidence && triggerFloating != null && (
+                <CompactStat label="Floating P&L at trigger" value={money(triggerFloating)} tone={triggerFloating < 0 ? "negative" : triggerFloating > 0 ? "positive" : "neutral"} />
+              )}
             </div>
-            <ShieldCheck size={16} className="text-[#777]" />
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-3 text-[9px] text-[#666]">
+              <span>{exactTraderEvidence ? "Exact live trigger valuation" : legacyEvidence ? "Legacy reconstructed evidence" : "Authoritative valuation evidence"}</span>
+              {Array.isArray(breach?.triggeredRules) && breach.triggeredRules.length > 0 && (
+                <span>{breach.triggeredRules.map(rule => String(rule).replaceAll("_", " ")).join(" + ")}</span>
+              )}
+            </div>
           </div>
-          <div className="mt-5 space-y-5">
-            <RiskBufferRow label="Daily loss remaining" amount={dailyRemaining} usage={dailyUsagePct} onLearn={() => onOpenAcademyLesson?.("daily-loss")} />
-            <RiskBufferRow label="Maximum loss remaining" amount={maxRemaining} usage={maxUsagePct} onLearn={() => onOpenAcademyLesson?.("maximum-loss")} />
+        </section>
+      ) : (
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.8fr)]">
+          <div className="rounded-xl border border-white/[0.08] bg-[#080808]">
+            <div className="border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
+              <h2 className="text-[12px] font-semibold text-white">{progressTitle}</h2>
+              <p className="mt-0.5 text-[10px] text-[#666]">{progressDescription}</p>
+            </div>
+            {!isMaster ? (
+              <div className="divide-y divide-white/[0.06]">
+                <ProgressRow
+                  label={`Profit target · ${profitTargetPct || 0}%`}
+                  value={money(Math.max(0, profit))}
+                  target={money(profitTargetAmount)}
+                  progress={profitProgressPct}
+                />
+                <ProgressRow
+                  label="Minimum trading days"
+                  value={`${tradingDays} day${tradingDays === 1 ? "" : "s"}`}
+                  target={`${minTradingDays} day${minTradingDays === 1 ? "" : "s"}`}
+                  progress={tradingDaysPct}
+                />
+              </div>
+            ) : (
+              <div className="px-4 py-5 text-[11px] leading-5 text-[#777] sm:px-5">
+                No challenge target or phase progression applies to this Master Account.
+              </div>
+            )}
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-4">
-            <CompactStat label="Used margin" value={money(usedMargin)} />
-            <CompactStat label="Free margin" value={money(freeMargin)} />
+
+          <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-[12px] font-semibold text-white">Risk buffer</h2>
+                <p className="mt-0.5 text-[10px] text-[#666]">{riskDescription}</p>
+              </div>
+              <ShieldCheck size={16} className="text-[#777]" />
+            </div>
+            <div className="mt-5 space-y-5">
+              <RiskBufferRow label="Daily loss remaining" amount={dailyRemaining} usage={dailyUsagePct} onLearn={() => onOpenAcademyLesson?.("daily-loss")} />
+              <RiskBufferRow label="Maximum loss remaining" amount={maxRemaining} usage={maxUsagePct} onLearn={() => onOpenAcademyLesson?.("maximum-loss")} />
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-4">
+              <CompactStat label="Used margin" value={money(usedMargin)} />
+              <CompactStat label="Free margin" value={money(freeMargin)} />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4 sm:p-5">
