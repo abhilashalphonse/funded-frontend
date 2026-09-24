@@ -9,7 +9,7 @@ import PaymentPage from "./components/PaymentPage.jsx";
 import AdminDashboard from "./components/admin/AdminDashboard.jsx";
 import LegalPage, { getLegalPage } from "./components/ui/LegalPage.jsx";
 import RulesPage from "./components/ui/RulesPage.jsx";
-import { captureAttribution, getAnalyticsSessionId, trackEvent } from "./utils/analytics.js";
+import { captureAttribution, getAnalyticsSessionId, getAttribution, trackEvent } from "./utils/analytics.js";
 
 function isAuthCallbackLocation() {
   if (typeof window === "undefined") return false;
@@ -268,6 +268,7 @@ function App() {
         body: JSON.stringify({
           challengeDefinition: plan.challengeDefinition,
           commercialConfig: plan.commercialConfig,
+          analyticsAttribution: getAttribution(),
         }),
       });
       const payload = await response.json().catch(() => ({}));
