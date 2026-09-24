@@ -751,21 +751,41 @@ export default function AdminDashboard() {
   const executionDeals = tradingDetail?.deals?.items || [];
   const tradingOrders = tradingDetail?.orders?.items || [];
   const lifecycleEvents = tradingDetail?.lifecycle || [];
-  const reconstructedDailyLoss = Math.max(0, Number(accountDetail?.dailyStartEquity || 0) - Number(accountDetail?.equity || 0));
-  const reconstructedTotalLoss = Math.max(0, Number(accountDetail?.initialDeposit || accountDetail?.accountSize || 0) - Number(accountDetail?.equity || 0));
-  const recordedBreachLoss = Number(breachDetail?.actualLoss || 0);
+  const initialBalance = Number(accountDetail?.initialDeposit || accountDetail?.accountSize || 0);
+  const reconstructedDailyLoss = Math.max(0, Number(accountDetail?.dailyStartEquity || initialBalance) - Number(accountDetail?.equity || 0));
+  const reconstructedTotalLoss = Math.max(0, initialBalance - Number(accountDetail?.equity || 0));
+  const breachIsMax = String(breachDetail?.primaryReason || "").toUpperCase() === "MAX_DRAWDOWN";
+  const breachEvidenceSource = String(breachDetail?.evidenceSource || "").toUpperCase();
   const legacyBreachEvidence = Boolean(
     breachDetail
-    && recordedBreachLoss <= 0
-    && reconstructedDailyLoss > 0
-    && String(breachDetail?.primaryReason || "").toUpperCase() === "DAILY_DRAWDOWN"
+    && !["TRADER_TRIGGER", "FUNDED_SNAPSHOT"].includes(breachEvidenceSource)
   );
+  const reconstructedBreachLoss = breachIsMax ? reconstructedTotalLoss : reconstructedDailyLoss;
+  const breachLimit = Number(
+    breachDetail?.limitAmount
+    ?? lossLimitAmount(accountDetail, breachIsMax ? accountDetail?.rules?.maxDrawdown : accountDetail?.rules?.dailyDrawdown)
+  );
+  const displayedBreachLoss = legacyBreachEvidence
+    ? reconstructedBreachLoss
+    : Number(breachDetail?.actualLoss || 0);
+  const displayedBreachAmount = legacyBreachEvidence
+    ? Math.max(0, reconstructedBreachLoss - breachLimit)
+    : Number(breachDetail?.breachAmount || 0);
+  const breachReference = breachIsMax
+    ? Number(breachDetail?.initialBalance ?? initialBalance)
+    : Number(breachDetail?.dailyStartEquity ?? accountDetail?.dailyStartEquity ?? initialBalance);
+  const breachThreshold = Number.isFinite(Number(breachDetail?.thresholdEquity))
+    ? Number(breachDetail.thresholdEquity)
+    : breachReference - breachLimit;
   const currentDailyLoss = accountDetail?.status === "BREACHED"
     ? Math.max(Number(accountDetail?.projections?.dailyLoss || 0), reconstructedDailyLoss)
     : Number(accountDetail?.projections?.dailyLoss || 0);
   const currentTotalLoss = accountDetail?.status === "BREACHED"
     ? Math.max(Number(accountDetail?.projections?.totalLoss || 0), reconstructedTotalLoss)
     : Number(accountDetail?.projections?.totalLoss || 0);
+  const currentProfit = accountDetail?.status === "BREACHED"
+    ? Number(accountDetail?.balance || 0) - initialBalance
+    : Number(accountDetail?.projections?.profit || 0);
 
   return (
     <div className="min-h-screen bg-[#090909] text-white">
@@ -826,7 +846,7 @@ export default function AdminDashboard() {
 
       {selected && ["challenges","trials","funded","breaches","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load account" text={selectedDetail.error} /> : <>
-          <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={money(accountDetail?.projections?.profit || 0,"USD")} /></div>
+          <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={signedMoney(currentProfit,"USD")} /></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Kpi
               label="Daily Loss"
@@ -856,10 +876,10 @@ export default function AdminDashboard() {
                 </div>
               )}
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Kpi label={legacyBreachEvidence ? "Recorded Actual Loss" : "Actual Loss"} value={money(breachDetail.actualLoss || 0)} detail={`Limit ${money(breachDetail.limitAmount || 0)}`} />
-                <Kpi label={legacyBreachEvidence ? "Current Beyond Limit" : "Beyond Limit"} value={money(legacyBreachEvidence ? Math.max(0, reconstructedDailyLoss - Number(breachDetail.limitAmount || 0)) : (breachDetail.breachAmount || 0))} />
+                <Kpi label={legacyBreachEvidence ? "Reconstructed Loss" : "Actual Loss"} value={money(displayedBreachLoss)} detail={`Limit ${money(breachLimit)}`} />
+                <Kpi label={legacyBreachEvidence ? "Current Beyond Limit" : "Beyond Limit"} value={money(displayedBreachAmount)} />
                 <Kpi label={legacyBreachEvidence ? "Recorded Trigger Equity" : "Equity at Breach"} value={money(breachDetail.equity || 0)} />
-                <Kpi label="Threshold Equity" value={money(breachDetail.thresholdEquity ?? (Number(breachDetail.dailyStartEquity || 0) - Number(breachDetail.limitAmount || 0)))} />
+                <Kpi label="Threshold Equity" value={money(breachThreshold)} />
               </div>
               <div className="mt-4 grid gap-x-6 gap-y-3 border-t border-red-400/10 pt-4 sm:grid-cols-2">
                 <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Triggered rules</p><p className="mt-1 text-xs text-zinc-200">{(breachDetail.triggeredRules || []).map(humanize).join(", ") || humanize(breachDetail.primaryReason)}</p></div>
@@ -867,7 +887,9 @@ export default function AdminDashboard() {
                 <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">{legacyBreachEvidence ? "Current daily loss" : "Daily loss at breach"}</p><p className="mt-1 text-xs text-zinc-200">{money(legacyBreachEvidence ? reconstructedDailyLoss : (breachDetail.dailyLoss || 0))}</p></div>
                 <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">{legacyBreachEvidence ? "Current total loss" : "Total loss at breach"}</p><p className="mt-1 text-xs text-zinc-200">{money(legacyBreachEvidence ? reconstructedTotalLoss : (breachDetail.totalLoss || 0))}</p></div>
                 <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Trigger valuation</p><p className="mt-1 text-xs text-zinc-200">{breachDetail.valuedAt ? dateTime(breachDetail.valuedAt) : "Legacy record"}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Evidence source</p><p className="mt-1 text-xs text-zinc-200">{humanize(breachDetail.evidenceSource || "LEGACY")}</p></div>
                 <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Reason code</p><p className="mt-1 text-xs text-zinc-200">{breachDetail.reasonCode || "—"}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Floating P&L at trigger</p><p className="mt-1 text-xs text-zinc-200">{breachDetail.floatingPnl == null ? "—" : signedMoney(breachDetail.floatingPnl)}</p></div>
               </div>
             </section>
           )}
