@@ -492,17 +492,20 @@ export default function AdminDashboard() {
     const e = data?.byEvent || {};
     const k = data?.kpis || {};
     const acquisition = data?.acquisition || [];
+    const countFor = key => {
+      if (key === "trial_outcome") return Number(k.trialOutcomes || 0);
+      return Number(e[key]?.sessions || e[key]?.events || 0);
+    };
     const stages = [
       ["landing_view", "Visitors"],
       ["signup_completed", "Registrations"],
       ["trial_created", "Free trials"],
       ["trial_first_trade", "Activated trials"],
-      ["trial_passed", "Trial passed"],
-      ["trial_failed", "Trial failed"],
+      ["trial_outcome", "Trial outcome"],
       ["checkout_started", "Checkout"],
       ["payment_completed", "Paid"],
     ];
-    const first = e[stages[0][0]]?.sessions || e[stages[0][0]]?.events || 0;
+    const first = countFor(stages[0][0]);
     const acquisitionColumns = [
       { key: "source", label: "Source" },
       { key: "campaign", label: "Campaign", render: row => row.campaign || "—" },
@@ -525,14 +528,13 @@ export default function AdminDashboard() {
           <Kpi label="Registrations" value={k.registrations || 0} detail={`${pct((k.visitorToRegistration || 0) * 100)} visitor → registration`} />
           <Kpi label="Activated Trials" value={k.activatedTrials || 0} detail={`${pct((k.trialToActivation || 0) * 100)} trial → first trade`} />
           <Kpi label="Paid Conversions" value={k.paidConversions || 0} detail={`${pct((k.checkoutToPaid || 0) * 100)} checkout → paid`} />
-          <Kpi label="Attributed Revenue" value={money(k.revenue || 0)} detail={`${k.trialOutcomes || 0} trial outcomes`} />
+          <Kpi label="Attributed Revenue" value={money(k.revenue || 0)} detail={`${k.trialOutcomes || 0} trial outcomes · ${k.trialPassed || 0} passed · ${k.trialFailed || 0} failed`} />
         </div>
 
         <div className="grid gap-3 lg:grid-cols-4">
           {stages.map(([key,label], i) => {
-            const count = e[key]?.sessions || e[key]?.events || 0;
-            const previousKey = stages[Math.max(0, i - 1)][0];
-            const previous = e[previousKey]?.sessions || e[previousKey]?.events || 0;
+            const count = countFor(key);
+            const previous = i === 0 ? 0 : countFor(stages[i - 1][0]);
             const stepConversion = i === 0 ? 100 : previous ? (count / previous) * 100 : 0;
             const overall = first ? (count / first) * 100 : 0;
             return <div key={key} className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
