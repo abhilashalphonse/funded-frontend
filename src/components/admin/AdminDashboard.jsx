@@ -25,6 +25,9 @@ const NAV = [
     { id: "payments", label: "Payments", icon: CreditCard },
     { id: "refunds", label: "Refunds", icon: RefreshCw },
   ] },
+  { label: "Trading", items: [
+    { id: "trades", label: "Trades", icon: Activity },
+  ] },
   { label: "Risk", items: [
     { id: "risk", label: "Risk Overview", icon: ShieldAlert },
     { id: "breaches", label: "Breaches", icon: AlertTriangle },
@@ -63,6 +66,7 @@ const TITLES = {
   refunds: ["Refunds", "Refund workflow and provider state"],
   risk: ["Risk Overview", "Breaches, locked accounts and provisioning failures"],
   breaches: ["Breaches", "Rule-engine failures requiring review"],
+  trades: ["Trades", "Recent ACG Trader executions across customer accounts"],
   funnel: ["Funnel", "Acquisition to paid challenge conversion"],
   revenue: ["Revenue", "Revenue and paid-order performance"],
   support: ["Support Cases", "Customer conversations escalated for human review"],
@@ -84,6 +88,12 @@ const money = (value, currency = "USD") => {
 
 const dateTime = value => value ? new Date(value).toLocaleString() : "—";
 const pct = value => `${Number(value || 0).toFixed(2)}%`;
+const humanize = value => String(value || "—").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+const signedMoney = (value, currency = "USD") => {
+  const number = Number(value || 0);
+  const formatted = money(Math.abs(number), currency);
+  return number > 0 ? `+${formatted}` : number < 0 ? `-${formatted}` : formatted;
+};
 const lossPct = (lossAmount, baseAmount) => {
   const loss = Number(lossAmount || 0);
   const base = Number(baseAmount || 0);
@@ -235,6 +245,7 @@ export default function AdminDashboard() {
     if (page === "funded") return `/challenges?funded=true&limit=100${q}`;
     if (page === "orders") return `/orders?limit=100${q}${s}`;
     if (page === "payments") return `/payments?limit=100${q}${s}`;
+    if (page === "trades") return "/trades?limit=200";
     if (page === "risk" || page === "breaches") return "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
     if (page === "support") return `/support?limit=100${q}${s}`;
@@ -284,6 +295,16 @@ export default function AdminDashboard() {
       if (page === "users") setSelectedDetail(await adminFetch(`/users/${encodeURIComponent(row.customerId)}`));
       if (["challenges", "trials", "funded", "breaches"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
       if (page === "orders" || page === "payments") setSelectedDetail({ payment: row });
+      if (page === "trades" && row.account?.externalRef) {
+        const detail = await adminFetch(`/challenges/${encodeURIComponent(row.account.externalRef)}`);
+        setSelected({
+          ...row,
+          accountId: detail?.account?.accountId || row.account.externalRef,
+          accountMode: detail?.account?.accountMode,
+          accountSize: detail?.account?.accountSize,
+        });
+        setSelectedDetail(detail);
+      }
       if (page === "support") {
         setSupportReply("");
         setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(row.conversationId)}`));
@@ -473,6 +494,54 @@ export default function AdminDashboard() {
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ];
 
+  const renderTrades = () => {
+    const term = search.trim().toLowerCase();
+    const items = (data?.items || []).filter(row => {
+      if (!term) return true;
+      return [
+        row.dealId,
+        row.symbol,
+        row.side,
+        row.type,
+        row.account?.accountCode,
+        row.account?.externalRef,
+        row.account?.ownerExternalRef,
+        row.account?.accountType,
+      ].some(value => String(value || "").toLowerCase().includes(term));
+    });
+
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Kpi label="Executions Loaded" value={items.length} detail={data?.page?.hasMore ? "Showing latest 200 · more history available" : "Latest execution history"} />
+          <Kpi label="Realized P&L" value={signedMoney(items.reduce((sum, item) => sum + Number(item.realizedPnl || 0), 0))} />
+          <Kpi label="Commission" value={money(items.reduce((sum, item) => sum + Math.abs(Number(item.commission || 0)), 0))} />
+          <Kpi label="Accounts" value={new Set(items.map(item => item.account?.externalRef).filter(Boolean)).size} />
+        </div>
+        <DataTable
+          rows={items}
+          onRow={openRow}
+          empty="No matching executions."
+          columns={[
+            { key: "executedAt", label: "Executed", render: r => dateTime(r.executedAt) },
+            { key: "account", label: "Account", render: r => r.account?.externalRef || r.account?.accountCode || "—" },
+            { key: "accountType", label: "Type", render: r => r.account?.accountType || "—" },
+            { key: "symbol", label: "Symbol" },
+            { key: "side", label: "Side", render: r => <Badge>{r.side}</Badge> },
+            { key: "type", label: "Execution" },
+            { key: "volume", label: "Volume" },
+            { key: "price", label: "Price" },
+            { key: "spreadPoints", label: "Spread", render: r => r.spreadPoints ?? "—" },
+            { key: "commission", label: "Commission", render: r => money(r.commission || 0) },
+            { key: "swap", label: "Swap", render: r => money(r.swap || 0) },
+            { key: "realizedPnl", label: "Realized P&L", render: r => signedMoney(r.realizedPnl || 0) },
+            { key: "dealId", label: "Deal ID" },
+          ]}
+        />
+      </div>
+    );
+  };
+
   const renderRisk = () => {
     const breachRows = page === "breaches" ? (data?.breached || []) : [...(data?.breached || []), ...(data?.locked || []), ...(data?.failedProvisioning || [])];
     return (
@@ -649,6 +718,7 @@ export default function AdminDashboard() {
     if (page === "users") return renderUsers();
     if (["challenges","trials","funded"].includes(page)) return renderChallenges();
     if (page === "orders" || page === "payments") return <DataTable rows={rows} columns={paymentColumns} onRow={openRow} />;
+    if (page === "trades") return renderTrades();
     if (page === "risk" || page === "breaches") return renderRisk();
     if (page === "funnel") return renderFunnel();
     if (page === "revenue") return renderRevenue();
@@ -674,6 +744,13 @@ export default function AdminDashboard() {
 
   const userDetail = selectedDetail?.customer;
   const accountDetail = selectedDetail?.account;
+  const tradingDetail = selectedDetail?.trading;
+  const breachDetail = accountDetail?.breach;
+  const openPositions = tradingDetail?.openPositions?.items || [];
+  const closedPositions = tradingDetail?.closedPositions?.items || [];
+  const executionDeals = tradingDetail?.deals?.items || [];
+  const tradingOrders = tradingDetail?.orders?.items || [];
+  const lifecycleEvents = tradingDetail?.lifecycle || [];
 
   return (
     <div className="min-h-screen bg-[#090909] text-white">
@@ -732,7 +809,7 @@ export default function AdminDashboard() {
         </>}
       </Inspector>}
 
-      {selected && ["challenges","trials","funded","breaches"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
+      {selected && ["challenges","trials","funded","breaches","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load account" text={selectedDetail.error} /> : <>
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={money(accountDetail?.projections?.profit || 0,"USD")} /></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -748,6 +825,175 @@ export default function AdminDashboard() {
             />
             <Kpi label="Trading Days" value={accountDetail?.projections?.tradingDays || 0} />
           </div>
+          {breachDetail && (
+            <section className="mt-5 rounded-xl border border-red-400/20 bg-red-400/[0.06] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-red-400">Breach evidence</p>
+                  <h3 className="mt-1 text-base font-semibold text-white">{humanize(breachDetail.primaryReason)}</h3>
+                  <p className="mt-1 text-xs text-zinc-400">{dateTime(breachDetail.breachedAt)} · Phase {breachDetail.phase || accountDetail?.currentPhase || 1}</p>
+                </div>
+                <Badge>BREACHED</Badge>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Kpi label="Actual Loss" value={money(breachDetail.actualLoss || 0)} detail={`Limit ${money(breachDetail.limitAmount || 0)}`} />
+                <Kpi label="Beyond Limit" value={money(breachDetail.breachAmount || 0)} />
+                <Kpi label="Equity at Breach" value={money(breachDetail.equity || 0)} />
+                <Kpi label="Balance at Breach" value={money(breachDetail.balance || 0)} />
+              </div>
+              <div className="mt-4 grid gap-x-6 gap-y-3 border-t border-red-400/10 pt-4 sm:grid-cols-2">
+                <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Triggered rules</p><p className="mt-1 text-xs text-zinc-200">{(breachDetail.triggeredRules || []).map(humanize).join(", ") || humanize(breachDetail.primaryReason)}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Daily start equity</p><p className="mt-1 text-xs text-zinc-200">{money(breachDetail.dailyStartEquity || 0)}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Daily loss</p><p className="mt-1 text-xs text-zinc-200">{money(breachDetail.dailyLoss || 0)}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Total loss</p><p className="mt-1 text-xs text-zinc-200">{money(breachDetail.totalLoss || 0)}</p></div>
+              </div>
+            </section>
+          )}
+
+          <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div><p className="text-xs font-semibold text-white">Account 360°</p><p className="mt-1 text-[11px] text-zinc-500">Customer, platform, lifecycle and risk state.</p></div>
+              <Badge>{accountDetail?.accountMode === "DEMO" ? "TRIAL" : accountDetail?.status === "FUNDED" ? "MASTER" : "CHALLENGE"}</Badge>
+            </div>
+            <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                ["Customer", selectedDetail?.customer?.primaryEmail || accountDetail?.customerId],
+                ["Customer ID", accountDetail?.customerId],
+                ["Account ID", accountDetail?.accountId],
+                ["Platform account", accountDetail?.platformAccountId],
+                ["Platform code", accountDetail?.platformAccountCode],
+                ["Platform login", accountDetail?.platformLogin],
+                ["Challenge", accountDetail?.challengeType],
+                ["Phase", accountDetail?.currentPhase || 1],
+                ["Leverage", accountDetail?.leverage ? `1:${accountDetail.leverage}` : "—"],
+                ["Floating P&L", signedMoney(accountDetail?.floatingProfit || 0)],
+                ["Used margin", money(accountDetail?.margin || 0)],
+                ["Free margin", money(accountDetail?.marginFree || 0)],
+                ["Margin level", accountDetail?.marginLevel ? `${Number(accountDetail.marginLevel).toFixed(2)}%` : "—"],
+                ["Highest balance", money(accountDetail?.projections?.highestBalance || 0)],
+                ["Highest equity", money(accountDetail?.projections?.highestEquity || 0)],
+                ["Last platform snapshot", dateTime(accountDetail?.lastPlatformSnapshotAt)],
+                ["Created", dateTime(accountDetail?.createdAt)],
+                ["Updated", dateTime(accountDetail?.updatedAt)],
+              ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 break-all text-xs text-zinc-200">{value || "—"}</p></div>)}
+            </div>
+          </section>
+
+          <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+            <p className="text-xs font-semibold text-white">Trading statistics</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Kpi label="Total Trades" value={accountDetail?.totalTrades || 0} />
+              <Kpi label="Wins" value={accountDetail?.winningTrades || 0} />
+              <Kpi label="Losses" value={accountDetail?.losingTrades || 0} />
+              <Kpi label="Win Rate" value={pct((Number(accountDetail?.totalTrades || 0) > 0 ? Number(accountDetail?.winningTrades || 0) / Number(accountDetail.totalTrades) : 0) * 100)} />
+            </div>
+          </section>
+
+          {selectedDetail?.tradingError && (
+            <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-xs text-amber-200">
+              Trader history is temporarily unavailable: {selectedDetail.tradingError.message}
+            </div>
+          )}
+
+          {tradingDetail && (
+            <>
+              <section className="mt-5">
+                <div className="mb-3 flex items-end justify-between"><div><h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Open positions</h3><p className="mt-1 text-[11px] text-zinc-600">{openPositions.length} currently open</p></div></div>
+                <DataTable rows={openPositions} empty="No open positions." columns={[
+                  { key: "symbol", label: "Symbol" },
+                  { key: "side", label: "Side", render: r => <Badge>{r.side}</Badge> },
+                  { key: "openVolume", label: "Open Volume" },
+                  { key: "entryPrice", label: "Entry" },
+                  { key: "stopLoss", label: "SL", render: r => r.stopLoss ?? "—" },
+                  { key: "takeProfit", label: "TP", render: r => r.takeProfit ?? "—" },
+                  { key: "margin", label: "Margin", render: r => money(r.margin || 0) },
+                  { key: "realizedPnl", label: "Realized P&L", render: r => signedMoney(r.realizedPnl || 0) },
+                  { key: "openedAt", label: "Opened", render: r => dateTime(r.openedAt) },
+                  { key: "positionId", label: "Position ID" },
+                ]} />
+              </section>
+
+              <section className="mt-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">Closed positions</h3>
+                <DataTable rows={closedPositions} empty="No closed positions." columns={[
+                  { key: "symbol", label: "Symbol" },
+                  { key: "side", label: "Side", render: r => <Badge>{r.side}</Badge> },
+                  { key: "initialVolume", label: "Volume" },
+                  { key: "entryPrice", label: "Entry" },
+                  { key: "realizedPnl", label: "P&L", render: r => signedMoney(r.realizedPnl || 0) },
+                  { key: "commissionPaid", label: "Commission", render: r => money(r.commissionPaid || 0) },
+                  { key: "swapPaid", label: "Swap", render: r => money(r.swapPaid || 0) },
+                  { key: "closeReason", label: "Close Reason", render: r => humanize(r.closeReason) },
+                  { key: "openedAt", label: "Opened", render: r => dateTime(r.openedAt) },
+                  { key: "closedAt", label: "Closed", render: r => dateTime(r.closedAt) },
+                ]} />
+              </section>
+
+              <section className="mt-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">Execution deals</h3>
+                <DataTable rows={executionDeals} empty="No executions recorded." columns={[
+                  { key: "executedAt", label: "Executed", render: r => dateTime(r.executedAt) },
+                  { key: "symbol", label: "Symbol" },
+                  { key: "side", label: "Side", render: r => <Badge>{r.side}</Badge> },
+                  { key: "type", label: "Type" },
+                  { key: "volume", label: "Volume" },
+                  { key: "price", label: "Price" },
+                  { key: "spreadPoints", label: "Spread" },
+                  { key: "commission", label: "Commission", render: r => money(r.commission || 0) },
+                  { key: "swap", label: "Swap", render: r => money(r.swap || 0) },
+                  { key: "realizedPnl", label: "P&L", render: r => signedMoney(r.realizedPnl || 0) },
+                  { key: "dealId", label: "Deal ID" },
+                ]} />
+              </section>
+
+              <section className="mt-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">Orders</h3>
+                <DataTable rows={tradingOrders} empty="No orders recorded." columns={[
+                  { key: "receivedAt", label: "Received", render: r => dateTime(r.receivedAt) },
+                  { key: "symbol", label: "Symbol" },
+                  { key: "side", label: "Side", render: r => <Badge>{r.side}</Badge> },
+                  { key: "type", label: "Type" },
+                  { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
+                  { key: "requestedVolume", label: "Requested" },
+                  { key: "filledVolume", label: "Filled" },
+                  { key: "acceptedPrice", label: "Fill Price", render: r => r.acceptedPrice ?? "—" },
+                  { key: "stopLoss", label: "SL", render: r => r.stopLoss ?? "—" },
+                  { key: "takeProfit", label: "TP", render: r => r.takeProfit ?? "—" },
+                  { key: "rejectMessage", label: "Reject Reason", render: r => r.rejectMessage || "—" },
+                ]} />
+              </section>
+
+              <section className="mt-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">Lifecycle timeline</h3>
+                <DataTable rows={lifecycleEvents} empty="No Trader lifecycle events recorded." columns={[
+                  { key: "createdAt", label: "Time", render: r => dateTime(r.createdAt) },
+                  { key: "type", label: "Event", render: r => humanize(r.type) },
+                  { key: "fromStatus", label: "From", render: r => r.fromStatus || "—" },
+                  { key: "toStatus", label: "To", render: r => r.toStatus || "—" },
+                  { key: "reason", label: "Reason", render: r => humanize(r.reason) },
+                  { key: "actorType", label: "Actor" },
+                ]} />
+              </section>
+            </>
+          )}
+
+          <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+            <p className="text-xs font-semibold text-white">Commercial & activation</p>
+            <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                ["Order", selectedDetail?.payment?.orderId],
+                ["Paid", selectedDetail?.payment ? money(selectedDetail.payment.amount, selectedDetail.payment.currency || "USD") : "—"],
+                ["Payment status", selectedDetail?.payment?.status],
+                ["Payment method", selectedDetail?.payment?.paymentMethod],
+                ["Activation", selectedDetail?.payment?.activation?.status],
+                ["Profit split", accountDetail?.commercialTerms?.profitSplit != null ? `${accountDetail.commercialTerms.profitSplit}%` : "—"],
+                ["Payout frequency", accountDetail?.commercialTerms?.payoutFrequency],
+                ["News trading", accountDetail?.commercialTerms?.newsTrading == null ? "—" : accountDetail.commercialTerms.newsTrading ? "Allowed" : "Restricted"],
+                ["Weekend holding", accountDetail?.commercialTerms?.weekendHolding == null ? "—" : accountDetail.commercialTerms.weekendHolding ? "Allowed" : "Restricted"],
+              ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 text-xs text-zinc-200">{value || "—"}</p></div>)}
+            </div>
+          </section>
+
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">State</p><div className="mt-2"><Badge>{accountDetail?.status}</Badge></div></div><div className="flex flex-wrap gap-2">
             {["ACTIVE","PHASE_2","FUNDED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
             {accountDetail?.status === "LOCKED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"UNLOCK",label:"Unlock account"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300">Unlock</button>}
