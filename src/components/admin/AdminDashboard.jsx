@@ -384,7 +384,7 @@ export default function AdminDashboard() {
             <div className="mt-5 space-y-3">
               {[
                 ["landing_view", "Visitors"], ["signup_completed", "Registrations"], ["trial_created", "Free trials"],
-                ["first_trade", "First trade"], ["checkout_started", "Checkout"], ["payment_completed", "Paid"],
+                ["trial_first_trade", "Activated trial"], ["checkout_started", "Checkout"], ["payment_completed", "Paid"],
               ].map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between border-b border-white/[0.05] pb-3 last:border-0">
                   <span className="text-xs text-zinc-400">{label}</span>
@@ -490,20 +490,51 @@ export default function AdminDashboard() {
 
   const renderFunnel = () => {
     const e = data?.byEvent || {};
+    const k = data?.kpis || {};
+    const acquisition = data?.acquisition || [];
+    const countFor = key => {
+      if (key === "trial_outcome") return Number(k.trialOutcomes || 0);
+      return Number(e[key]?.sessions || e[key]?.events || 0);
+    };
     const stages = [
-      ["landing_view", "Visitors"], ["hero_cta_click", "CTA clicks"], ["signup_completed", "Registrations"],
-      ["trial_created", "Trial created"], ["first_trade", "First trade"], ["trial_passed", "Trial passed"],
-      ["checkout_started", "Checkout"], ["payment_completed", "Paid"], ["challenge_activated", "Activated"],
+      ["landing_view", "Visitors"],
+      ["signup_completed", "Registrations"],
+      ["trial_created", "Free trials"],
+      ["trial_first_trade", "Activated trials"],
+      ["trial_outcome", "Trial outcome"],
+      ["checkout_started", "Checkout"],
+      ["payment_completed", "Paid"],
     ];
-    const first = e[stages[0][0]]?.sessions || e[stages[0][0]]?.events || 0;
+    const first = countFor(stages[0][0]);
+    const acquisitionColumns = [
+      { key: "source", label: "Source" },
+      { key: "campaign", label: "Campaign", render: row => row.campaign || "—" },
+      { key: "creatorId", label: "Creator", render: row => row.creatorId || "—" },
+      { key: "creativeId", label: "Creative", render: row => row.creativeId || "—" },
+      { key: "market", label: "Market", render: row => row.market || "—" },
+      { key: "language", label: "Language", render: row => row.language || "—" },
+      { key: "registrations", label: "Registrations" },
+      { key: "trialsCreated", label: "Trials" },
+      { key: "activatedTrials", label: "Activated" },
+      { key: "paidConversions", label: "Paid" },
+      { key: "revenue", label: "Revenue", render: row => money(row.revenue) },
+    ];
+
     return (
       <div className="space-y-5">
         <div className="flex gap-2">{["7","30","90"].map(v => <button key={v} onClick={() => setDays(v)} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${days===v ? "border-white bg-white text-black" : "border-white/10 text-zinc-400"}`}>{v}D</button>)}</div>
-        <div className="grid gap-3 lg:grid-cols-3">
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Kpi label="Registrations" value={k.registrations || 0} detail={`${pct((k.visitorToRegistration || 0) * 100)} visitor → registration`} />
+          <Kpi label="Activated Trials" value={k.activatedTrials || 0} detail={`${pct((k.trialToActivation || 0) * 100)} trial → first trade`} />
+          <Kpi label="Paid Conversions" value={k.paidConversions || 0} detail={`${pct((k.checkoutToPaid || 0) * 100)} checkout → paid`} />
+          <Kpi label="Attributed Revenue" value={money(k.revenue || 0)} detail={`${k.trialOutcomes || 0} trial outcomes · ${k.trialPassed || 0} passed · ${k.trialFailed || 0} failed`} />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-4">
           {stages.map(([key,label], i) => {
-            const count = e[key]?.sessions || e[key]?.events || 0;
-            const previousKey = stages[Math.max(0, i - 1)][0];
-            const previous = e[previousKey]?.sessions || e[previousKey]?.events || 0;
+            const count = countFor(key);
+            const previous = i === 0 ? 0 : countFor(stages[i - 1][0]);
             const stepConversion = i === 0 ? 100 : previous ? (count / previous) * 100 : 0;
             const overall = first ? (count / first) * 100 : 0;
             return <div key={key} className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
@@ -512,6 +543,18 @@ export default function AdminDashboard() {
             </div>;
           })}
         </div>
+
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Acquisition sources</h3>
+            <p className="mt-1 text-xs text-zinc-500">First-touch attribution from campaign → creator → creative through trial activation and paid conversion.</p>
+          </div>
+          <DataTable
+            rows={acquisition}
+            columns={acquisitionColumns}
+            empty="No attributed acquisition activity yet."
+          />
+        </section>
       </div>
     );
   };
