@@ -41,6 +41,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
   const isOverview = activeTab === "overview";
   const tradable = isTradableAccount(activeChallenge);
   const terminal = isTerminalAccount(activeChallenge);
+  const breached = String(activeChallenge?.status || "").toUpperCase() === "BREACHED";
   const transitionLocked = isAccountTransitionLocked(activeChallenge);
   const isTrial = activeChallenge?.accountMode === "DEMO";
   const freshness = formatFreshness(activeChallenge?.lastPlatformSnapshotAt || activeChallenge?.updatedAt);
@@ -106,7 +107,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
 
       <button
         type="button"
-        onClick={transitionLocked ? undefined : terminal ? (isTrial ? onStartTrial : onNewChallenge) : onOpenTrader}
+        onClick={transitionLocked ? undefined : breached ? onOpenTrader : terminal ? (isTrial ? onStartTrial : onNewChallenge) : onOpenTrader}
         disabled={loading || traderLaunching || trialChecking || transitionLocked}
         className="hidden h-9 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-[12px] font-semibold text-black transition hover:bg-[#e8e8e8] disabled:cursor-wait disabled:opacity-50 sm:inline-flex"
       >
@@ -120,9 +121,11 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
                 ? "Preparing Phase 2…"
                 : isMasterReview(activeChallenge)
                   ? "Master Review"
-                  : terminal
-                    ? (isTrial ? "Start New Trial" : "New Challenge")
-                    : "Open ACG Trader"}
+                  : breached
+                    ? "View Trade History"
+                    : terminal
+                      ? (isTrial ? "Start New Trial" : "New Challenge")
+                      : "Open ACG Trader"}
       </button>
     </header>
   );
@@ -1550,6 +1553,12 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
 
   const handlePrimaryAccountAction = () => {
     if (isAccountTransitionLocked(activeChallenge)) return;
+    const breached = String(activeChallenge?.status || "").toUpperCase() === "BREACHED";
+    if (breached) {
+      setIsSidebarOpen(false);
+      void handleOpenTrader();
+      return;
+    }
     if (isTerminalAccount(activeChallenge)) {
       setIsSidebarOpen(false);
       if (activeChallenge?.accountMode === "DEMO") onFreeTrial();
@@ -1569,22 +1578,26 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
           ? "Preparing Phase 2…"
           : isMasterReview(activeChallenge)
             ? "Master Review"
-            : isTerminalAccount(activeChallenge)
-              ? (getAccountTypeKey(activeChallenge) === "TRIAL" ? "Start New Trial" : "New Challenge")
-              : "Open ACG Trader";
+            : String(activeChallenge?.status || "").toUpperCase() === "BREACHED"
+              ? "View Trade History"
+              : isTerminalAccount(activeChallenge)
+                ? (getAccountTypeKey(activeChallenge) === "TRIAL" ? "Start New Trial" : "New Challenge")
+                : "Open ACG Trader";
 
   const activeAccountType = getAccountTypeKey(activeChallenge);
   const primaryAccountActionHelper = isPhaseTwoPreparing(activeChallenge)
     ? "Phase 1 passed. Your Phase 2 account is being prepared."
     : isMasterReview(activeChallenge)
       ? "Challenge passed. Trading is paused while your Master Account is reviewed."
-      : isTerminalAccount(activeChallenge)
-        ? activeAccountType === "TRIAL"
-          ? "This trial is closed"
-          : activeAccountType === "MASTER"
-            ? "This Master Account is closed"
-            : "This challenge is closed"
-        : activeChallenge
+      : String(activeChallenge?.status || "").toUpperCase() === "BREACHED"
+        ? "Review this account in ACG Trader · read-only"
+        : isTerminalAccount(activeChallenge)
+          ? activeAccountType === "TRIAL"
+            ? "This trial is closed"
+            : activeAccountType === "MASTER"
+              ? "This Master Account is closed"
+              : "This challenge is closed"
+          : activeChallenge
           ? `Trade your selected ${getTraderAccountLabel(activeChallenge).toLowerCase()}`
           : "Start with a free trial";
 
