@@ -80,7 +80,6 @@ function App() {
   const [builderMode, setBuilderMode] = useState("paid");
   const [trialError, setTrialError] = useState("");
   const [trialCreating, setTrialCreating] = useState(false);
-  const [trialChecking, setTrialChecking] = useState(false);
   const [pendingTrialIntent, setPendingTrialIntent] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem("acg:pendingTrial") === "1";
@@ -152,7 +151,7 @@ function App() {
     setScreen("payment");
   };
 
-  const handleOpenTrialBuilder = useCallback(async () => {
+  const handleOpenTrialBuilder = useCallback(() => {
     if (!user) {
       setPendingTrialIntent(true);
       if (typeof window !== "undefined") {
@@ -165,36 +164,12 @@ function App() {
       return;
     }
 
-    if (trialChecking) return;
-    setTrialChecking(true);
+    // Opening the builder is a UI action, not a platform-health check. The
+    // server remains authoritative when the user actually creates the trial.
     setTrialError("");
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error("Your session has expired. Please sign in again.");
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/customer/trial-readiness`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-acg-session-id": getAnalyticsSessionId(),
-        },
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.data?.ready) {
-        const checks = payload?.data?.checks || {};
-        const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
-        const suffix = failed.length ? ` Failed checks: ${failed.join(", ")}.` : "";
-        throw new Error((payload?.message || payload?.data?.error || "ACG Trader is not ready for free trials.") + suffix);
-      }
-
-      setBuilderMode("trial");
-      setScreen("builder");
-    } catch (error) {
-      setTrialError(error?.message || "Unable to verify ACG Trader readiness.");
-      setScreen("dashboard");
-    } finally {
-      setTrialChecking(false);
-    }
-  }, [getAccessToken, trialChecking, user]);
+    setBuilderMode("trial");
+    setScreen("builder");
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -330,7 +305,6 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
           setScreen("builder");
         }}
         onFreeTrial={handleOpenTrialBuilder}
-        trialChecking={trialChecking}
         trialError={trialError}
       />
     );
