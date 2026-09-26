@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactCountryFlag from "react-country-flag";
 import acg from '../../assets/ACG.png';
 import { 
@@ -153,6 +153,9 @@ const formatDashboardDateTime = (value) => {
 const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 0));
 
 const TERMINAL_ACCOUNT_STATUSES = new Set(["BREACHED", "LOCKED", "CLOSED"]);
+
+const isClosedAccount = (account) =>
+  String(account?.status || "").trim().toUpperCase() === "CLOSED";
 
 const isPhaseTwoPreparing = (account) =>
   Boolean(
@@ -1259,8 +1262,12 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
 
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Trader";
   const userInitials = userName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join("") || "TR";
-  const availableAccounts = Array.isArray(workspace?.accounts) ? workspace.accounts : [];
-  const defaultAccount = workspace?.activeChallenge || workspace?.demos?.find(account => account.enabled && ["NEW", "ACTIVE", "PHASE_2"].includes(account.status)) || availableAccounts[0] || null;
+  const availableAccounts = useMemo(
+    () => (Array.isArray(workspace?.accounts) ? workspace.accounts.filter(account => !isClosedAccount(account)) : []),
+    [workspace?.accounts]
+  );
+  const workspaceActiveAccount = !isClosedAccount(workspace?.activeChallenge) ? workspace?.activeChallenge : null;
+  const defaultAccount = workspaceActiveAccount || workspace?.demos?.find(account => account.enabled && ["NEW", "ACTIVE", "PHASE_2"].includes(String(account.status || "").toUpperCase())) || availableAccounts[0] || null;
   const activeChallenge = availableAccounts.find(account => account.accountId === selectedAccountId) || defaultAccount;
 
   useEffect(() => {
