@@ -47,10 +47,10 @@ export default function Navbar({
         </a>
 
         <div className="hidden md:flex items-center gap-6">
-          {['Challenges', 'How It Works', 'Support'].map((link) => (
+          {['Challenges', 'How It Works', 'Rules', 'Support'].map((link) => (
             <a
               key={link}
-              href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
+              href={link === 'Rules' ? '/rules' : `#${link.toLowerCase().replace(/\s+/g, '-')}`}
               className="text-[13px] font-medium text-[#888888] hover:text-white transition-all duration-300"
             >
               {link}
@@ -112,10 +112,10 @@ export default function Navbar({
             <div>
               <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">Explore</p>
               <nav className="mt-2 divide-y divide-white/[0.06]">
-                {['Challenges', 'How It Works', 'Support'].map((link) => (
+                {['Challenges', 'How It Works', 'Rules', 'Support'].map((link) => (
                   <a
                     key={link}
-                    href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
+                    href={link === 'Rules' ? '/rules' : `#${link.toLowerCase().replace(/\s+/g, '-')}`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex min-h-12 items-center justify-between px-1 text-[14px] font-semibold text-white transition-colors hover:text-white/65"
                   >
