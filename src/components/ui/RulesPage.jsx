@@ -1,53 +1,31 @@
 import React, { useEffect } from 'react';
 import logo from '../../assets/ACG.png';
 import Footer from './Footer';
+import {
+  STEP_TYPES,
+  ACCOUNT_SIZE_CONFIG,
+  DEFAULT_RULES,
+  DEFAULT_COMMERCIAL_CONFIG,
+  RULE_BOUNDS,
+  PROFIT_SPLIT_OPTIONS,
+  PAYOUT_FREQUENCY_OPTIONS,
+} from '../../utils/challengeRules.js';
 
-const PLATFORM_RULES = [
-  {
-    name: 'Maximum risk per trade',
-    value: '1% of current equity',
-    detail: 'When a Stop Loss is set, the projected loss to that Stop Loss must not exceed 1% of current account equity. ACG does not require or automatically add a Stop Loss.',
-  },
-  {
-    name: 'Maximum aggregate open risk',
-    value: '2% of current equity',
-    detail: 'When Stop Losses are present, the combined measurable risk across open positions must remain within 2% of current account equity.',
-  },
-  {
-    name: 'Maximum margin usage',
-    value: '50%',
-    detail: 'New exposure must not increase total used margin above 50% of current account equity.',
-  },
-  {
-    name: 'Maximum open positions',
-    value: '10',
-    detail: 'A trading account may have up to 10 open positions at the same time.',
-  },
-  {
-    name: 'Maximum positions per symbol',
-    value: '3',
-    detail: 'A maximum of 3 open positions may be held on the same instrument at one time.',
-  },
-  {
-    name: 'Maximum pending orders',
-    value: '10',
-    detail: 'A trading account may have up to 10 active pending orders at the same time.',
-  },
-  {
-    name: 'Maximum pending orders per symbol',
-    value: '3',
-    detail: 'A maximum of 3 active pending orders may be placed on the same instrument at one time.',
-  },
-  {
-    name: 'Single-order exposure',
-    value: '20% of remaining permitted margin capacity',
-    detail: 'A single new order must not consume more than 20% of the margin capacity still available inside the account\'s 50% maximum margin-usage limit at the time the order is evaluated.',
-  },
-  {
-    name: 'Per-symbol margin exposure',
-    value: '30% of permitted account margin',
-    detail: 'The margin allocated to one instrument must not exceed 30% of the total margin permitted for the account under the 50% margin-usage ceiling.',
-  },
+const fmtAccount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '—';
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}K`;
+  return `$${amount.toLocaleString('en-US')}`;
+};
+
+const rangeLabel = (bounds, suffix = '%') => `${bounds.min}${suffix}–${bounds.max}${suffix}`;
+
+const EXECUTION_LIMITS = [
+  ['Open positions', '10', 'Maximum open positions on one trading account.'],
+  ['Positions per symbol', '3', 'Maximum simultaneous open positions on the same instrument.'],
+  ['Pending orders', '10', 'Maximum active pending orders on one trading account.'],
+  ['Pending orders per symbol', '3', 'Maximum active pending orders on the same instrument.'],
 ];
 
 const POLICY_RULES = [
@@ -56,24 +34,29 @@ const POLICY_RULES = [
     body: (
       <>
         <p>
-          News trading availability depends on the challenge configuration selected by the trader.
-          Where news trading is restricted, traders must not open or execute new positions within
-          30 minutes before or 30 minutes after an applicable high-impact economic event.
+          News trading is selected with the challenge configuration. If news trading is not enabled,
+          traders must not open or execute new positions within 30 minutes before or 30 minutes after
+          an applicable high-impact economic event.
         </p>
-        <p>
-          The setting shown for your challenge at purchase and in your account is the setting that
-          applies to that challenge.
-        </p>
+        <p>The setting shown at checkout and on the account is the setting that applies.</p>
       </>
+    ),
+  },
+  {
+    title: 'Weekend Holding',
+    body: (
+      <p>
+        Weekend holding is selected with the challenge configuration. If weekend holding is not
+        enabled, positions must be closed before the applicable market closes for the weekend.
+      </p>
     ),
   },
   {
     title: 'Hedging',
     body: (
       <p>
-        Hedging is not permitted. Traders must not intentionally maintain opposing positions
-        designed to offset the same market exposure or use hedging techniques to circumvent ACG
-        challenge or risk rules.
+        Hedging is not permitted. Traders must not intentionally maintain opposing positions designed
+        to offset the same market exposure or use hedging techniques to circumvent challenge or risk rules.
       </p>
     ),
   },
@@ -81,9 +64,9 @@ const POLICY_RULES = [
     title: 'Hedging Across Multiple Accounts',
     body: (
       <p>
-        Coordinating opposite or offsetting positions across multiple ACG accounts is prohibited.
-        This includes using separate evaluation or funded accounts to create an artificial hedge
-        or to bypass account-level risk limits.
+        Coordinating opposite or offsetting positions across multiple ACG accounts is prohibited,
+        including using separate evaluation or funded accounts to create an artificial hedge or bypass
+        account-level rules.
       </p>
     ),
   },
@@ -91,8 +74,8 @@ const POLICY_RULES = [
     title: 'High-Frequency Trading (HFT)',
     body: (
       <p>
-        High-frequency trading strategies designed to exploit execution speed, latency, price-feed
-        delays, infrastructure behaviour, or rapid machine-driven order activity are not permitted.
+        Strategies designed to exploit execution speed, latency, price-feed delays, infrastructure
+        behaviour, or rapid machine-driven order activity are not permitted.
       </p>
     ),
   },
@@ -100,19 +83,15 @@ const POLICY_RULES = [
     title: 'Toxic Trading Behaviour',
     body: (
       <>
+        <p>Tick scalping and arbitrage are strictly prohibited as described in the ACG Terms and Conditions.</p>
         <p>
-          Tick scalping and arbitrage are strictly prohibited as described in Section 13i of the
-          ACG Terms and Conditions.
+          If more than 10% of closed trades are held for less than one minute, or more than 10% of
+          positive realized profits are generated by trades held for less than one minute, the account
+          becomes temporarily ineligible for payout.
         </p>
         <p>
-          If more than 10% of your closed trades are held for less than one minute, or more than
-          10% of your positive realized profits are generated by trades held for less than one
-          minute, the account becomes temporarily ineligible for payout.
-        </p>
-        <p>
-          You may continue trading until both percentages return to 10% or below. A continuous or
-          repeated pattern of prohibited short-duration trading may result in account suspension or
-          termination.
+          Trading may continue until both percentages return to 10% or below. A continuous or repeated
+          pattern of prohibited short-duration trading may result in account suspension or termination.
         </p>
       </>
     ),
@@ -121,29 +100,57 @@ const POLICY_RULES = [
     title: 'Account Sharing',
     body: (
       <p>
-        Each trader is permitted only one active account per evaluation level unless ACG expressly
-        states otherwise. Login credentials are personal and must not be shared. Trading on behalf
-        of another person, or allowing another person to operate your account, is strictly
-        prohibited.
+        Login credentials are personal and must not be shared. Trading on behalf of another person,
+        or allowing another person to operate your account, is strictly prohibited.
       </p>
     ),
   },
 ];
 
-function LimitCard({ rule }) {
+function Fact({ label, value, detail }) {
   return (
-    <article className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <h3 className="text-[14px] font-semibold tracking-[-0.015em] text-white">
-          {rule.name}
-        </h3>
-        <span className="shrink-0 rounded-full border border-white/[0.09] bg-black/40 px-3 py-1 text-[11px] font-semibold text-[#D7DAE0]">
-          {rule.value}
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.022] px-4 py-4">
+      <span className="block text-[10px] font-semibold uppercase tracking-[0.13em] text-[#6F7580]">{label}</span>
+      <strong className="mt-1.5 block text-[15px] font-semibold tracking-[-0.015em] text-white">{value}</strong>
+      {detail && <span className="mt-1 block text-[10px] leading-4 text-[#747A84]">{detail}</span>}
+    </div>
+  );
+}
+
+function Metric({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-6 border-b border-white/[0.06] py-3 last:border-b-0">
+      <span className="text-[12px] text-[#858B95]">{label}</span>
+      <strong className="text-right text-[12px] font-semibold text-white">{value}</strong>
+    </div>
+  );
+}
+
+function ChallengeCard({ title, subtitle, rows, accountRange }) {
+  return (
+    <article className="rounded-2xl border border-white/[0.08] bg-[#08090D] p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-[18px] font-semibold tracking-[-0.025em] text-white">{title}</h3>
+          <p className="mt-1 text-[11px] text-[#747A84]">{subtitle}</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[10px] font-semibold text-[#B6BCC5]">
+          {accountRange}
         </span>
       </div>
-      <p className="mt-4 text-[12px] leading-6 text-[#858A94]">
-        {rule.detail}
-      </p>
+      <div className="mt-5 border-t border-white/[0.06]">
+        {rows.map(([label, value]) => <Metric key={label} label={label} value={value} />)}
+      </div>
+    </article>
+  );
+}
+
+function OptionCard({ title, value, detail }) {
+  return (
+    <article className="rounded-xl border border-white/[0.07] bg-white/[0.018] px-4 py-4">
+      <span className="block text-[11px] font-medium text-[#858B95]">{title}</span>
+      <strong className="mt-1 block text-[13px] font-semibold text-white">{value}</strong>
+      {detail && <p className="mt-1 text-[10px] leading-4 text-[#6F7580]">{detail}</p>}
     </article>
   );
 }
@@ -151,10 +158,20 @@ function LimitCard({ rule }) {
 export default function RulesPage() {
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Trading Rules | ACG Funded';
+    document.title = 'Rules | ACG Funded';
     window.scrollTo({ top: 0, behavior: 'auto' });
     return () => { document.title = previousTitle; };
   }, []);
+
+  const oneStep = DEFAULT_RULES[STEP_TYPES.ONE_STEP];
+  const twoStep = DEFAULT_RULES[STEP_TYPES.TWO_STEP];
+  const oneStepAccounts = ACCOUNT_SIZE_CONFIG[STEP_TYPES.ONE_STEP];
+  const twoStepAccounts = ACCOUNT_SIZE_CONFIG[STEP_TYPES.TWO_STEP];
+
+  const oneStepDailyAmount = 100000 * oneStep.dailyLoss / 100;
+  const oneStepMaxFloor = 100000 * (1 - oneStep.maxLoss / 100);
+  const sampleDailyStart = 101200;
+  const sampleDailyFloor = sampleDailyStart - oneStepDailyAmount;
 
   return (
     <div className="min-h-screen bg-[#05060A] text-white">
@@ -163,10 +180,7 @@ export default function RulesPage() {
           <a href="/" aria-label="ACG Funded home">
             <img src={logo} width={82} alt="ACG Funded" />
           </a>
-          <a
-            href="/"
-            className="text-[13px] font-medium text-[#969AA3] transition-colors hover:text-white"
-          >
+          <a href="/" className="text-[13px] font-medium text-[#969AA3] transition-colors hover:text-white">
             Back to ACG Funded
           </a>
         </div>
@@ -174,134 +188,222 @@ export default function RulesPage() {
 
       <main>
         <section className="border-b border-white/[0.06]">
-          <div className="mx-auto max-w-[1000px] px-6 py-16 sm:py-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#737985]">
-              ACG Funded
-            </p>
-            <h1 className="mt-3 max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-white sm:text-5xl">
-              Trading Rules
-            </h1>
+          <div className="mx-auto max-w-[1040px] px-6 py-14 sm:py-18">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#737985]">ACG Funded</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">Rules</h1>
             <p className="mt-5 max-w-3xl text-[14px] leading-7 text-[#9499A3] sm:text-[15px]">
-              These rules define the standard trading limits and conduct requirements that apply
-              across ACG Funded programs. Challenge-specific settings shown at purchase or inside
-              your account take precedence where a rule is configurable.
+              How to pass, how an account can breach, and what trading is allowed. The configuration
+              selected at checkout and shown on your account is authoritative where a rule is configurable.
             </p>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4">
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6F7580]">Risk</span>
-                <strong className="mt-1 block text-[14px] text-white">1% per trade · 2% aggregate</strong>
-              </div>
-              <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4">
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6F7580]">Margin</span>
-                <strong className="mt-1 block text-[14px] text-white">50% maximum usage</strong>
-              </div>
-              <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4">
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6F7580]">Stop Loss</span>
-                <strong className="mt-1 block text-[14px] text-white">Not mandatory</strong>
-              </div>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Fact label="Leverage" value="1:100" detail="ACG Trader standard leverage" />
+              <Fact label="Challenge duration" value="No time limit" detail="Paid evaluations do not expire by duration" />
+              <Fact label="Stop Loss" value="Optional" detail="Required only when using Risk sizing" />
+              <Fact label="Account currency" value="USD" detail="Challenge balances and rules are denominated in USD" />
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1000px] px-6 py-14 sm:py-18">
+        <section className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
           <div className="max-w-3xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">
-              Platform limits
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
-              Standard account restrictions
-            </h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Challenge defaults</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Know the pass and breach levels first</h2>
             <p className="mt-3 text-[13px] leading-6 text-[#858A94]">
-              These limits are designed to control account exposure while leaving trade direction,
-              Stop Loss and Take Profit decisions with the trader.
+              These are the standard starting configurations. ACG lets you customize supported parameters before purchase.
             </p>
           </div>
 
-          <div className="mt-8 grid gap-3 md:grid-cols-2">
-            {PLATFORM_RULES.map((rule) => <LimitCard key={rule.name} rule={rule} />)}
-          </div>
-
-          <div className="mt-14 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-6 sm:px-7">
-            <h3 className="text-[15px] font-semibold tracking-[-0.02em]">Stop Loss and measurable risk</h3>
-            <p className="mt-3 text-[12px] leading-6 text-[#858A94]">
-              ACG does not require a Stop Loss and does not automatically create or modify one.
-              The 1% per-trade and 2% aggregate risk limits are measured from entry to Stop Loss
-              only where a trader has chosen to set a Stop Loss. Positions without a Stop Loss
-              remain subject to margin, single-order capacity, per-symbol margin exposure and position-count
-              limits.
-            </p>
+          <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            <ChallengeCard
+              title="1-Step"
+              subtitle="Fast-track single evaluation"
+              accountRange={`${fmtAccount(oneStepAccounts.min)}–${fmtAccount(oneStepAccounts.max)}`}
+              rows={[
+                ['Profit target', `${oneStep.profitTarget}%`],
+                ['Daily loss', `${oneStep.dailyLoss}%`],
+                ['Maximum loss', `${oneStep.maxLoss}%`],
+                ['Minimum trading days', String(oneStep.minTradingDays)],
+                ['Time limit', 'None'],
+              ]}
+            />
+            <ChallengeCard
+              title="2-Step"
+              subtitle="Two evaluation phases"
+              accountRange={`${fmtAccount(twoStepAccounts.min)}–${fmtAccount(twoStepAccounts.max)}`}
+              rows={[
+                ['Phase 1 target', `${twoStep.phase1ProfitTarget}%`],
+                ['Phase 2 target', `${twoStep.phase2ProfitTarget}%`],
+                ['Daily loss', `${twoStep.dailyLoss}%`],
+                ['Maximum loss', `${twoStep.maxLoss}%`],
+                ['Minimum trading days', String(twoStep.minTradingDays)],
+                ['Time limit', 'None'],
+              ]}
+            />
           </div>
         </section>
 
         <section className="border-y border-white/[0.06] bg-white/[0.012]">
-          <div className="mx-auto max-w-[1000px] px-6 py-14 sm:py-18">
+          <div className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
             <div className="max-w-3xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">
-                Trading conduct
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
-                Strategy and account-use rules
-              </h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Drawdown</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">How Daily Loss and Maximum Loss work</h2>
               <p className="mt-3 text-[13px] leading-6 text-[#858A94]">
-                These are ACG policy and compliance rules. Traders are responsible for ensuring
-                their activity remains within the conditions of their program.
+                These are the hard account-loss limits. They are separate from optional Stop Loss settings or the Risk sizing tool.
               </p>
             </div>
 
-            <div className="mt-8 space-y-3">
-              {POLICY_RULES.map((rule, index) => (
-                <article
-                  key={rule.title}
-                  className="rounded-2xl border border-white/[0.08] bg-[#05060A] px-5 py-6 sm:px-7"
-                >
-                  <div className="flex items-start gap-4">
-                    <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/[0.08] bg-white/[0.025] text-[10px] font-semibold text-[#7F858F]">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <div>
-                      <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-white">
-                        {rule.title}
-                      </h3>
-                      <div className="mt-3 space-y-3 text-[12px] leading-6 text-[#858A94]">
-                        {rule.body}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              <article className="rounded-2xl border border-white/[0.08] bg-[#05060A] p-5 sm:p-6">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#727985]">Daily Loss</span>
+                <h3 className="mt-2 text-[17px] font-semibold tracking-[-0.02em]">Resets from the day's starting equity</h3>
+                <p className="mt-3 text-[12px] leading-6 text-[#858A94]">
+                  The daily loss amount is calculated from the account's starting balance and is measured against the
+                  equity reference captured for that trading day. It does not trail intraday equity highs.
+                </p>
+                <div className="mt-5 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6F7580]">$100K · 1-Step example</span>
+                  <p className="mt-2 text-[12px] leading-5 text-[#B5BBC4]">
+                    {oneStep.dailyLoss}% daily loss = <strong className="text-white">${oneStepDailyAmount.toLocaleString('en-US')}</strong>.
+                    If the day starts at <strong className="text-white">${sampleDailyStart.toLocaleString('en-US')}</strong> equity,
+                    the daily breach level is <strong className="text-white">${sampleDailyFloor.toLocaleString('en-US')}</strong>.
+                  </p>
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-white/[0.08] bg-[#05060A] p-5 sm:p-6">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#727985]">Maximum Loss</span>
+                <h3 className="mt-2 text-[17px] font-semibold tracking-[-0.02em]">Anchored to the initial account balance</h3>
+                <p className="mt-3 text-[12px] leading-6 text-[#858A94]">
+                  Maximum Loss uses the initial account balance as its reference. The maximum-loss floor does not trail
+                  upward when the account makes profit.
+                </p>
+                <div className="mt-5 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6F7580]">$100K · 1-Step example</span>
+                  <p className="mt-2 text-[12px] leading-5 text-[#B5BBC4]">
+                    {oneStep.maxLoss}% maximum loss means the account must remain above
+                    <strong className="text-white"> ${oneStepMaxFloor.toLocaleString('en-US')}</strong>.
+                    Profits do not move this floor upward.
+                  </p>
+                </div>
+              </article>
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1000px] px-6 py-14 sm:py-18">
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-6 sm:px-7 sm:py-7">
-            <h2 className="text-[17px] font-semibold tracking-[-0.025em]">Important</h2>
-            <div className="mt-4 space-y-3 text-[12px] leading-6 text-[#858A94]">
-              <p>
-                Challenge objectives such as profit targets, daily loss limits, maximum loss
-                limits, minimum trading days and news-trading availability may vary by program.
-                Always review the configuration shown for your specific challenge.
-              </p>
-              <p>
-                These Trading Rules should be read together with the ACG Funded Terms &amp;
-                Conditions. Where the Terms &amp; Conditions contain a more specific requirement,
-                the Terms &amp; Conditions apply.
+        <section className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Configurable at checkout</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Your selected configuration follows the account</h2>
+            <p className="mt-3 text-[13px] leading-6 text-[#858A94]">
+              The builder may change the price as you change objectives or commercial terms. The values confirmed at purchase
+              are the values applied to that challenge.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <OptionCard title="1-Step profit target" value={rangeLabel(RULE_BOUNDS.profitTarget)} detail={`Default ${oneStep.profitTarget}%`} />
+            <OptionCard title="2-Step targets" value={rangeLabel(RULE_BOUNDS.phase1ProfitTarget)} detail={`Defaults ${twoStep.phase1ProfitTarget}% / ${twoStep.phase2ProfitTarget}%`} />
+            <OptionCard title="Daily Loss" value={rangeLabel(RULE_BOUNDS.dailyLoss)} detail={`Defaults ${oneStep.dailyLoss}% or ${twoStep.dailyLoss}%`} />
+            <OptionCard title="Maximum Loss" value={rangeLabel(RULE_BOUNDS.maxLoss)} detail={`Defaults ${oneStep.maxLoss}% or ${twoStep.maxLoss}%`} />
+            <OptionCard title="Minimum Trading Days" value={rangeLabel(RULE_BOUNDS.minTradingDays, '')} detail={`Default ${oneStep.minTradingDays} days`} />
+            <OptionCard title="News Trading" value="Yes / No" detail={DEFAULT_COMMERCIAL_CONFIG.newsTrading ? 'Enabled by default' : 'Disabled by default'} />
+            <OptionCard title="Weekend Holding" value="Yes / No" detail={DEFAULT_COMMERCIAL_CONFIG.weekendHolding ? 'Enabled by default' : 'Disabled by default'} />
+            <OptionCard title="Profit Split" value={PROFIT_SPLIT_OPTIONS.map(value => `${value}%`).join(' · ')} detail={`Default ${DEFAULT_COMMERCIAL_CONFIG.profitSplit}%`} />
+            <OptionCard title="Payout Frequency" value={PAYOUT_FREQUENCY_OPTIONS.join(' · ')} detail={`Default ${DEFAULT_COMMERCIAL_CONFIG.payoutFrequency}`} />
+          </div>
+        </section>
+
+        <section className="border-y border-white/[0.06] bg-white/[0.012]">
+          <div className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Execution</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Platform limits without forcing a trading style</h2>
+              <p className="mt-3 text-[13px] leading-6 text-[#858A94]">
+                ACG does not require a fixed risk percentage per trade or a mandatory Stop Loss. Traders remain responsible
+                for keeping the account inside its Daily Loss and Maximum Loss limits.
               </p>
             </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href="/legal/terms-and-conditions"
-                className="rounded-lg border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-[12px] font-semibold text-white transition hover:bg-white/[0.07]"
-              >
-                Terms &amp; Conditions
-              </a>
-              <a
-                href="mailto:support@acgfunded.com"
-                className="rounded-lg px-4 py-2.5 text-[12px] font-medium text-[#8F949E] transition hover:text-white"
-              >
-                Questions? Contact support
-              </a>
+
+            <div className="mt-8 grid gap-3 md:grid-cols-2">
+              {EXECUTION_LIMITS.map(([name, value, detail]) => (
+                <article key={name} className="rounded-xl border border-white/[0.07] bg-[#05060A] px-4 py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className="text-[13px] font-semibold text-white">{name}</h3>
+                    <span className="font-mono text-[13px] font-semibold text-[#D8DDE4]">{value}</span>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-5 text-[#747A84]">{detail}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <article className="rounded-xl border border-white/[0.07] bg-[#05060A] px-5 py-5">
+                <h3 className="text-[13px] font-semibold text-white">Lots mode</h3>
+                <p className="mt-2 text-[11px] leading-5 text-[#7C828C]">
+                  Enter the lot size directly and execute. A Stop Loss and Take Profit are optional.
+                </p>
+              </article>
+              <article className="rounded-xl border border-white/[0.07] bg-[#05060A] px-5 py-5">
+                <h3 className="text-[13px] font-semibold text-white">Risk sizing</h3>
+                <p className="mt-2 text-[11px] leading-5 text-[#7C828C]">
+                  When you choose to size a trade by risk percentage or amount, ACG Trader requires a Stop Loss so it can
+                  calculate the correct lot size from the stop distance. This is a sizing requirement, not a mandatory account rule.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Trading conduct</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">What is and is not allowed</h2>
+            <p className="mt-3 text-[13px] leading-6 text-[#858A94]">
+              Strategy freedom does not include behaviour intended to exploit infrastructure, bypass account rules, or transfer
+              trading responsibility to another person.
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-3">
+            {POLICY_RULES.map((rule, index) => (
+              <article key={rule.title} className="rounded-2xl border border-white/[0.08] bg-[#08090D] px-5 py-5 sm:px-6">
+                <div className="flex items-start gap-4">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/[0.08] bg-white/[0.025] text-[10px] font-semibold text-[#7F858F]">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <div>
+                    <h3 className="text-[14px] font-semibold tracking-[-0.015em] text-white">{rule.title}</h3>
+                    <div className="mt-2.5 space-y-2.5 text-[11px] leading-5 text-[#7C828C]">{rule.body}</div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-t border-white/[0.06]">
+          <div className="mx-auto max-w-[1040px] px-6 py-12 sm:py-14">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.022] px-5 py-6 sm:px-7">
+              <h2 className="text-[17px] font-semibold tracking-[-0.025em]">Your account configuration is authoritative</h2>
+              <div className="mt-3 max-w-3xl space-y-3 text-[11px] leading-5 text-[#7C828C]">
+                <p>
+                  Defaults on this page are a reference. If you customize a supported challenge parameter, the configuration
+                  confirmed at checkout and shown inside your account applies to that challenge.
+                </p>
+                <p>
+                  These Rules should be read together with the ACG Funded Terms &amp; Conditions. Where the Terms &amp;
+                  Conditions contain a more specific requirement, the Terms &amp; Conditions apply.
+                </p>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a href="/legal/terms-and-conditions" className="rounded-lg border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-[12px] font-semibold text-white transition hover:bg-white/[0.07]">
+                  Terms &amp; Conditions
+                </a>
+                <a href="mailto:support@acgfunded.com" className="rounded-lg px-4 py-2.5 text-[12px] font-medium text-[#8F949E] transition hover:text-white">
+                  Questions? Contact support
+                </a>
+              </div>
             </div>
           </div>
         </section>
