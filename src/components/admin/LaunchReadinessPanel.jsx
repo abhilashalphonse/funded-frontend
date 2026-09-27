@@ -63,10 +63,14 @@ export default function LaunchReadinessPanel({ data, adminFetch, reload }) {
     setLocalError("");
     try {
       await fn();
-      await reload();
     } catch (error) {
       setLocalError(error?.message || "Launch-readiness operation failed.");
     } finally {
+      try {
+        await reload();
+      } catch {
+        // The operation error above remains the primary operator feedback.
+      }
       setBusy("");
     }
   };
@@ -251,6 +255,14 @@ export default function LaunchReadinessPanel({ data, adminFetch, reload }) {
                     <StatusBadge>{item.status}</StatusBadge>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {selected.status === "FAIL" && selected.error?.message && (
+              <div className="mt-4 rounded-lg border border-red-400/20 bg-red-400/[0.05] px-3 py-3">
+                <p className="text-xs font-semibold text-red-300">This fixture cannot be replayed safely.</p>
+                <p className="mt-1 text-[11px] leading-5 text-zinc-500">{selected.error.message}</p>
+                <p className="mt-1 text-[11px] leading-5 text-zinc-600">Create a fresh fixture after the harness issue is fixed.</p>
               </div>
             )}
 
