@@ -6,6 +6,7 @@ import {
   WalletCards, X, Zap
 } from "lucide-react";
 import { useAuth } from "../../AuthContext.jsx";
+import LaunchReadinessPanel from "./LaunchReadinessPanel.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -39,6 +40,7 @@ const NAV = [
   ] },
   { label: "Support", items: [{ id: "support", label: "Cases", icon: LifeBuoy }] },
   { label: "Operations", items: [
+    { id: "launch-readiness", label: "Launch Readiness", icon: ShieldAlert },
     { id: "jobs", label: "Jobs", icon: FileClock },
     { id: "integrations", label: "Integrations", icon: Activity },
     { id: "errors", label: "Errors", icon: AlertTriangle },
@@ -70,6 +72,7 @@ const TITLES = {
   funnel: ["Funnel", "Acquisition to paid challenge conversion"],
   revenue: ["Revenue", "Revenue and paid-order performance"],
   support: ["Support Cases", "Customer conversations escalated for human review"],
+  "launch-readiness": ["Launch Readiness", "Create isolated acceptance fixtures and validate the production lifecycle"],
   jobs: ["Jobs", "Background work and provisioning operations"],
   integrations: ["Integrations", "Operational configuration and service readiness"],
   errors: ["Errors", "Application and integration failures requiring attention"],
@@ -249,6 +252,7 @@ export default function AdminDashboard() {
     if (page === "risk" || page === "breaches") return "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
     if (page === "support") return `/support?limit=100${q}${s}`;
+    if (page === "launch-readiness") return "/launch-readiness?limit=20";
     if (page === "audit") return "/audit?limit=100";
     if (page === "admins") return "/admin-users";
     if (["jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
@@ -340,7 +344,7 @@ export default function AdminDashboard() {
 
   const rows = data?.rows || [];
 
-  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
+  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "launch-readiness", "jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
 
 
   const sendHumanSupportReply = async () => {
@@ -723,6 +727,7 @@ export default function AdminDashboard() {
     if (page === "funnel") return renderFunnel();
     if (page === "revenue") return renderRevenue();
     if (page === "support") return renderSupport();
+    if (page === "launch-readiness") return <LaunchReadinessPanel data={data} adminFetch={adminFetch} reload={load} />;
     if (page === "integrations" || page === "platforms") return renderSystem();
     if (page === "admins") return <div className="space-y-4"><DataTable rows={rows} columns={[
       { key: "email", label: "Admin" },
