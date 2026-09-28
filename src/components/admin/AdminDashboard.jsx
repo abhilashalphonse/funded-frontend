@@ -84,6 +84,22 @@ const TITLES = {
   audit: ["Audit Log", "Immutable record of privileged admin actions"],
 };
 
+const PAGE_STATUS_OPTIONS = {
+  users: ["ACTIVE", "BLOCKED"],
+  challenges: ["NEW", "ACTIVE", "PHASE_2", "PASSED", "BREACHED", "LOCKED", "EXPIRED", "CLOSED"],
+  trials: ["NEW", "ACTIVE", "PASSED", "BREACHED", "LOCKED", "EXPIRED", "CLOSED"],
+  funded: ["FUNDED_REVIEW", "FUNDED"],
+  orders: ["CREATED", "WAITING", "CONFIRMING", "PAID", "FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"],
+  payments: ["CREATED", "WAITING", "CONFIRMING", "PAID", "FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"],
+  support: ["OPEN", "ESCALATED", "CLOSED"],
+};
+
+const QUEUE_LABELS = {
+  provisioning: "Provisioning attention",
+  "failed-payments": "Failed payments",
+  escalated: "Support escalations",
+};
+
 const money = (value, currency = "USD") => {
   const number = Number(value || 0);
   return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(number);
@@ -164,6 +180,36 @@ function DataTable({ columns, rows, onRow, empty = "No records found." }) {
   );
 }
 
+function Pagination({ pagination, onPage }) {
+  if (!pagination || Number(pagination.pages || 1) <= 1) return null;
+  const current = Number(pagination.page || 1);
+  const pages = Number(pagination.pages || 1);
+  const total = Number(pagination.total || 0);
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-white/[0.07] bg-[#0f0f0f] px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+      <span>{total.toLocaleString()} records · Page {current} of {pages}</span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={current <= 1}
+          onClick={() => onPage(current - 1)}
+          className="rounded-lg border border-white/[0.09] px-3 py-2 font-semibold text-zinc-300 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={current >= pages}
+          onClick={() => onPage(current + 1)}
+          className="rounded-lg border border-white/[0.09] px-3 py-2 font-semibold text-zinc-300 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Inspector({ title, subtitle, children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/65 backdrop-blur-sm" onMouseDown={onClose}>
@@ -209,6 +255,9 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [listPage, setListPage] = useState(1);
+  const [queue, setQueue] = useState("");
+  const [tradeLoadingMore, setTradeLoadingMore] = useState(false);
   const [days, setDays] = useState("30");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -241,23 +290,33 @@ export default function AdminDashboard() {
   const endpoint = useMemo(() => {
     const q = search.trim() ? `&q=${encodeURIComponent(search.trim())}` : "";
     const s = status ? `&status=${encodeURIComponent(status)}` : "";
+    const p = `&page=${listPage}`;
     if (page === "overview") return "/overview";
-    if (page === "users") return `/users?limit=100${q}${s}`;
-    if (page === "challenges") return `/challenges?limit=100${q}${s}`;
-    if (page === "trials") return `/challenges?mode=DEMO&limit=100${q}${s}`;
-    if (page === "funded") return `/challenges?funded=true&limit=100${q}`;
-    if (page === "orders") return `/orders?limit=100${q}${s}`;
-    if (page === "payments") return `/payments?limit=100${q}${s}`;
+    if (page === "users") return `/users?limit=100${p}${q}${s}`;
+    if (page === "challenges") return `/challenges?limit=100${p}${q}${s}`;
+    if (page === "trials") return `/challenges?mode=DEMO&limit=100${p}${q}${s}`;
+    if (page === "funded") return `/challenges?funded=true&limit=100${p}${q}${s}`;
+    if (page === "orders" || page === "payments") {
+      const attention = queue === "provisioning"
+        ? "&attention=provisioning"
+        : queue === "failed-payments"
+          ? "&attention=failed-today"
+          : s;
+      return `/${page}?limit=100${p}${q}${attention}`;
+    }
     if (page === "trades") return "/trades?limit=200";
     if (page === "risk" || page === "breaches") return "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
-    if (page === "support") return `/support?limit=100${q}${s}`;
+    if (page === "support") {
+      const supportStatus = queue === "escalated" ? "&status=ESCALATED" : s;
+      return `/support?limit=100${p}${q}${supportStatus}`;
+    }
     if (page === "launch-readiness") return "/launch-readiness?limit=20";
-    if (page === "audit") return "/audit?limit=100";
+    if (page === "audit") return `/audit?limit=100${p}`;
     if (page === "admins") return "/admin-users";
     if (["jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
     return "/overview";
-  }, [page, search, status, days]);
+  }, [page, search, status, days, listPage, queue]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -287,9 +346,68 @@ export default function AdminDashboard() {
     setPage(id);
     setSearch("");
     setStatus("");
+    setListPage(1);
+    setQueue("");
     setSelected(null);
     setSelectedDetail(null);
     setSidebarOpen(false);
+  };
+
+  const openQueue = (destination, nextQueue = "") => {
+    setPage(destination);
+    setSearch("");
+    setStatus("");
+    setListPage(1);
+    setQueue(nextQueue);
+    setSelected(null);
+    setSelectedDetail(null);
+    setSidebarOpen(false);
+  };
+
+  const goToListPage = nextPage => {
+    setListPage(Math.max(1, Number(nextPage) || 1));
+    setSelected(null);
+    setSelectedDetail(null);
+  };
+
+  const openAccountDetail = async row => {
+    const accountId = row?.accountId || row?.account?.externalRef;
+    if (!accountId) return;
+    const targetPage = row?.accountMode === "DEMO"
+      ? "trials"
+      : ["FUNDED_REVIEW", "FUNDED"].includes(String(row?.status || "").toUpperCase())
+        ? "funded"
+        : "challenges";
+    setPage(targetPage);
+    setSearch("");
+    setStatus("");
+    setListPage(1);
+    setQueue("");
+    setSelected({ ...row, accountId });
+    setSelectedDetail(null);
+    try {
+      const detail = await adminFetch(`/challenges/${encodeURIComponent(accountId)}`);
+      setSelected({
+        ...row,
+        accountId: detail?.account?.accountId || accountId,
+        accountMode: detail?.account?.accountMode || row?.accountMode,
+        accountSize: detail?.account?.accountSize || row?.accountSize,
+        status: detail?.account?.status || row?.status,
+      });
+      setSelectedDetail(detail);
+    } catch (err) {
+      setSelectedDetail({ error: err.message });
+    }
+  };
+
+  const openPaymentDetail = row => {
+    setPage("payments");
+    setSearch("");
+    setStatus("");
+    setListPage(1);
+    setQueue("");
+    setSelected(row);
+    setSelectedDetail({ payment: row });
   };
 
   const openRow = async row => {
@@ -385,6 +503,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadMoreTrades = async () => {
+    const cursor = data?.page?.nextCursor;
+    if (!cursor || tradeLoadingMore) return;
+    setTradeLoadingMore(true);
+    try {
+      const next = await adminFetch(`/trades?limit=200&cursor=${encodeURIComponent(cursor)}`);
+      setData(previous => ({
+        ...next,
+        items: [...(previous?.items || []), ...(next?.items || [])],
+      }));
+    } catch (err) {
+      setError(err?.message || "Unable to load more executions.");
+    } finally {
+      setTradeLoadingMore(false);
+    }
+  };
+
   const renderOverview = () => {
     const k = data?.kpis || {};
     const funnel = data?.funnel?.byEvent || {};
@@ -423,12 +558,12 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-semibold text-white">Requires attention</h3>
             <div className="mt-4 space-y-2">
               {[
-                ["Provisioning", k.pendingProvisioning, "orders"],
-                ["Failed payments", k.failedPaymentsToday, "payments"],
-                ["Breaches", k.breachedToday, "breaches"],
-                ["Support escalations", k.supportEscalated, "support"],
-              ].map(([label, value, destination]) => (
-                <button key={label} onClick={() => changePage(destination)} className="flex w-full items-center justify-between rounded-lg border border-white/[0.06] px-3 py-3 text-left hover:bg-white/[0.03]">
+                ["Provisioning", k.pendingProvisioning, "orders", "provisioning"],
+                ["Failed payments", k.failedPaymentsToday, "payments", "failed-payments"],
+                ["Breaches", k.breachedToday, "breaches", ""],
+                ["Support escalations", k.supportEscalated, "support", "escalated"],
+              ].map(([label, value, destination, nextQueue]) => (
+                <button key={label} onClick={() => openQueue(destination, nextQueue)} className="flex w-full items-center justify-between rounded-lg border border-white/[0.06] px-3 py-3 text-left hover:bg-white/[0.03]">
                   <span className="text-xs text-zinc-400">{label}</span><span className="flex items-center gap-2 text-sm font-semibold text-white">{value || 0}<ChevronRight size={13} className="text-zinc-600" /></span>
                 </button>
               ))}
@@ -438,14 +573,14 @@ export default function AdminDashboard() {
 
         <div className="grid gap-5 xl:grid-cols-2">
           <section><h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">Recent payments</h3>
-            <DataTable rows={data?.recentPayments || []} columns={[
+            <DataTable rows={data?.recentPayments || []} onRow={openPaymentDetail} columns={[
               { key: "orderId", label: "Order" }, { key: "email", label: "Customer" },
-              { key: "amount", label: "Amount", render: r => money(r.amount, r.currency || "EUR") },
+              { key: "amount", label: "Amount", render: r => money(r.amount, r.currency || "USD") },
               { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
             ]} />
           </section>
           <section><h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">Recent accounts</h3>
-            <DataTable rows={data?.recentAccounts || []} columns={[
+            <DataTable rows={data?.recentAccounts || []} onRow={openAccountDetail} columns={[
               { key: "accountId", label: "Account" }, { key: "accountSize", label: "Size", render: r => money(r.accountSize, "USD") },
               { key: "accountMode", label: "Type" }, { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
             ]} />
@@ -455,7 +590,7 @@ export default function AdminDashboard() {
     );
   };
 
-  const renderUsers = () => <DataTable rows={rows} onRow={openRow} columns={[
+  const renderUsers = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
     { key: "primaryEmail", label: "User" },
     { key: "customerId", label: "Customer ID" },
     { key: "createdAt", label: "Joined", render: r => dateTime(r.createdAt) },
@@ -465,7 +600,7 @@ export default function AdminDashboard() {
     { key: "funded", label: "Funded", render: r => r.stats?.funded || 0 },
     { key: "spend", label: "Spend", render: r => money(r.stats?.totalSpend || 0) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
-  ]} />;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
 
   const challengeColumns = [
     { key: "accountId", label: "Account" },
@@ -484,12 +619,12 @@ export default function AdminDashboard() {
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ];
 
-  const renderChallenges = () => <DataTable rows={rows} onRow={openRow} columns={challengeColumns} />;
+  const renderChallenges = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={challengeColumns} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
 
   const paymentColumns = [
     { key: "orderId", label: "Order" },
     { key: "email", label: "Customer" },
-    { key: "amount", label: "Amount", render: r => money(r.amount, r.currency || "EUR") },
+    { key: "amount", label: "Amount", render: r => money(r.amount, r.currency || "USD") },
     { key: "paymentMethod", label: "Method" },
     { key: "provider", label: "Provider" },
     { key: "providerPaymentId", label: "Provider Ref" },
@@ -542,6 +677,18 @@ export default function AdminDashboard() {
             { key: "dealId", label: "Deal ID" },
           ]}
         />
+        {data?.page?.hasMore && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              disabled={tradeLoadingMore}
+              onClick={loadMoreTrades}
+              className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-white/[0.06] disabled:opacity-40"
+            >
+              {tradeLoadingMore ? "Loading…" : "Load more executions"}
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -638,7 +785,7 @@ export default function AdminDashboard() {
     return <div className="space-y-5"><div className="grid gap-3 sm:grid-cols-3"><Kpi label="Paid events" value={paid} /><Kpi label="Activated challenges" value={activated} /><Kpi label="Window" value={`${days} days`} /></div><Empty title="Revenue ledger analytics are not yet materialized" text="The current backend stores payment records and funnel events. Revenue-by-product, country, affiliate, refunds and chargebacks should be added after the payment ledger/refund workflow is implemented." /></div>;
   };
 
-  const renderSupport = () => <DataTable rows={rows} onRow={openRow} columns={[
+  const renderSupport = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
     { key: "conversationId", label: "Case" },
     { key: "channel", label: "Channel", render: r => <Badge>{r.channel || "WEB"}</Badge> },
     { key: "customer", label: "Customer", render: r => r.email?.customerEmail || r.customerId || "Anonymous" },
@@ -646,7 +793,7 @@ export default function AdminDashboard() {
     { key: "category", label: "Category" },
     { key: "lastMessageAt", label: "Last Activity", render: r => dateTime(r.lastMessageAt) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
-  ]} />;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
 
   const renderSystem = () => (
     <div className="space-y-5">
@@ -709,11 +856,11 @@ export default function AdminDashboard() {
     <Empty title={title} text={capabilityKey && capability(capabilityKey) === false ? `${text} The backend explicitly reports this capability as not connected, so the admin does not fabricate state.` : text} />
   );
 
-  const renderAudit = () => <DataTable rows={rows} columns={[
+  const renderAudit = () => <div className="space-y-3"><DataTable rows={rows} columns={[
     { key: "createdAt", label: "Timestamp", render: r => dateTime(r.createdAt) },
     { key: "adminEmail", label: "Admin" }, { key: "action", label: "Action" }, { key: "entityType", label: "Entity Type" },
     { key: "entityId", label: "Entity" }, { key: "reason", label: "Reason" }, { key: "ip", label: "IP" },
-  ]} />;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
 
   const renderContent = () => {
     if (loading) return <Loading />;
@@ -721,7 +868,7 @@ export default function AdminDashboard() {
     if (page === "overview") return renderOverview();
     if (page === "users") return renderUsers();
     if (["challenges","trials","funded"].includes(page)) return renderChallenges();
-    if (page === "orders" || page === "payments") return <DataTable rows={rows} columns={paymentColumns} onRow={openRow} />;
+    if (page === "orders" || page === "payments") return <div className="space-y-3"><DataTable rows={rows} columns={paymentColumns} onRow={openRow} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
     if (page === "trades") return renderTrades();
     if (page === "risk" || page === "breaches") return renderRisk();
     if (page === "funnel") return renderFunnel();
@@ -747,6 +894,7 @@ export default function AdminDashboard() {
     return null;
   };
 
+  const pageStatusOptions = PAGE_STATUS_OPTIONS[page] || [];
   const userDetail = selectedDetail?.customer;
   const accountDetail = selectedDetail?.account;
   const tradingDetail = selectedDetail?.trading;
@@ -825,11 +973,15 @@ export default function AdminDashboard() {
 
         <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
           {toolbar && <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-            <div className="relative min-w-0 flex-1"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by email, ID, order or account…" className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#0e0e0e] pl-9 pr-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/20" /></div>
-            <select value={status} onChange={e => setStatus(e.target.value)} className="h-10 rounded-lg border border-white/[0.08] bg-[#0e0e0e] px-3 text-xs text-zinc-400 outline-none">
+            <div className="relative min-w-0 flex-1"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" /><input value={search} onChange={e => { setSearch(e.target.value); setListPage(1); }} placeholder="Search by email, ID, order or account…" className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#0e0e0e] pl-9 pr-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/20" /></div>
+            {pageStatusOptions.length > 0 && <select value={status} onChange={e => { setStatus(e.target.value); setListPage(1); setQueue(""); }} className="h-10 rounded-lg border border-white/[0.08] bg-[#0e0e0e] px-3 text-xs text-zinc-400 outline-none">
               <option value="">All statuses</option>
-              {["ACTIVE","BLOCKED","PAID","WAITING","FAILED","NEW","PASSED","BREACHED","LOCKED","PHASE_2","FUNDED_REVIEW","FUNDED","ESCALATED","OPEN"].map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
+              {pageStatusOptions.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>}
+          </div>}
+          {queue && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/15 bg-amber-400/[0.04] px-4 py-3">
+            <div><p className="text-xs font-semibold text-amber-200">{QUEUE_LABELS[queue] || humanize(queue)}</p><p className="mt-0.5 text-[11px] text-zinc-500">Showing only records requiring this operational follow-up.</p></div>
+            <button type="button" onClick={() => { setQueue(""); setStatus(""); setListPage(1); }} className="rounded-lg border border-white/10 px-3 py-2 text-[11px] font-semibold text-zinc-300 hover:bg-white/[0.04]">Clear queue</button>
           </div>}
           {renderContent()}
         </main>
@@ -843,9 +995,9 @@ export default function AdminDashboard() {
             {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
           </div></div></div>
           <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-zinc-500">Challenges & trials</h3>
-          <DataTable rows={selectedDetail.accounts || []} columns={challengeColumns.slice(0,7)} />
+          <DataTable rows={selectedDetail.accounts || []} onRow={openAccountDetail} columns={challengeColumns.slice(0,7)} />
           <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-zinc-500">Orders</h3>
-          <DataTable rows={selectedDetail.payments || []} columns={paymentColumns.slice(0,6)} />
+          <DataTable rows={selectedDetail.payments || []} onRow={openPaymentDetail} columns={paymentColumns.slice(0,6)} />
         </>}
       </Inspector>}
 
