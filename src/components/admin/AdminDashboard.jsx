@@ -624,7 +624,7 @@ export default function AdminDashboard() {
   const paymentColumns = [
     { key: "orderId", label: "Order" },
     { key: "email", label: "Customer" },
-    { key: "amount", label: "Amount", render: r => money(r.amount, r.currency || "EUR") },
+    { key: "amount", label: "Amount", render: r => money(r.amount, r.currency || "USD") },
     { key: "paymentMethod", label: "Method" },
     { key: "provider", label: "Provider" },
     { key: "providerPaymentId", label: "Provider Ref" },
