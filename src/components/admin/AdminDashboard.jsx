@@ -300,7 +300,7 @@ export default function AdminDashboard() {
       const attention = queue === "provisioning"
         ? "&attention=provisioning"
         : queue === "failed-payments"
-          ? "&status=FAILED%2CEXPIRED%2CUNDERPAID"
+          ? "&attention=failed-today"
           : s;
       return `/${page}?limit=100${p}${q}${attention}`;
     }
