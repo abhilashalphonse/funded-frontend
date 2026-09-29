@@ -1061,6 +1061,50 @@ export default function AdminDashboard() {
         </section>
       )}
 
+      {page === "integrations" && (
+        <section className="rounded-xl border border-white/[0.07] bg-[#111] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Payout execution</h3>
+              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-500">Customer payout requests and admin review are live in the feature branch. Money movement remains manual until an exact payout-provider adapter is configured.</p>
+            </div>
+            <Badge>{data?.capabilities?.payoutAutomation ? "AUTOMATED" : "MANUAL"}</Badge>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {(data?.payoutProviders || []).map(provider => (
+              <div key={provider.id} className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-100">{provider.label}</p>
+                    <p className="mt-1 text-[10px] text-zinc-600">{(provider.methods || []).join(" · ") || "No methods"}</p>
+                  </div>
+                  <Badge>{provider.status}</Badge>
+                </div>
+                <p className="mt-3 text-[10px] leading-4 text-zinc-500">
+                  {provider.automatic
+                    ? provider.configured
+                      ? "Provider can execute payout operations automatically."
+                      : "Automatic adapter is not connected."
+                    : "Operator completes the transfer externally and records the reference here."}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-black/20 px-3 py-3 text-[11px]">
+              <span className="text-zinc-500">Destination encryption</span>
+              <Badge>{data?.payoutSecurity?.destinationEncryption ? "READY" : "NOT CONFIGURED"}</Badge>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-black/20 px-3 py-3 text-[11px]">
+              <span className="text-zinc-500">Signed payout quotes</span>
+              <Badge>{data?.payoutSecurity?.signedQuotes ? "READY" : "NOT CONFIGURED"}</Badge>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div className="rounded-xl border border-white/[0.07] bg-[#111] p-5"><h3 className="text-sm font-semibold text-white">Runtime</h3><div className="mt-4 grid gap-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Environment</p><p className="mt-1 text-sm text-zinc-300">{data?.environment}</p></div><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Trading provider</p><p className="mt-1 text-sm text-zinc-300">{data?.tradingProvider}</p></div></div></div>
     </div>
   );
