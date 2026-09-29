@@ -134,7 +134,7 @@ function quoteExplanation(quote) {
   if (quote.quoteStatus === "PROVIDER_PENDING") {
     return "The exact provider settlement is still pending.";
   }
-  return "This INR amount is the payout settlement estimate. Sunpay can return its provider fee and net amount only after the transfer is accepted; ACG will show that final provider net in payout tracking.";
+  return "This is the trader payout amount. ACG covers payout-provider fees, so provider fees are not deducted from the amount shown here.";
 }
 
 export default function PayoutRequestModal({ accountId, overview, methods = [], onClose, onCreated }) {
@@ -432,7 +432,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
                 <ConfirmRow label="Destination" value={destinationSummary(method, destination)} />
                 {quote.settlementAmount != null && (
                   <ConfirmRow
-                    label="Estimated settlement"
+                    label="Trader receives"
                     value={quote.settlementCurrency === "INR" ? inr(quote.settlementAmount) : String(quote.settlementAmount)}
                   />
                 )}
@@ -456,7 +456,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
                       className="mt-0.5 size-4 accent-[#195be1]"
                     />
                     <span className="text-[9px] leading-4 text-[#888]">
-                      I confirm the payout amount, method and destination above are correct. I understand the provider fee/net amount may be finalized when processing begins.
+                      I confirm the payout amount, method and destination above are correct. ACG covers payout-provider fees; they are not deducted from my quoted payout.
                     </span>
                   </label>
 
