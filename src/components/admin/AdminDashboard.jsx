@@ -247,6 +247,34 @@ function ConfirmModal({ action, entity, onClose, onConfirm, busy }) {
 }
 
 
+function payoutActionsFor(status) {
+  const value = String(status || "").toUpperCase();
+  if (value === "REQUESTED") return [
+    { value: "START_REVIEW", label: "Start review", tone: "neutral" },
+    { value: "APPROVE", label: "Approve", tone: "positive" },
+    { value: "REJECT", label: "Reject", tone: "negative" },
+    { value: "CANCEL", label: "Cancel", tone: "negative" },
+  ];
+  if (value === "REVIEWING") return [
+    { value: "APPROVE", label: "Approve", tone: "positive" },
+    { value: "REJECT", label: "Reject", tone: "negative" },
+    { value: "CANCEL", label: "Cancel", tone: "negative" },
+  ];
+  if (value === "APPROVED") return [
+    { value: "MARK_PROCESSING", label: "Mark processing", tone: "positive" },
+    { value: "FAIL", label: "Mark failed", tone: "negative" },
+  ];
+  if (value === "PROCESSING") return [
+    { value: "MARK_SENT", label: "Mark sent", tone: "positive" },
+    { value: "FAIL", label: "Mark failed", tone: "negative" },
+  ];
+  if (value === "SENT") return [
+    { value: "MARK_PAID", label: "Mark paid", tone: "positive" },
+    { value: "FAIL", label: "Mark failed", tone: "negative" },
+  ];
+  return [];
+}
+
 function PayoutActionModal({ action, payout, onClose, onConfirm, busy }) {
   const [reason, setReason] = useState("");
   const [provider, setProvider] = useState(payout?.provider || "");
