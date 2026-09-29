@@ -603,14 +603,22 @@ export default function AdminDashboard() {
     setPayoutBusy(true);
     setError("");
     try {
-      await adminFetch(`/payouts/${encodeURIComponent(payoutAction.id)}/action`, {
+      const payoutId = encodeURIComponent(payoutAction.id);
+      const path = payoutAction.value === "RETRY_EXECUTION"
+        ? `/payouts/${payoutId}/execute`
+        : payoutAction.value === "RECONCILE"
+          ? `/payouts/${payoutId}/reconcile`
+          : `/payouts/${payoutId}/action`;
+
+      const body = payoutAction.value === "RETRY_EXECUTION" || payoutAction.value === "RECONCILE"
+        ? { reason: input.reason }
+        : { action: payoutAction.value, ...input };
+
+      await adminFetch(path, {
         method: "POST",
-        body: JSON.stringify({
-          action: payoutAction.value,
-          ...input,
-        }),
+        body: JSON.stringify(body),
       });
-      const detail = await adminFetch(`/payouts/${encodeURIComponent(payoutAction.id)}`);
+      const detail = await adminFetch(`/payouts/${payoutId}`);
       setSelected(detail?.payout || selected);
       setSelectedDetail(detail);
       setPayoutAction(null);
@@ -1568,10 +1576,15 @@ export default function AdminDashboard() {
               <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
                 {[
                   ["Provider", payout?.provider],
+                  ["Provider status", payout?.providerStatus],
                   ["Provider reference", payout?.providerReference],
                   ["UTR", payout?.utr],
                   ["Transaction hash", payout?.txHash],
                   ["Network", payout?.network],
+                  ["Provider fee", payout?.providerFee == null ? null : money(payout.providerFee, payout.settlementCurrency || "INR")],
+                  ["Provider net amount", payout?.providerNetAmount == null ? null : money(payout.providerNetAmount, payout.settlementCurrency || "INR")],
+                  ["Last status check", payout?.providerStatusCheckedAt ? dateTime(payout.providerStatusCheckedAt) : null],
+                  ["Webhook received", payout?.providerWebhookAt ? dateTime(payout.providerWebhookAt) : null],
                   ["Quote status", payout?.quoteStatus],
                 ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{value || "—"}</p></div>)}
               </div>
@@ -1590,6 +1603,13 @@ export default function AdminDashboard() {
               </div>
             </section>
 
+            {payout?.providerLastError && (
+              <section className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">{payout.providerLastError.code || "Provider execution needs attention"}</p>
+                <p className="mt-2 text-xs leading-5 text-zinc-300">{payout.providerLastError.message || "The provider operation needs to be retried."}</p>
+              </section>
+            )}
+
             {payout?.failure && (
               <section className="rounded-xl border border-red-400/20 bg-red-400/[0.05] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-red-300">{payout.failure.code || "Payout failure"}</p>
@@ -1606,26 +1626,49 @@ export default function AdminDashboard() {
                 <Badge>{payout?.status}</Badge>
               </div>
 
-              {actions.length ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {actions.map(item => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => setPayoutAction({ ...item, id: payout.payoutId })}
-                      className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                        item.tone === "positive"
-                          ? "border-emerald-400/20 text-emerald-300 hover:bg-emerald-400/[0.07]"
-                          : item.tone === "negative"
-                            ? "border-red-400/20 text-red-300 hover:bg-red-400/[0.07]"
-                            : "border-white/10 text-zinc-300 hover:bg-white/[0.05]"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              ) : (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {actions.map(item => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setPayoutAction({ ...item, id: payout.payoutId })}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      item.tone === "positive"
+                        ? "border-emerald-400/20 text-emerald-300 hover:bg-emerald-400/[0.07]"
+                        : item.tone === "negative"
+                          ? "border-red-400/20 text-red-300 hover:bg-red-400/[0.07]"
+                          : "border-white/10 text-zinc-300 hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+
+                {payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
+                  <button
+                    type="button"
+                    onClick={() => setPayoutAction({ value: "RETRY_EXECUTION", label: "Retry automatic transfer", tone: "positive", id: payout.payoutId })}
+                    className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/[0.07]"
+                  >
+                    Retry automatic transfer
+                  </button>
+                )}
+
+                {["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay" && (
+                  <button
+                    type="button"
+                    onClick={() => setPayoutAction({ value: "RECONCILE", label: "Verify Sunpay status", tone: "neutral", id: payout.payoutId })}
+                    className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/[0.05]"
+                  >
+                    Verify Sunpay status
+                  </button>
+                )}
+              </div>
+
+              {!actions.length && !(
+                (payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError)
+                || (["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay")
+              ) && (
                 <p className="mt-4 text-xs text-zinc-600">This payout is in a terminal state.</p>
               )}
             </section>
