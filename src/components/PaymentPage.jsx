@@ -82,10 +82,10 @@ function EmailField({ email, onChange, locked = false }) {
   </div>;
 }
 
-function PaymentMethodSelector({ method, onChange }) {
+function PaymentMethodSelector({ method, onChange, upiDisabled = false }) {
   const methods = [
-    { id: "UPI", label: "UPI", icon: QrCode },
-    { id: "CRYPTO", label: "Crypto", icon: Bitcoin },
+    { id: "UPI", label: "UPI", icon: QrCode, disabled: upiDisabled },
+    { id: "CRYPTO", label: "Crypto", icon: Bitcoin, disabled: false },
   ];
   return (
     <div className="grid grid-cols-2 gap-2" aria-label="Payment methods">
@@ -96,8 +96,9 @@ function PaymentMethodSelector({ method, onChange }) {
           <button
             key={item.id}
             type="button"
+            disabled={item.disabled}
             onClick={() => onChange(item.id)}
-            className={`flex min-h-12 items-center justify-between rounded-lg border px-3.5 text-left transition-colors ${active ? "border-white bg-white text-black" : "border-white/[0.09] bg-white/[0.01] text-zinc-400 hover:text-white"}`}
+            className={`flex min-h-12 items-center justify-between rounded-lg border px-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${active ? "border-white bg-white text-black" : "border-white/[0.09] bg-white/[0.01] text-zinc-400 hover:text-white"}`}
           >
             <span className="flex items-center gap-2 text-xs font-semibold">
               <Icon className="h-4 w-4" />
@@ -167,6 +168,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   const [upiQuote, setUpiQuote] = useState(null);
   const [upiQuoteLoading, setUpiQuoteLoading] = useState(false);
   const [upiQuoteError, setUpiQuoteError] = useState("");
+  const [upiUnavailable, setUpiUnavailable] = useState(null);
   const [activatedAccountId, setActivatedAccountId] = useState("");
 
   const definition = plan.challengeDefinition;
@@ -177,16 +179,11 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   const canSubmit = emailValid && termsAccepted && status !== STATUS.PROCESSING && upiReady;
 
   useEffect(() => {
-    if (method !== "UPI") {
-      setUpiQuote(null);
-      setUpiQuoteError("");
-      setUpiQuoteLoading(false);
-      return undefined;
-    }
-
     let active = true;
     setUpiQuoteLoading(true);
     setUpiQuoteError("");
+    setUpiUnavailable(null);
+
     const loadQuote = async () => {
       try {
         const response = await fetch(`${API_URL}/api/payments/upi/quote`, {
@@ -199,9 +196,28 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
         });
         const payload = await response.json().catch(() => ({}));
         if (!active) return;
-        if (!response.ok || !payload?.data?.providerAmount) {
+        if (!response.ok || !payload?.data) {
           throw new Error(payload?.message || "Unable to calculate the INR amount.");
         }
+
+        if (payload.data.available === false) {
+          setUpiQuote(null);
+          setUpiUnavailable(payload.data);
+          setMethod(current => current === "UPI" ? "BTC" : current);
+          const max = Number(payload.data.maxProviderAmount);
+          setNotice(
+            Number.isFinite(max)
+              ? `UPI is available for payments up to ${formatINR(max)} INR. Please use Crypto for this purchase.`
+              : "UPI is unavailable for this purchase. Please use Crypto.",
+          );
+          return;
+        }
+
+        if (!payload.data.providerAmount || !payload.data.quoteToken) {
+          throw new Error("Unable to calculate the INR amount.");
+        }
+
+        setUpiUnavailable(null);
         setUpiQuote(payload.data);
       } catch (error) {
         if (active) {
@@ -212,9 +228,10 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
         if (active) setUpiQuoteLoading(false);
       }
     };
+
     void loadQuote();
     return () => { active = false; };
-  }, [method, definition, commercial]);
+  }, [definition, commercial]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -386,8 +403,17 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     <p className="mb-6 text-xs text-zinc-500">Complete your payment to activate your challenge.</p>
     <div className="space-y-5">
       <EmailField email={email} onChange={onEmailChange} locked={emailLocked} />
-      <PaymentMethodSelector method={method === "UPI" ? "UPI" : "CRYPTO"} onChange={(next) => setMethod(next === "UPI" ? "UPI" : "BTC")} />
+      <PaymentMethodSelector
+        method={method === "UPI" ? "UPI" : "CRYPTO"}
+        upiDisabled={Boolean(upiUnavailable)}
+        onChange={(next) => setMethod(next === "UPI" ? "UPI" : "BTC")}
+      />
       {method === "UPI" ? <UpiPaymentPanel quote={upiQuote} loading={upiQuoteLoading} error={upiQuoteError} /> : <CryptoPaymentPanel method={method} onMethodChange={setMethod} />}
+      {upiUnavailable && (
+        <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 text-xs text-amber-300">
+          UPI is available for payments up to {formatINR(upiUnavailable.maxProviderAmount)} INR. Please use Crypto for this purchase.
+        </div>
+      )}
       <Terms checked={termsAccepted} onChange={setTermsAccepted} />
       {notice && <div className="flex items-start gap-2 rounded-md border border-white/[0.1] bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{notice}</span></div>}
       <button type="button" onClick={createPayment} disabled={!canSubmit} className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-[13.5px] font-semibold uppercase tracking-wide text-black hover:bg-neutral-200 disabled:opacity-40">
