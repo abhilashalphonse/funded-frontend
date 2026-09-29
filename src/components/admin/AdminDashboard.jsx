@@ -936,6 +936,42 @@ export default function AdminDashboard() {
     return <div className="space-y-5"><div className="grid gap-3 sm:grid-cols-3"><Kpi label="Paid events" value={paid} /><Kpi label="Activated challenges" value={activated} /><Kpi label="Window" value={`${days} days`} /></div><Empty title="Revenue ledger analytics are not yet materialized" text="The current backend stores payment records and funnel events. Revenue-by-product, country, affiliate, refunds and chargebacks should be added after the payment ledger/refund workflow is implemented." /></div>;
   };
 
+  const renderPayouts = () => {
+    const requested = rows.filter(row => row.status === "REQUESTED").length;
+    const reviewing = rows.filter(row => ["REVIEWING", "APPROVED"].includes(row.status)).length;
+    const processing = rows.filter(row => ["PROCESSING", "SENT"].includes(row.status)).length;
+    const paid = rows.filter(row => row.status === "PAID").reduce((sum, row) => sum + Number(row.requestedAmountUsd || 0), 0);
+
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Kpi label="Requested" value={requested} detail="Awaiting payout review" />
+          <Kpi label="Review / Approved" value={reviewing} detail="Operator attention" />
+          <Kpi label="Processing / Sent" value={processing} detail="Money moving" />
+          <Kpi label="Paid on this page" value={money(paid)} detail="Completed payout value" />
+        </div>
+
+        <DataTable
+          rows={rows}
+          onRow={openRow}
+          empty="No payout requests found."
+          columns={[
+            { key: "payoutId", label: "Payout" },
+            { key: "accountId", label: "Account" },
+            { key: "customerId", label: "Customer" },
+            { key: "requestedAmountUsd", label: "Amount", render: row => money(row.requestedAmountUsd) },
+            { key: "method", label: "Method", render: row => row.method || "—" },
+            { key: "destination", label: "Destination", render: row => row.destination?.destination || "—" },
+            { key: "settlement", label: "Settlement", render: row => row.settlementAmount == null ? "Pending" : money(row.settlementAmount, row.settlementCurrency || "USD") },
+            { key: "status", label: "Status", render: row => <Badge>{row.status}</Badge> },
+            { key: "requestedAt", label: "Requested", render: row => dateTime(row.requestedAt) },
+          ]}
+        />
+        <Pagination pagination={data?.pagination} onPage={goToListPage} />
+      </div>
+    );
+  };
+
   const renderSupport = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
     { key: "conversationId", label: "Case" },
     { key: "channel", label: "Channel", render: r => <Badge>{r.channel || "WEB"}</Badge> },
