@@ -12,6 +12,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuth } from "../../AuthContext.jsx";
+import PayoutRequestModal from "./PayoutRequestModal.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -97,7 +98,7 @@ function localPreview(account) {
     methods: [
       { id: "UPI", label: "UPI", settlementCurrency: "INR", limits: { min: 100, max: 20000, unit: "INR" } },
       { id: "BANK", label: "Bank Transfer", settlementCurrency: "INR", limits: null },
-      { id: "USDT", label: "USDT", settlementCurrency: "USDT", limits: null },
+      { id: "USDT", label: "USDT", settlementCurrency: "USDT", limits: null, networks: ["TRC20"] },
     ],
   };
 }
@@ -407,6 +408,7 @@ function PayoutHistory({ items }) {
 
 export default function PayoutCenter({ account }) {
   const { overview, history, loading, error, retry } = usePayoutData(account);
+  const [requestOpen, setRequestOpen] = useState(false);
   const copy = stageCopy(overview);
   const isPreview = overview?.mode === "PREVIEW";
   const isJourney = overview?.mode === "JOURNEY";
@@ -485,14 +487,22 @@ export default function PayoutCenter({ account }) {
               <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <button
                   type="button"
-                  disabled
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-white px-4 text-[11px] font-semibold text-black opacity-45"
-                  title="Payout destination and confirmation flow is added in the next build part."
+                  onClick={() => setRequestOpen(true)}
+                  disabled={!overview?.eligibility?.canRequest || loading || Boolean(error)}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-white px-4 text-[11px] font-semibold text-black transition hover:bg-[#e9e9e9] disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   Request payout
                   <ArrowRight size={13} />
                 </button>
-                <span className="text-[9px] text-[#555]">Method selection and final confirmation are being added next.</span>
+                <span className="text-[9px] text-[#555]">
+                  {overview?.eligibility?.canRequest
+                    ? "Choose UPI, Bank Transfer or USDT."
+                    : activePayout
+                      ? "Your current payout is already being tracked."
+                      : blockers.length
+                        ? blockerCopy(blockers[0])
+                        : "Checking payout eligibility…"}
+                </span>
               </div>
             )}
           </div>
@@ -591,6 +601,16 @@ export default function PayoutCenter({ account }) {
           </p>
         </section>
       </div>
+
+      {requestOpen && overview?.eligibility?.canRequest && (
+        <PayoutRequestModal
+          accountId={account.accountId}
+          overview={overview}
+          methods={overview.methods || []}
+          onClose={() => setRequestOpen(false)}
+          onCreated={() => retry()}
+        />
+      )}
     </div>
   );
 }
