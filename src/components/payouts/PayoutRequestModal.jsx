@@ -249,6 +249,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
           body: JSON.stringify({
             method,
             amountUsd: amountNumber,
+            quoteId: quote.quoteId,
             destination,
           }),
         },
@@ -433,6 +434,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
                   />
                 )}
                 {quote.fxRate && <ConfirmRow label="USD → INR" value={`₹${number(quote.fxRate).toFixed(4)}`} />}
+                {quote.quoteExpiresAt && <ConfirmRow label="Quote valid until" value={new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(quote.quoteExpiresAt)) + " UTC"} />}
               </div>
 
               <div className={`mt-4 rounded-xl border px-4 py-3 text-[9px] leading-4 ${
