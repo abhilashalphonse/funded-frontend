@@ -449,14 +449,25 @@ function ActivePayoutTracker({ payout }) {
             <strong className="mt-1 block text-[10px] text-[#aaa]">{payout.method || "—"}</strong>
           </div>
           <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
-            <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">Settlement</span>
+            <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">
+              {payout.providerNetAmount != null ? "Provider net" : "Settlement estimate"}
+            </span>
             <strong className="mt-1 block font-mono text-[10px] text-[#aaa]">
-              {payout.settlementAmount == null
-                ? "Provider pending"
-                : payout.settlementCurrency === "INR"
-                  ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.settlementAmount))
-                  : `${number(payout.settlementAmount).toLocaleString("en-US")} ${payout.settlementCurrency || ""}`}
+              {payout.providerNetAmount != null && payout.settlementCurrency === "INR"
+                ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.providerNetAmount))
+                : payout.settlementAmount == null
+                  ? "Provider pending"
+                  : payout.settlementCurrency === "INR"
+                    ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.settlementAmount))
+                    : `${number(payout.settlementAmount).toLocaleString("en-US")} ${payout.settlementCurrency || ""}`}
             </strong>
+            {payout.providerFee != null && (
+              <span className="mt-1 block text-[7px] text-[#555]">
+                Provider fee {payout.settlementCurrency === "INR"
+                  ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.providerFee))
+                  : payout.providerFee}
+              </span>
+            )}
           </div>
           <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
             <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">Reference</span>
