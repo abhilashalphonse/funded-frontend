@@ -62,9 +62,11 @@ function localPreview(account) {
   const isTrial = account.accountMode === "DEMO";
   const status = String(account.status || "").toUpperCase();
   const isMaster = status === "FUNDED";
-  const split = Number(account.commercialTerms?.profitSplit);
+  const configuredSplit = Number(account.commercialTerms?.profitSplit);
+  const hasConfiguredSplit = Number.isFinite(configuredSplit) && configuredSplit > 0;
+  const split = hasConfiguredSplit ? configuredSplit : isTrial ? 80 : null;
   const profit = Math.max(0, number(account.projections?.profit));
-  const share = Number.isFinite(split) ? profit * split / 100 : null;
+  const share = split != null ? profit * split / 100 : null;
 
   return {
     accountId: account.accountId,
@@ -72,7 +74,8 @@ function localPreview(account) {
     accountStatus: status,
     mode: isTrial ? "PREVIEW" : isMaster ? "REAL" : "JOURNEY",
     commercialTerms: {
-      profitSplitPercent: Number.isFinite(split) ? split : null,
+      profitSplitPercent: split,
+      profitSplitSource: hasConfiguredSplit ? "ACCOUNT_TERMS" : isTrial ? "ILLUSTRATIVE_DEFAULT" : null,
       payoutFrequency: account.commercialTerms?.payoutFrequency || null,
     },
     performance: {
@@ -222,7 +225,9 @@ function stageCopy(overview) {
     return {
       eyebrow: "Payout Preview",
       title: "See what this performance could become",
-      description: "Trial profit is simulated and not withdrawable. This preview shows what the same realized performance could look like on a Master Account using the selected profit split.",
+      description: overview.commercialTerms?.profitSplitSource === "ILLUSTRATIVE_DEFAULT"
+        ? "Trial profit is simulated and not withdrawable. This preview uses an illustrative 80% profit split to show what the same realized performance could look like on a Master Account."
+        : "Trial profit is simulated and not withdrawable. This preview shows what the same realized performance could look like on a Master Account using the selected profit split.",
     };
   }
 
@@ -596,7 +601,10 @@ export default function PayoutCenter({ account }) {
           <div className="border-t border-white/[0.07] bg-[#0A0A0A] lg:border-l lg:border-t-0">
             <div className="grid grid-cols-2 divide-x divide-y divide-white/[0.06] lg:grid-cols-1 lg:divide-x-0">
               <HeroStat label="Realized profit" value={realized == null ? "—" : signedUsd(realized)} />
-              <HeroStat label="Your profit split" value={split == null ? "—" : `${split}%`} />
+              <HeroStat
+                label={isPreview && overview?.commercialTerms?.profitSplitSource === "ILLUSTRATIVE_DEFAULT" ? "Preview profit split" : "Your profit split"}
+                value={split == null ? "—" : `${split}%${isPreview && overview?.commercialTerms?.profitSplitSource === "ILLUSTRATIVE_DEFAULT" ? " example" : ""}`}
+              />
               <HeroStat label="Payout schedule" value={overview?.commercialTerms?.payoutFrequency || "—"} />
               <HeroStat
                 label={isReal ? "Next eligible" : "Master payout"}
