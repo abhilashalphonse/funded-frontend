@@ -283,12 +283,29 @@ function PayoutActionModal({ action, payout, onClose, onConfirm, busy }) {
   const [txHash, setTxHash] = useState(payout?.txHash || "");
   const [network, setNetwork] = useState(payout?.network || payout?.destination?.network || "TRC20");
   const [settlementAmount, setSettlementAmount] = useState(payout?.settlementAmount ?? "");
+  const [traderReceivedAmount, setTraderReceivedAmount] = useState("");
+  const [providerFeePaidByAcg, setProviderFeePaidByAcg] = useState(
+    payout?.providerFeePaidByAcg ?? payout?.providerFee ?? ""
+  );
   const method = String(payout?.method || "").toUpperCase();
   const needsTransferReference = action?.value === "MARK_SENT" && ["UPI", "BANK"].includes(method);
   const needsTxHash = action?.value === "MARK_SENT" && method === "USDT";
+  const needsPaidAccounting = action?.value === "MARK_PAID";
+  const expectedSettlement = Number(payout?.settlementAmount);
+  const receivedAmount = Number(traderReceivedAmount);
+  const acgFeeAmount = Number(providerFeePaidByAcg);
+  const exactReceiptConfirmed = !needsPaidAccounting || (
+    Number.isFinite(expectedSettlement)
+    && Number.isFinite(receivedAmount)
+    && Number.isFinite(acgFeeAmount)
+    && receivedAmount > 0
+    && acgFeeAmount >= 0
+    && Math.round(receivedAmount * 100) === Math.round(expectedSettlement * 100)
+  );
   const canSubmit = reason.trim()
     && (!needsTransferReference || providerReference.trim() || utr.trim())
-    && (!needsTxHash || txHash.trim());
+    && (!needsTxHash || txHash.trim())
+    && exactReceiptConfirmed;
 
   const inputClass = "mt-1.5 h-10 w-full rounded-lg border border-white/10 bg-black px-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/25";
 
@@ -342,6 +359,61 @@ function PayoutActionModal({ action, payout, onClose, onConfirm, busy }) {
           </div>
         )}
 
+        {needsPaidAccounting && (
+          <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/25 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold text-white">Exact receipt verification</p>
+                <p className="mt-1 text-[10px] leading-4 text-zinc-500">ACG covers provider fees. Confirm the trader received the full quoted settlement before marking this payout paid.</p>
+              </div>
+              <Badge>ACG COVERS</Badge>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-[10px] font-medium text-zinc-500">Quoted trader amount</span>
+                <input
+                  value={Number.isFinite(expectedSettlement) ? expectedSettlement : ""}
+                  readOnly
+                  className={inputClass + " cursor-not-allowed text-zinc-500"}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-medium text-zinc-500">Trader actually received</span>
+                <input
+                  value={traderReceivedAmount}
+                  onChange={e => setTraderReceivedAmount(e.target.value)}
+                  inputMode="decimal"
+                  className={inputClass}
+                  placeholder={Number.isFinite(expectedSettlement) ? String(expectedSettlement) : "Required"}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-[10px] font-medium text-zinc-500">Provider fee paid by ACG</span>
+                <input
+                  value={providerFeePaidByAcg}
+                  onChange={e => setProviderFeePaidByAcg(e.target.value)}
+                  inputMode="decimal"
+                  className={inputClass}
+                  placeholder="Enter 0 if there was no provider fee"
+                />
+              </label>
+            </div>
+
+            {traderReceivedAmount && !exactReceiptConfirmed && (
+              <p className="mt-3 text-[10px] text-amber-300">
+                The received amount must exactly equal the quoted trader amount. Do not mark this payout paid until any shortfall has been topped up.
+              </p>
+            )}
+
+            {exactReceiptConfirmed && needsPaidAccounting && (
+              <p className="mt-3 text-[10px] text-zinc-500">
+                ACG total payout cost · {money(receivedAmount + acgFeeAmount, payout?.settlementCurrency || "INR")}
+              </p>
+            )}
+          </div>
+        )}
+
         <label className="mt-4 block">
           <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-500">Reason</span>
           <textarea
@@ -366,6 +438,8 @@ function PayoutActionModal({ action, payout, onClose, onConfirm, busy }) {
               network: network.trim() || undefined,
               settlementAmount: settlementAmount === "" ? undefined : Number(settlementAmount),
               settlementCurrency: payout?.settlementCurrency || undefined,
+              traderReceivedAmount: needsPaidAccounting ? Number(traderReceivedAmount) : undefined,
+              providerFeePaidByAcg: needsPaidAccounting ? Number(providerFeePaidByAcg) : undefined,
             })}
             className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black disabled:opacity-40"
           >
