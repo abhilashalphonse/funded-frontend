@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   CalendarDays,
@@ -54,6 +55,20 @@ function compactSignedMoney(value) {
   const amount = number(value);
   if (Math.abs(amount) < 0.005) return "$0";
   return `${amount > 0 ? "+" : "-"}${compactMoneyFormatter.format(Math.abs(amount))}`;
+}
+
+function mobileCompactSignedMoney(value) {
+  const amount = number(value);
+  const absolute = Math.abs(amount);
+  if (absolute < 0.5) return "$0";
+  const sign = amount > 0 ? "+" : "-";
+  if (absolute >= 1_000_000) {
+    return `${sign}${(absolute / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (absolute >= 1_000) {
+    return `${sign}${(absolute / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  }
+  return `${sign}${Math.round(absolute).toLocaleString("en-US")}`;
 }
 
 function utcDateKey(value) {
@@ -193,14 +208,14 @@ function toneClass(value) {
 
 function cellClass(value, selected, today) {
   const tone = value > 0.004
-    ? "bg-emerald-400/[0.025]"
+    ? "border-emerald-400/15 bg-emerald-400/[0.045]"
     : value < -0.004
-      ? "bg-rose-400/[0.025]"
-      : "bg-[#080808]";
+      ? "border-rose-400/15 bg-rose-400/[0.045]"
+      : "border-white/[0.07] bg-[#080808]";
 
-  if (selected) return `${tone} border-white/[0.24] bg-white/[0.045]`;
-  if (today) return `${tone} border-white/[0.16]`;
-  return `${tone} border-white/[0.07] hover:border-white/[0.14] hover:bg-white/[0.025]`;
+  if (selected) return `${tone} border-[#195be1]/80 ring-1 ring-inset ring-[#195be1]/30`;
+  if (today) return `${tone} border-[#195be1]/45`;
+  return `${tone} hover:border-white/[0.16] hover:bg-white/[0.025]`;
 }
 
 export default function TradingCalendar({ account }) {
@@ -369,7 +384,7 @@ export default function TradingCalendar({ account }) {
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080808]">
           <div className="flex flex-col gap-4 border-b border-white/[0.07] px-4 py-4 sm:px-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -458,9 +473,9 @@ export default function TradingCalendar({ account }) {
               )}
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
+          <div className="flex snap-x snap-mandatory overflow-x-auto sm:grid sm:grid-cols-3 sm:overflow-visible xl:grid-cols-6">
             {weekStats.map(week => (
-              <div key={week.index} className="border-b border-r border-white/[0.06] px-4 py-3 last:border-r-0 sm:px-5">
+              <div key={week.index} className="min-w-[132px] snap-start border-r border-white/[0.06] px-4 py-2.5 last:border-r-0 sm:min-w-0 sm:border-b sm:px-5 sm:py-3">
                 <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[#555]">Week {week.index}</span>
                 <strong className={`mt-1.5 block font-mono text-[12px] font-semibold ${toneClass(week.net)}`}>
                   {compactSignedMoney(week.net)}
@@ -476,7 +491,7 @@ export default function TradingCalendar({ account }) {
         <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080808]">
           <div className="grid grid-cols-7 border-b border-white/[0.07] bg-black/40">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
-              <div key={day} className="px-1 py-2.5 text-center text-[8px] font-semibold uppercase tracking-[0.08em] text-[#555] sm:text-[9px]">
+              <div key={day} className="px-1 py-2.5 text-center text-[9px] font-semibold uppercase tracking-[0.07em] text-[#707070] sm:text-[9px]">
                 {day}
               </div>
             ))}
@@ -495,7 +510,7 @@ export default function TradingCalendar({ account }) {
                 <div key={rowIndex} className="grid grid-cols-7 gap-1.5 sm:gap-2">
                   {row.map((day, columnIndex) => {
                     if (!day) {
-                      return <div key={`empty-${rowIndex}-${columnIndex}`} className="min-h-[66px] sm:min-h-[92px]" />;
+                      return <div key={`empty-${rowIndex}-${columnIndex}`} className="min-h-[74px] sm:min-h-[92px]" />;
                     }
                     const key = dateKeyForDay(cursor, day);
                     const bucket = dayMap.get(key);
@@ -509,19 +524,27 @@ export default function TradingCalendar({ account }) {
                         key={key}
                         type="button"
                         onClick={() => setSelectedDay(key)}
-                        className={`min-h-[66px] min-w-0 rounded-lg border p-1.5 text-left transition sm:min-h-[92px] sm:p-2.5 ${cellClass(net, selectedCell, today)}`}
+                        className={`min-h-[74px] min-w-0 rounded-lg border p-1.5 text-left transition sm:min-h-[92px] sm:p-2.5 ${cellClass(net, selectedCell, today)}`}
                         aria-label={`${key}${hasActivity ? `, ${signedMoney(net)}, ${bucket.tradeCount} trades` : ", no trading activity"}`}
                       >
                         <div className="flex items-start justify-between gap-1">
-                          <span className={`font-mono text-[9px] font-medium sm:text-[10px] ${today ? "text-white" : "text-[#777]"}`}>
+                          <span className={`font-mono text-[9px] font-medium sm:text-[10px] ${today ? "text-white" : "text-[#8a8a8a]"}`}>
                             {String(day).padStart(2, "0")}
                           </span>
-                          {today && <span className="hidden text-[7px] font-semibold uppercase tracking-[0.08em] text-[#666] sm:block">Today</span>}
+                          {today && (
+                            <>
+                              <span className="mt-0.5 size-1.5 rounded-full bg-[#195be1] sm:hidden" aria-hidden="true" />
+                              <span className="hidden text-[7px] font-semibold uppercase tracking-[0.08em] text-[#777] sm:block">Today</span>
+                            </>
+                          )}
                         </div>
 
                         {hasActivity && (
                           <div className="mt-2 min-w-0 sm:mt-3">
-                            <strong className={`block truncate font-mono text-[9px] font-semibold sm:text-[11px] ${toneClass(net)}`}>
+                            <strong className={`block whitespace-nowrap font-mono text-[8.5px] font-semibold tracking-[-0.05em] sm:hidden ${toneClass(net)}`}>
+                              {mobileCompactSignedMoney(net)}
+                            </strong>
+                            <strong className={`hidden whitespace-nowrap font-mono text-[11px] font-semibold sm:block ${toneClass(net)}`}>
                               {compactSignedMoney(net)}
                             </strong>
                             <span className="mt-1 hidden text-[8px] text-[#555] sm:block">
@@ -546,8 +569,9 @@ export default function TradingCalendar({ account }) {
           )}
         </section>
 
-        <div className="px-1 text-[9px] leading-4 text-[#4f4f4f]">
-          Net P&L = realized P&L minus execution commission and swap. Trade outcomes use realized P&L on closing executions. Times and day boundaries are UTC.
+        <div className="px-1 text-[10px] leading-5 text-[#666]">
+          <span className="sm:hidden">Net P&L = realized P&L − commission − swap. Day boundaries use UTC.</span>
+          <span className="hidden sm:inline">Net P&L = realized P&L minus execution commission and swap. Trade outcomes use realized P&L on closing executions. Times and day boundaries are UTC.</span>
         </div>
       </div>
 
@@ -578,8 +602,13 @@ function DayDrawer({ dayKey, bucket, onClose }) {
     const onKeyDown = event => {
       if (event.key === "Escape") onClose();
     };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [onClose]);
 
   const executions = bucket?.executions || [];
@@ -588,20 +617,20 @@ function DayDrawer({ dayKey, bucket, onClose }) {
   const wins = bucket?.wins || 0;
   const losses = bucket?.losses || 0;
 
-  return (
-    <div className="fixed inset-0 z-[80]">
+  return createPortal(
+    <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label={`Trading details for ${dayHeading(dayKey)}`}>
       <button
         type="button"
         className="absolute inset-0 bg-black/75 backdrop-blur-[2px]"
         onClick={onClose}
         aria-label="Close day details"
       />
-      <aside className="absolute inset-x-0 bottom-0 max-h-[82dvh] overflow-y-auto rounded-t-2xl border-t border-white/[0.1] bg-[#080808] shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(92vw,430px)] sm:rounded-none sm:border-l sm:border-t-0">
-        <div className="sticky top-0 z-10 border-b border-white/[0.07] bg-[#080808]/95 px-4 py-4 backdrop-blur sm:px-5">
+      <aside className="absolute inset-x-0 bottom-0 flex max-h-[84dvh] flex-col overflow-hidden rounded-t-2xl border-t border-white/[0.1] bg-[#080808] shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(92vw,430px)] sm:rounded-none sm:border-l sm:border-t-0">
+        <div className="shrink-0 border-b border-white/[0.07] bg-[#080808]/98 px-4 py-4 backdrop-blur sm:px-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <span className="text-[8px] font-semibold uppercase tracking-[0.13em] text-[#555]">Trading day · UTC</span>
-              <h3 className="mt-1.5 text-[15px] font-semibold text-white">{dayHeading(dayKey)}</h3>
+            <div className="min-w-0">
+              <span className="text-[8px] font-semibold uppercase tracking-[0.13em] text-[#666]">Trading day · UTC</span>
+              <h3 className="mt-1.5 text-[15px] font-semibold leading-5 text-white">{dayHeading(dayKey)}</h3>
             </div>
             <button
               type="button"
@@ -616,7 +645,7 @@ function DayDrawer({ dayKey, bucket, onClose }) {
           <strong className={`mt-5 block font-mono text-[28px] font-semibold tracking-[-0.04em] ${toneClass(net)}`}>
             {signedMoney(net)}
           </strong>
-          <span className="mt-1 block text-[9px] text-[#555]">Net P&L</span>
+          <span className="mt-1 block text-[9px] text-[#666]">Net P&L</span>
 
           <div className="mt-4 grid grid-cols-4 gap-2">
             <MiniMetric label="Trades" value={tradeCount} />
@@ -626,7 +655,7 @@ function DayDrawer({ dayKey, bucket, onClose }) {
           </div>
         </div>
 
-        <div className="p-4 sm:p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5">
           <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-black/25">
             <SummaryRow label="Realized P&L" value={signedMoney(bucket?.realized || 0)} valueClass={toneClass(bucket?.realized || 0)} />
             <SummaryRow label="Commission" value={`-${money(bucket?.commission || 0)}`} />
@@ -637,11 +666,11 @@ function DayDrawer({ dayKey, bucket, onClose }) {
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[10px] font-semibold text-white">Executions</h4>
-              <span className="text-[8px] text-[#555]">{executions.length} total</span>
+              <span className="text-[8px] text-[#666]">{executions.length} total</span>
             </div>
 
             {executions.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.07] px-4 py-8 text-center text-[9px] text-[#555]">
+              <div className="rounded-xl border border-white/[0.07] px-4 py-8 text-center text-[9px] text-[#666]">
                 No trading activity on this day.
               </div>
             ) : (
@@ -660,7 +689,7 @@ function DayDrawer({ dayKey, bucket, onClose }) {
                               {String(deal.type || "EXECUTION").replaceAll("_", " ")}
                             </span>
                           </div>
-                          <p className="mt-1.5 text-[8px] text-[#555]">
+                          <p className="mt-1.5 text-[8px] text-[#666]">
                             {utcTimeLabel(deal.executedAt)} · {deal.volume || "—"} lots @ {deal.price || "—"}
                           </p>
                         </div>
@@ -668,7 +697,7 @@ function DayDrawer({ dayKey, bucket, onClose }) {
                           <strong className={`font-mono text-[10px] font-semibold ${toneClass(netValue)}`}>
                             {signedMoney(netValue)}
                           </strong>
-                          <span className="mt-1 block text-[7px] text-[#555]">{close ? "Close" : "Execution"}</span>
+                          <span className="mt-1 block text-[7px] text-[#666]">{close ? "Close" : "Execution"}</span>
                         </div>
                       </div>
                     </div>
@@ -679,7 +708,8 @@ function DayDrawer({ dayKey, bucket, onClose }) {
           </div>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
