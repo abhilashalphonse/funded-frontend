@@ -186,6 +186,18 @@ function usePayoutData(account) {
     };
   }, [account, getAccessToken, reloadKey]);
 
+  useEffect(() => {
+    if (!overview?.ledger?.activePayout?.payoutId) return undefined;
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        setReloadKey(value => value + 1);
+      }
+    }, 60_000);
+
+    return () => window.clearInterval(timer);
+  }, [overview?.ledger?.activePayout?.payoutId, overview?.ledger?.activePayout?.status]);
+
   return {
     overview,
     history,
