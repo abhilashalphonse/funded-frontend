@@ -246,6 +246,109 @@ function ConfirmModal({ action, entity, onClose, onConfirm, busy }) {
   );
 }
 
+
+function PayoutActionModal({ action, payout, onClose, onConfirm, busy }) {
+  const [reason, setReason] = useState("");
+  const [provider, setProvider] = useState(payout?.provider || "");
+  const [providerReference, setProviderReference] = useState(payout?.providerReference || "");
+  const [utr, setUtr] = useState(payout?.utr || "");
+  const [txHash, setTxHash] = useState(payout?.txHash || "");
+  const [network, setNetwork] = useState(payout?.network || payout?.destination?.network || "TRC20");
+  const [settlementAmount, setSettlementAmount] = useState(payout?.settlementAmount ?? "");
+  const method = String(payout?.method || "").toUpperCase();
+  const needsTransferReference = action?.value === "MARK_SENT" && ["UPI", "BANK"].includes(method);
+  const needsTxHash = action?.value === "MARK_SENT" && method === "USDT";
+  const canSubmit = reason.trim()
+    && (!needsTransferReference || providerReference.trim() || utr.trim())
+    && (!needsTxHash || txHash.trim());
+
+  const inputClass = "mt-1.5 h-10 w-full rounded-lg border border-white/10 bg-black px-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/25";
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/75 px-4 backdrop-blur-sm" onMouseDown={onClose}>
+      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#111] p-5" onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-white">{action.label}</h3>
+            <p className="mt-1 font-mono text-[10px] text-zinc-500">{payout?.payoutId}</p>
+          </div>
+          <Badge>{payout?.status}</Badge>
+        </div>
+
+        {(action.value === "MARK_PROCESSING" || action.value === "MARK_SENT") && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Provider</span>
+              <input value={provider} onChange={e => setProvider(e.target.value)} className={inputClass} placeholder="Provider name" />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Settlement amount</span>
+              <input value={settlementAmount} onChange={e => setSettlementAmount(e.target.value)} inputMode="decimal" className={inputClass} placeholder="Optional" />
+            </label>
+          </div>
+        )}
+
+        {action.value === "MARK_SENT" && method !== "USDT" && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Provider reference</span>
+              <input value={providerReference} onChange={e => setProviderReference(e.target.value)} className={inputClass} placeholder="Transfer reference" />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">UTR</span>
+              <input value={utr} onChange={e => setUtr(e.target.value)} className={inputClass} placeholder="UTR / bank reference" />
+            </label>
+          </div>
+        )}
+
+        {action.value === "MARK_SENT" && method === "USDT" && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Network</span>
+              <input value={network} onChange={e => setNetwork(e.target.value.toUpperCase())} className={inputClass} placeholder="TRC20" />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Transaction hash</span>
+              <input value={txHash} onChange={e => setTxHash(e.target.value)} className={inputClass} placeholder="Required before SENT" />
+            </label>
+          </div>
+        )}
+
+        <label className="mt-4 block">
+          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-500">Reason</span>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            rows={4}
+            className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-white/25"
+            placeholder="Required for the audit log"
+          />
+        </label>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} disabled={busy} className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-40">Cancel</button>
+          <button
+            disabled={!canSubmit || busy}
+            onClick={() => onConfirm({
+              reason,
+              provider: provider.trim() || undefined,
+              providerReference: providerReference.trim() || undefined,
+              utr: utr.trim() || undefined,
+              txHash: txHash.trim() || undefined,
+              network: network.trim() || undefined,
+              settlementAmount: settlementAmount === "" ? undefined : Number(settlementAmount),
+              settlementCurrency: payout?.settlementCurrency || undefined,
+            })}
+            className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black disabled:opacity-40"
+          >
+            {busy ? "Applying…" : action.label}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user, getAccessToken, signOut } = useAuth();
   const initialPage = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("page") || "overview" : "overview";
