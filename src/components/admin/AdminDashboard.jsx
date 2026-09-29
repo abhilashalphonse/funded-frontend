@@ -1050,15 +1050,23 @@ export default function AdminDashboard() {
     const requested = rows.filter(row => row.status === "REQUESTED").length;
     const reviewing = rows.filter(row => ["REVIEWING", "APPROVED"].includes(row.status)).length;
     const processing = rows.filter(row => ["PROCESSING", "SENT"].includes(row.status)).length;
-    const paid = rows.filter(row => row.status === "PAID").reduce((sum, row) => sum + Number(row.requestedAmountUsd || 0), 0);
+    const paidRows = rows.filter(row => row.status === "PAID");
+    const paid = paidRows.reduce((sum, row) => sum + Number(row.requestedAmountUsd || 0), 0);
+    const acgFees = paidRows.reduce((sum, row) => sum + Number(row.providerFeePaidByAcg || 0), 0);
+    const exactReceiptCount = paidRows.filter(row =>
+      row.traderReceivedAmount != null
+      && row.settlementAmount != null
+      && Math.round(Number(row.traderReceivedAmount) * 100) === Math.round(Number(row.settlementAmount) * 100)
+    ).length;
 
     return (
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Kpi label="Requested" value={requested} detail="Awaiting payout review" />
           <Kpi label="Review / Approved" value={reviewing} detail="Operator attention" />
           <Kpi label="Processing / Sent" value={processing} detail="Money moving" />
-          <Kpi label="Paid on this page" value={money(paid)} detail="Completed payout value" />
+          <Kpi label="Paid to traders" value={money(paid)} detail="Completed payout value" />
+          <Kpi label="ACG payout fees" value={money(acgFees, "INR")} detail={`${exactReceiptCount}/${paidRows.length} exact receipts verified`} />
         </div>
 
         <DataTable
@@ -1072,7 +1080,8 @@ export default function AdminDashboard() {
             { key: "requestedAmountUsd", label: "Amount", render: row => money(row.requestedAmountUsd) },
             { key: "method", label: "Method", render: row => row.method || "—" },
             { key: "destination", label: "Destination", render: row => row.destination?.destination || "—" },
-            { key: "settlement", label: "Settlement", render: row => row.settlementAmount == null ? "Pending" : money(row.settlementAmount, row.settlementCurrency || "USD") },
+            { key: "settlement", label: "Trader Settlement", render: row => row.settlementAmount == null ? "Pending" : money(row.settlementAmount, row.settlementCurrency || "USD") },
+            { key: "acgCost", label: "ACG Cost", render: row => row.acgTotalCostAmount == null ? "—" : money(row.acgTotalCostAmount, row.accountingCurrency || row.settlementCurrency || "INR") },
             { key: "status", label: "Status", render: row => <Badge>{row.status}</Badge> },
             { key: "requestedAt", label: "Requested", render: row => dateTime(row.requestedAt) },
           ]}
@@ -1644,7 +1653,12 @@ export default function AdminDashboard() {
                   ["Reserved before request", money(payout?.snapshot?.previouslyReservedUsd)],
                   ["Available at request", money(payout?.snapshot?.availableBeforeRequestUsd)],
                   ["Fee policy", payout?.feePolicy === "ACG_COVERS" ? "Paid by ACG" : humanize(payout?.feePolicy)],
-                  ["Trader settlement", payout?.settlementAmount == null ? "Provider pending" : money(payout.settlementAmount, payout.settlementCurrency || "USD")],
+                  ["Quoted trader settlement", payout?.settlementAmount == null ? "Provider pending" : money(payout.settlementAmount, payout.settlementCurrency || "USD")],
+                  ["Trader actually received", payout?.traderReceivedAmount == null ? "Not verified yet" : money(payout.traderReceivedAmount, payout.accountingCurrency || payout.settlementCurrency || "USD")],
+                  ["Provider fee paid by ACG", payout?.providerFeePaidByAcg == null ? "Not verified yet" : money(payout.providerFeePaidByAcg, payout.accountingCurrency || payout.settlementCurrency || "USD")],
+                  ["Total ACG payout cost", payout?.acgTotalCostAmount == null ? "Not verified yet" : money(payout.acgTotalCostAmount, payout.accountingCurrency || payout.settlementCurrency || "USD")],
+                  ["Accounting source", payout?.accountingSource ? humanize(payout.accountingSource) : "—"],
+                  ["Accounting verified", payout?.accountingVerifiedAt ? dateTime(payout.accountingVerifiedAt) : "—"],
                   ["FX rate", payout?.fxRate ? String(payout.fxRate) : "—"],
                   ["Cycle", payout?.cycle?.frequency || "—"],
                 ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 text-xs text-zinc-200">{value}</p></div>)}
@@ -1690,6 +1704,12 @@ export default function AdminDashboard() {
                 {(payout.providerLastError.minimum != null || payout.providerLastError.maximum != null) && (
                   <p className="mt-2 font-mono text-[10px] text-zinc-500">
                     Provider range · {payout.providerLastError.minimum ?? "—"} – {payout.providerLastError.maximum ?? "—"}
+                  </p>
+                )}
+                {(payout.providerLastError.expectedAmount != null || payout.providerLastError.receivedAmount != null) && (
+                  <p className="mt-2 font-mono text-[10px] text-zinc-500">
+                    Expected {payout.providerLastError.expectedAmount ?? "—"} {payout.providerLastError.currency || ""}
+                    {" · "}Provider reported {payout.providerLastError.receivedAmount ?? "—"} {payout.providerLastError.currency || ""}
                   </p>
                 )}
               </section>
