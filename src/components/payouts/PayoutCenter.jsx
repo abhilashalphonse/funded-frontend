@@ -3,10 +3,8 @@ import {
   ArrowRight,
   Building2,
   Check,
-  CheckCircle2,
   CircleDollarSign,
   Clock3,
-  Copy,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -454,7 +452,7 @@ export default function PayoutCenter({ account }) {
       )}
 
       <section className="relative overflow-hidden rounded-2xl border border-white/[0.09] bg-[#080808]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#195be1]/60 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[#195be1]/45" />
         <div className="grid lg:grid-cols-[1.3fr_.7fr]">
           <div className="p-5 sm:p-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.025] px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#8a8a8a]">
