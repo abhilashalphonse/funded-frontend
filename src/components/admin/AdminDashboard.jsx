@@ -91,6 +91,7 @@ const PAGE_STATUS_OPTIONS = {
   funded: ["FUNDED_REVIEW", "FUNDED"],
   orders: ["CREATED", "WAITING", "CONFIRMING", "PAID", "FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"],
   payments: ["CREATED", "WAITING", "CONFIRMING", "PAID", "FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"],
+  payouts: ["REQUESTED", "REVIEWING", "APPROVED", "PROCESSING", "SENT", "PAID", "FAILED", "REJECTED", "CANCELLED"],
   support: ["OPEN", "ESCALATED", "CLOSED"],
 };
 
@@ -124,8 +125,8 @@ const lossLimitAmount = (account, rulePercent) => lossBase(account) * Number(rul
 const statusTone = status => {
   const s = String(status || "").toUpperCase();
   if (["PAID", "ACTIVE", "FUNDED", "PASSED", "HEALTHY", "CONFIGURED", "READY", "OPEN"].includes(s)) return "text-emerald-300 bg-emerald-400/10 border-emerald-400/20";
-  if (["FAILED", "BREACHED", "BLOCKED", "CLOSED", "NOT_CONFIGURED"].includes(s)) return "text-red-300 bg-red-400/10 border-red-400/20";
-  if (["PENDING", "WAITING", "CONFIRMING", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT", "NOT_INTEGRATED"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
+  if (["FAILED", "REJECTED", "CANCELLED", "BREACHED", "BLOCKED", "CLOSED", "NOT_CONFIGURED"].includes(s)) return "text-red-300 bg-red-400/10 border-red-400/20";
+  if (["PENDING", "WAITING", "CONFIRMING", "REQUESTED", "REVIEWING", "APPROVED", "PROCESSING", "SENT", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT", "NOT_INTEGRATED"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
   return "text-zinc-300 bg-white/5 border-white/10";
 };
 
@@ -167,7 +168,7 @@ function DataTable({ columns, rows, onRow, empty = "No records found." }) {
           </thead>
           <tbody className="divide-y divide-white/[0.05]">
             {rows.map((row, index) => (
-              <tr key={row._id || row.customerId || row.accountId || row.orderId || row.conversationId || index}
+              <tr key={row._id || row.payoutId || row.customerId || row.accountId || row.orderId || row.conversationId || index}
                 onClick={() => onRow?.(row)}
                 className={onRow ? "cursor-pointer transition hover:bg-white/[0.035]" : ""}>
                 {columns.map(col => <td key={col.key} className="whitespace-nowrap px-4 py-3 text-zinc-300">{col.render ? col.render(row) : row[col.key] ?? "—"}</td>)}
@@ -304,6 +305,7 @@ export default function AdminDashboard() {
           : s;
       return `/${page}?limit=100${p}${q}${attention}`;
     }
+    if (page === "payouts") return `/payouts?limit=100${p}${q}${s}`;
     if (page === "trades") return "/trades?limit=200";
     if (page === "risk" || page === "breaches") return "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
@@ -314,7 +316,7 @@ export default function AdminDashboard() {
     if (page === "launch-readiness") return "/launch-readiness?limit=20";
     if (page === "audit") return `/audit?limit=100${p}`;
     if (page === "admins") return "/admin-users";
-    if (["jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
+    if (["jobs", "integrations", "errors", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
     return "/overview";
   }, [page, search, status, days, listPage, queue]);
 
@@ -417,6 +419,7 @@ export default function AdminDashboard() {
       if (page === "users") setSelectedDetail(await adminFetch(`/users/${encodeURIComponent(row.customerId)}`));
       if (["challenges", "trials", "funded", "breaches"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
       if (page === "orders" || page === "payments") setSelectedDetail({ payment: row });
+      if (page === "payouts") setSelectedDetail(await adminFetch(`/payouts/${encodeURIComponent(row.payoutId)}`));
       if (page === "trades" && row.account?.externalRef) {
         const detail = await adminFetch(`/challenges/${encodeURIComponent(row.account.externalRef)}`);
         setSelected({
@@ -462,7 +465,7 @@ export default function AdminDashboard() {
 
   const rows = data?.rows || [];
 
-  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "launch-readiness", "jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
+  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "launch-readiness", "jobs", "integrations", "errors", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
 
 
   const sendHumanSupportReply = async () => {
@@ -902,7 +905,7 @@ export default function AdminDashboard() {
       { key: "current", label: "Current", render: r => r.current ? <Badge>ACTIVE</Badge> : "—" },
     ]} /><p className="text-xs text-zinc-600">{data?.note}</p></div>;
     if (page === "audit") return renderAudit();
-    if (page === "payouts") return unavailable("Payout workflow is not connected yet", "Funded-review accounts are visible, but the backend currently has no payout entity or payout processing lifecycle.", "payouts");
+    if (page === "payouts") return renderPayouts();
     if (page === "refunds") return unavailable("Refund workflow is not connected yet", "Payments can reach REFUNDED from the provider, but there is not yet a first-class admin refund request/approval workflow.", "refunds");
     if (page === "products") return unavailable("Challenge product admin is not connected yet", "Current challenge rules/pricing are code-driven. Product versioning should be introduced before making these editable.", "challengeProductAdmin");
     if (page === "pricing") return unavailable("Pricing admin is not connected yet", "Pricing is currently code-driven. Publishing mutable pricing without version snapshots would risk changing historical challenge terms.", "pricingAdmin");
