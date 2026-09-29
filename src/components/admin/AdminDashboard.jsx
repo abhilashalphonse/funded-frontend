@@ -1444,6 +1444,151 @@ export default function AdminDashboard() {
         </div>
       </Inspector>}
 
+      {selected && page === "payouts" && <Inspector
+        title={selectedDetail?.payout?.payoutId || selected.payoutId || "Payout"}
+        subtitle={selectedDetail?.payout ? `${selectedDetail.payout.accountId} · ${selectedDetail.payout.customerId}` : selected.accountId}
+        onClose={() => { setSelected(null); setSelectedDetail(null); setPayoutAction(null); }}
+      >
+        {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load payout" text={selectedDetail.error} /> : (() => {
+          const payout = selectedDetail.payout;
+          const destination = selectedDetail.destinationDetails;
+          const actions = payoutActionsFor(payout?.status);
+          const timeline = [
+            ["Requested", payout?.requestedAt],
+            ["Reviewing", payout?.reviewingAt],
+            ["Approved", payout?.approvedAt],
+            ["Processing", payout?.processingAt],
+            ["Sent", payout?.sentAt],
+            ["Paid", payout?.paidAt],
+          ].filter(([, value]) => value);
+
+          return <div className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Kpi label="Payout Amount" value={money(payout?.requestedAmountUsd)} />
+              <Kpi label="Method" value={payout?.method || "—"} />
+              <Kpi label="Status" value={humanize(payout?.status)} />
+            </div>
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-white">Payout destination</p>
+                  <p className="mt-1 text-[11px] text-zinc-500">Sensitive payout details · verify before approval.</p>
+                </div>
+                <Badge>{payout?.method}</Badge>
+              </div>
+
+              {selectedDetail.destinationError ? (
+                <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2 text-[11px] text-amber-200">
+                  {selectedDetail.destinationError.message}
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                  {payout?.method === "UPI" && <>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Beneficiary</p><p className="mt-1 text-xs text-zinc-200">{destination?.beneficiaryName || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">UPI ID</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{destination?.upiId || "—"}</p></div>
+                  </>}
+                  {payout?.method === "BANK" && <>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Beneficiary</p><p className="mt-1 text-xs text-zinc-200">{destination?.beneficiaryName || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Bank</p><p className="mt-1 text-xs text-zinc-200">{destination?.bankName || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Account number</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{destination?.accountNumber || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">IFSC</p><p className="mt-1 font-mono text-xs text-zinc-200">{destination?.ifsc || "—"}</p></div>
+                  </>}
+                  {payout?.method === "USDT" && <>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Network</p><p className="mt-1 text-xs text-zinc-200">{destination?.network || payout?.network || "—"}</p></div>
+                    <div className="sm:col-span-2"><p className="text-[10px] uppercase tracking-wider text-zinc-600">Wallet address</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{destination?.walletAddress || "—"}</p></div>
+                  </>}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <p className="text-xs font-semibold text-white">Financial snapshot</p>
+              <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  ["Realized profit", money(payout?.snapshot?.realizedProfitUsd)],
+                  ["Profit split", payout?.snapshot?.profitSplitPercent != null ? `${payout.snapshot.profitSplitPercent}%` : "—"],
+                  ["Trader entitlement", money(payout?.snapshot?.entitlementUsd)],
+                  ["Previously paid", money(payout?.snapshot?.previouslyPaidUsd)],
+                  ["Reserved before request", money(payout?.snapshot?.previouslyReservedUsd)],
+                  ["Available at request", money(payout?.snapshot?.availableBeforeRequestUsd)],
+                  ["Settlement", payout?.settlementAmount == null ? "Provider pending" : money(payout.settlementAmount, payout.settlementCurrency || "USD")],
+                  ["FX rate", payout?.fxRate ? String(payout.fxRate) : "—"],
+                  ["Cycle", payout?.cycle?.frequency || "—"],
+                ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 text-xs text-zinc-200">{value}</p></div>)}
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <p className="text-xs font-semibold text-white">Transfer tracking</p>
+              <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                {[
+                  ["Provider", payout?.provider],
+                  ["Provider reference", payout?.providerReference],
+                  ["UTR", payout?.utr],
+                  ["Transaction hash", payout?.txHash],
+                  ["Network", payout?.network],
+                  ["Quote status", payout?.quoteStatus],
+                ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{value || "—"}</p></div>)}
+              </div>
+
+              <div className="mt-5 border-t border-white/[0.06] pt-4">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-600">Timeline</p>
+                <div className="mt-3 space-y-2">
+                  {timeline.length ? timeline.map(([label, value], index) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <span className={`grid size-5 shrink-0 place-items-center rounded-full border text-[8px] ${index === timeline.length - 1 ? "border-white/20 text-white" : "border-emerald-400/20 text-emerald-300"}`}>{index + 1}</span>
+                      <span className="min-w-[72px] text-[10px] text-zinc-300">{label}</span>
+                      <span className="text-[10px] text-zinc-600">{dateTime(value)}</span>
+                    </div>
+                  )) : <p className="text-xs text-zinc-600">No lifecycle timestamps recorded.</p>}
+                </div>
+              </div>
+            </section>
+
+            {payout?.failure && (
+              <section className="rounded-xl border border-red-400/20 bg-red-400/[0.05] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-red-300">{payout.failure.code || "Payout failure"}</p>
+                <p className="mt-2 text-xs leading-5 text-zinc-300">{payout.failure.message || "No failure message recorded."}</p>
+              </section>
+            )}
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-white">Review actions</p>
+                  <p className="mt-1 text-[11px] text-zinc-500">Every action requires a reason and is written to the admin audit log.</p>
+                </div>
+                <Badge>{payout?.status}</Badge>
+              </div>
+
+              {actions.length ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {actions.map(item => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setPayoutAction({ ...item, id: payout.payoutId })}
+                      className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                        item.tone === "positive"
+                          ? "border-emerald-400/20 text-emerald-300 hover:bg-emerald-400/[0.07]"
+                          : item.tone === "negative"
+                            ? "border-red-400/20 text-red-300 hover:bg-red-400/[0.07]"
+                            : "border-white/10 text-zinc-300 hover:bg-white/[0.05]"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-xs text-zinc-600">This payout is in a terminal state.</p>
+              )}
+            </section>
+          </div>;
+        })()}
+      </Inspector>}
+
       {selected && page === "support" && <Inspector
         title={selectedDetail?.conversation?.email?.subject || "Support case"}
         subtitle={selectedDetail?.conversation?.email?.customerEmail || selectedDetail?.customer?.primaryEmail || selected.conversationId}
@@ -1514,6 +1659,15 @@ export default function AdminDashboard() {
         })()}
       </Inspector>}
 
+      {payoutAction && selectedDetail?.payout && (
+        <PayoutActionModal
+          action={payoutAction}
+          payout={selectedDetail.payout}
+          busy={payoutBusy}
+          onClose={() => setPayoutAction(null)}
+          onConfirm={performPayoutAction}
+        />
+      )}
       {action && <ConfirmModal action={action} entity={action.id} busy={actionBusy} onClose={() => setAction(null)} onConfirm={performAction} />}
     </div>
   );
