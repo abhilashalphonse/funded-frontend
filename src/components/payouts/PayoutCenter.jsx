@@ -99,6 +99,11 @@ function localPreview(account) {
       canRequest: false,
       blockers: isMaster ? ["PAYOUT_DATA_LOADING"] : ["MASTER_ACCOUNT_REQUIRED"],
     },
+    fees: {
+      providerFeePolicy: "ACG_COVERS",
+      traderPaysProviderFee: false,
+      description: "ACG covers payout-provider fees.",
+    },
     methods: [
       { id: "UPI", label: "UPI", settlementCurrency: "INR", limits: { min: 100, max: 20000, unit: "INR" } },
       { id: "BANK", label: "Bank Transfer", settlementCurrency: "INR", limits: null },
@@ -449,25 +454,15 @@ function ActivePayoutTracker({ payout }) {
             <strong className="mt-1 block text-[10px] text-[#aaa]">{payout.method || "—"}</strong>
           </div>
           <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
-            <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">
-              {payout.providerNetAmount != null ? "Provider net" : "Settlement estimate"}
-            </span>
+            <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">Trader receives</span>
             <strong className="mt-1 block font-mono text-[10px] text-[#aaa]">
-              {payout.providerNetAmount != null && payout.settlementCurrency === "INR"
-                ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.providerNetAmount))
-                : payout.settlementAmount == null
-                  ? "Provider pending"
-                  : payout.settlementCurrency === "INR"
-                    ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.settlementAmount))
-                    : `${number(payout.settlementAmount).toLocaleString("en-US")} ${payout.settlementCurrency || ""}`}
+              {payout.settlementAmount == null
+                ? "Provider pending"
+                : payout.settlementCurrency === "INR"
+                  ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.settlementAmount))
+                  : `${number(payout.settlementAmount).toLocaleString("en-US")} ${payout.settlementCurrency || ""}`}
             </strong>
-            {payout.providerFee != null && (
-              <span className="mt-1 block text-[7px] text-[#555]">
-                Provider fee {payout.settlementCurrency === "INR"
-                  ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.providerFee))
-                  : payout.providerFee}
-              </span>
-            )}
+            <span className="mt-1 block text-[7px] text-[#555]">Provider fees paid by ACG</span>
           </div>
           <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
             <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">Reference</span>
@@ -672,7 +667,7 @@ export default function PayoutCenter({ account }) {
           <div>
             <h3 className="text-[12px] font-semibold text-white">{isReal ? "Receive your payout" : "How ACG pays traders"}</h3>
             <p className="mt-1 text-[10px] text-[#666]">
-              {isReal ? "Your final settlement amount is shown before you confirm." : "These methods become available once you reach an eligible Master Account payout."}
+              {isReal ? "Your trader payout amount is shown before you confirm. ACG covers payout-provider fees." : "These methods become available once you reach an eligible Master Account payout."}
             </p>
           </div>
           {isPreview && <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[#555]">Preview only</span>}
@@ -683,7 +678,7 @@ export default function PayoutCenter({ account }) {
         </div>
 
         <div className="mt-4 rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3 text-[9px] leading-4 text-[#666]">
-          UPI is limited to ₹100–₹20,000 per payout. INR conversion and the exact amount are confirmed before a real payout request. Bank and USDT provider limits will only be shown from configured payout-provider data.
+          UPI is limited to ₹100–₹20,000 per payout. INR conversion and the trader payout amount are confirmed before a real payout request. ACG covers payout-provider fees. Bank and USDT provider limits will only be shown from configured payout-provider data.
         </div>
       </section>
 
@@ -724,11 +719,12 @@ export default function PayoutCenter({ account }) {
             <SnapshotRow label="Realized profit" value={realized == null ? "—" : signedUsd(realized)} />
             <SnapshotRow label={isReal ? "Available now" : "Estimated share"} value={isReal ? (available == null ? "—" : usd(available)) : (estimatedShare == null ? "—" : usd(estimatedShare))} />
             <SnapshotRow label="Payout cycle" value={overview?.commercialTerms?.payoutFrequency || "—"} />
+            <SnapshotRow label="Provider fees" value={overview?.fees?.traderPaysProviderFee === false ? "Paid by ACG" : "—"} />
           </div>
 
           <p className="mt-4 border-t border-white/[0.06] pt-4 text-[9px] leading-4 text-[#555]">
             {isReal
-              ? "Real payout availability comes from ACG Funded's payout ledger and Master Account state. Floating P&L is not treated as withdrawable profit."
+              ? "Real payout availability comes from ACG Funded's payout ledger and Master Account state. Floating P&L is not treated as withdrawable profit. Payout-provider fees are paid by ACG."
               : "Preview values are educational projections only. Trial and Challenge account profits are not payable."}
           </p>
         </section>
