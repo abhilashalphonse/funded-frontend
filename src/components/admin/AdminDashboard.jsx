@@ -1052,7 +1052,9 @@ export default function AdminDashboard() {
     const processing = rows.filter(row => ["PROCESSING", "SENT"].includes(row.status)).length;
     const paidRows = rows.filter(row => row.status === "PAID");
     const paid = paidRows.reduce((sum, row) => sum + Number(row.requestedAmountUsd || 0), 0);
-    const acgFees = paidRows.reduce((sum, row) => sum + Number(row.providerFeePaidByAcg || 0), 0);
+    const acgFeesInr = paidRows
+      .filter(row => String(row.accountingCurrency || row.settlementCurrency || "").toUpperCase() === "INR")
+      .reduce((sum, row) => sum + Number(row.providerFeePaidByAcg || 0), 0);
     const exactReceiptCount = paidRows.filter(row =>
       row.traderReceivedAmount != null
       && row.settlementAmount != null
@@ -1066,7 +1068,7 @@ export default function AdminDashboard() {
           <Kpi label="Review / Approved" value={reviewing} detail="Operator attention" />
           <Kpi label="Processing / Sent" value={processing} detail="Money moving" />
           <Kpi label="Paid to traders" value={money(paid)} detail="Completed payout value" />
-          <Kpi label="ACG payout fees" value={money(acgFees, "INR")} detail={`${exactReceiptCount}/${paidRows.length} exact receipts verified`} />
+          <Kpi label="ACG payout fees · INR" value={money(acgFeesInr, "INR")} detail={`${exactReceiptCount}/${paidRows.length} exact receipts verified`} />
         </div>
 
         <DataTable
