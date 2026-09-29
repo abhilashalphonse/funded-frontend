@@ -218,7 +218,7 @@ export default function SupportAssistant() {
                     </div>
                     <p className="mt-1 truncate text-[11px] text-zinc-500">
                       {status === "ESCALATED"
-                        ? "Human review requested"
+                        ? "Human support active"
                         : user
                           ? "Account-aware support"
                           : "Typically replies instantly"}
@@ -244,7 +244,7 @@ export default function SupportAssistant() {
 
               {status === "ESCALATED" && (
                 <div className="mt-4 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] px-3 py-2.5 text-[11px] leading-5 text-amber-200">
-                  Your conversation is queued for human review. You do not need to repeat the details already shared.
+                  Human support is handling this conversation. AI auto-replies are paused until support returns the case to AI.
                 </div>
               )}
             </header>
@@ -344,7 +344,7 @@ export default function SupportAssistant() {
                   className="inline-flex items-center gap-1.5 text-[10px] text-zinc-500 transition hover:text-zinc-300 disabled:cursor-default disabled:text-zinc-700"
                 >
                   <UserRound size={11} />
-                  {status === "ESCALATED" ? "Human review requested" : "Talk to a person"}
+                  {status === "ESCALATED" ? "Human support active" : "Talk to a person"}
                 </button>
                 <span className="text-right text-[9px] text-zinc-700">Never share passwords or private keys</span>
               </div>
