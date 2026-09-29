@@ -370,6 +370,8 @@ export default function AdminDashboard() {
   const [actionBusy, setActionBusy] = useState(false);
   const [supportReply, setSupportReply] = useState("");
   const [supportBusy, setSupportBusy] = useState(false);
+  const [payoutAction, setPayoutAction] = useState(null);
+  const [payoutBusy, setPayoutBusy] = useState(false);
 
   const adminFetch = useCallback(async (path, options = {}) => {
     const token = await getAccessToken();
@@ -567,6 +569,30 @@ export default function AdminDashboard() {
   };
 
   const rows = data?.rows || [];
+
+  const performPayoutAction = async input => {
+    if (!payoutAction?.id) return;
+    setPayoutBusy(true);
+    setError("");
+    try {
+      await adminFetch(`/payouts/${encodeURIComponent(payoutAction.id)}/action`, {
+        method: "POST",
+        body: JSON.stringify({
+          action: payoutAction.value,
+          ...input,
+        }),
+      });
+      const detail = await adminFetch(`/payouts/${encodeURIComponent(payoutAction.id)}`);
+      setSelected(detail?.payout || selected);
+      setSelectedDetail(detail);
+      setPayoutAction(null);
+      await load();
+    } catch (err) {
+      setError(err?.message || "Unable to update payout.");
+    } finally {
+      setPayoutBusy(false);
+    }
+  };
 
   const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "launch-readiness", "jobs", "integrations", "errors", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
 
