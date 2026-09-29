@@ -46,7 +46,7 @@ export default function SupportAssistant() {
     if (!open || !conversationId) return;
     let cancelled = false;
 
-    (async () => {
+    const loadConversation = async () => {
       try {
         const token = await getAccessToken().catch(() => null);
         const response = await fetch(
@@ -59,16 +59,26 @@ export default function SupportAssistant() {
           },
         );
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !payload?.data?.messages?.length || cancelled) return;
-        setMessages(payload.data.messages.filter(message => message.role !== "system"));
+        if (!response.ok || !payload?.data || cancelled) return;
+        if (Array.isArray(payload.data.messages) && payload.data.messages.length) {
+          setMessages(payload.data.messages.filter(message => message.role !== "system"));
+        }
         setStatus(payload.data.status || "OPEN");
       } catch {
         // A previous anonymous conversation may no longer belong to the signed-in identity.
       }
-    })();
+    };
 
-    return () => { cancelled = true; };
-  }, [conversationId, getAccessToken, open, sessionId, user?.id]);
+    void loadConversation();
+    const poll = status === "ESCALATED"
+      ? window.setInterval(() => { void loadConversation(); }, 4000)
+      : null;
+
+    return () => {
+      cancelled = true;
+      if (poll) window.clearInterval(poll);
+    };
+  }, [conversationId, getAccessToken, open, sessionId, status, user?.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -103,7 +113,7 @@ export default function SupportAssistant() {
         }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.data?.answer) {
+      if (!response.ok || !payload?.data) {
         throw new Error(payload?.message || "Support is temporarily unavailable.");
       }
 
@@ -113,7 +123,12 @@ export default function SupportAssistant() {
         window.localStorage.setItem(CONVERSATION_KEY, nextConversationId);
       }
       setStatus(payload.data.status || "OPEN");
-      setMessages(current => [...current, { role: "assistant", content: payload.data.answer }]);
+
+      if (payload.data.answer) {
+        setMessages(current => [...current, { role: "assistant", content: payload.data.answer, source: payload.data.handler === "HUMAN" ? "human" : "ai" }]);
+      } else if (payload.data.humanOwned !== true) {
+        throw new Error("Support did not return a response.");
+      }
     } catch (requestError) {
       setError(requestError?.message || "Support is temporarily unavailable.");
       setMessages(current => [
@@ -248,6 +263,11 @@ export default function SupportAssistant() {
                       ? "rounded-[18px] rounded-br-[6px] bg-white text-black"
                       : "rounded-[18px] rounded-bl-[6px] bg-[#171719] text-zinc-200"}`}
                   >
+                    {message.role !== "user" && message.source && (
+                      <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
+                        {message.source === "human" ? "Human support" : "ACG Support"}
+                      </div>
+                    )}
                     {message.content}
                   </div>
                 </div>
@@ -302,7 +322,7 @@ export default function SupportAssistant() {
                   }}
                   rows={1}
                   maxLength={3000}
-                  placeholder="Message ACG Support"
+                  placeholder={status === "ESCALATED" ? "Message human support" : "Message ACG Support"}
                   className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2.5 text-[13px] leading-5 text-white outline-none placeholder:text-zinc-600"
                 />
                 <button
