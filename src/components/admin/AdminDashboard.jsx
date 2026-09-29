@@ -1086,6 +1086,7 @@ export default function AdminDashboard() {
                   <div>
                     <p className="text-sm font-semibold text-zinc-100">{provider.label}</p>
                     <p className="mt-1 text-[10px] text-zinc-600">{(provider.methods || []).join(" · ") || "No methods"}</p>
+                    {provider.feePolicy && <p className="mt-1 text-[9px] uppercase tracking-wider text-zinc-700">Fee policy · {humanize(provider.feePolicy)}</p>}
                   </div>
                   <Badge>{provider.status}</Badge>
                 </div>
