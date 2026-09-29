@@ -126,10 +126,13 @@ function destinationReady(method, destination) {
 function quoteExplanation(quote) {
   if (!quote) return "";
   if (quote.method === "UPI" && quote.available === false) {
-    return "UPI is unavailable for this amount. Reduce the payout amount or choose Bank Transfer / USDT.";
+    return "UPI is unavailable for this amount. Reduce the payout amount or choose Bank Transfer.";
+  }
+  if (quote.method === "USDT" && quote.available === false) {
+    return "USDT payout requests stay disabled until ACG can show the exact provider settlement amount and network terms before confirmation.";
   }
   if (quote.quoteStatus === "PROVIDER_PENDING") {
-    return "Your USD payout amount is locked. The exact USDT settlement amount is finalized when the payout provider processes the request.";
+    return "The exact provider settlement is still pending.";
   }
   return "This settlement estimate is calculated server-side from the current payout quote.";
 }
