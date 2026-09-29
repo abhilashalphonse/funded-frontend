@@ -55,6 +55,8 @@ export default function PayoutCertificateModal({ payout, onClose }) {
             min-height: 100vh !important;
             margin: 0 !important;
             border-radius: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .acg-certificate-controls { display: none !important; }
         }
