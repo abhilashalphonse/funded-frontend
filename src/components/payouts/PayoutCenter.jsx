@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../AuthContext.jsx";
 import PayoutRequestModal from "./PayoutRequestModal.jsx";
+import PayoutCertificateModal from "./PayoutCertificateModal.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -455,7 +456,7 @@ function ActivePayoutTracker({ payout }) {
   );
 }
 
-function PayoutHistory({ items }) {
+function PayoutHistory({ items, onCertificate }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0A0A0A]">
       <div className="border-b border-white/[0.07] px-5 py-4 sm:px-6">
@@ -488,7 +489,18 @@ function PayoutHistory({ items }) {
                   {item.method || "Method pending"} · {dateLabel(item.paidAt || item.requestedAt)}
                 </p>
               </div>
-              <span className="max-w-[42%] truncate font-mono text-[8px] text-[#555]">{item.payoutId}</span>
+              <div className="flex max-w-[46%] shrink-0 flex-col items-end gap-2">
+                <span className="max-w-full truncate font-mono text-[8px] text-[#555]">{item.payoutId}</span>
+                {String(item.status || "").toUpperCase() === "PAID" && (
+                  <button
+                    type="button"
+                    onClick={() => onCertificate?.(item)}
+                    className="rounded-md border border-white/[0.08] px-2 py-1 text-[8px] font-semibold text-[#888] hover:border-white/[0.16] hover:text-white"
+                  >
+                    View certificate
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -500,6 +512,7 @@ function PayoutHistory({ items }) {
 export default function PayoutCenter({ account }) {
   const { overview, history, loading, error, retry } = usePayoutData(account);
   const [requestOpen, setRequestOpen] = useState(false);
+  const [certificate, setCertificate] = useState(null);
   const copy = stageCopy(overview);
   const isPreview = overview?.mode === "PREVIEW";
   const isJourney = overview?.mode === "JOURNEY";
@@ -671,7 +684,7 @@ export default function PayoutCenter({ account }) {
       )}
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
-        <PayoutHistory items={history} />
+        <PayoutHistory items={history} onCertificate={setCertificate} />
 
         <section className="rounded-2xl border border-white/[0.08] bg-[#0A0A0A] p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
@@ -697,6 +710,10 @@ export default function PayoutCenter({ account }) {
           </p>
         </section>
       </div>
+
+      {certificate && (
+        <PayoutCertificateModal payout={certificate} onClose={() => setCertificate(null)} />
+      )}
 
       {requestOpen && overview?.eligibility?.canRequest && (
         <PayoutRequestModal
