@@ -12,14 +12,14 @@ import {
 import { useAuth } from "../../AuthContext"; 
 import { getAnalyticsSessionId, trackEvent } from "../../utils/analytics.js";
 import Academy from "../academy/Academy.jsx";
-import NewsCalendar from "../calendar/NewsCalendar.jsx";
+import CalendarWorkspace from "../calendar/CalendarWorkspace.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 const pageDetails = {
   overview: { title: 'Overview', description: 'Account, objective and risk status' },
   analytics: { title: 'Performance', description: 'Understand how this account is performing' },
-  calendar: { title: 'Calendar', description: 'Market events and trading restrictions' },
+  calendar: { title: 'Calendar', description: 'Trading performance and market events' },
   academy: { title: 'Academy', description: 'Continue your trading education' },
   billing: { title: 'Payouts', description: 'Reward eligibility, payout terms and history' },
   profile: { title: 'Settings', description: 'Profile, security and preferences' },
@@ -1623,7 +1623,7 @@ export default function Dashboard({ initialAccountId = "", onInitialAccountConsu
         return <OverviewSection {...propsPayload} account={activeChallenge} onStartTrial={onFreeTrial} onNewChallenge={onNewChallenge} onOpenAcademyLesson={(lessonId) => { setAcademyInitialLesson(lessonId); setActiveTab("academy"); }} />;
       case 'analytics':
         return <AnalyticsSection account={activeChallenge} />;
-      case 'calendar':        return <NewsCalendar account={activeChallenge} />;
+      case 'calendar':        return <CalendarWorkspace account={activeChallenge} />;
       case 'traders':
         return <TradersSection />;
       case 'academy':
