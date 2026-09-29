@@ -485,6 +485,25 @@ export default function AdminDashboard() {
     }
   };
 
+  const returnSupportToAi = async () => {
+    const conversationId = selectedDetail?.conversation?.conversationId;
+    if (!conversationId || supportBusy) return;
+    setSupportBusy(true);
+    setError("");
+    try {
+      await adminFetch(`/support/${encodeURIComponent(conversationId)}/return-to-ai`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "Human support returned conversation to AI" }),
+      });
+      setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
+      await load();
+    } catch (err) {
+      setError(err?.message || "Unable to return support case to AI.");
+    } finally {
+      setSupportBusy(false);
+    }
+  };
+
   const closeSupportCase = async () => {
     const conversationId = selectedDetail?.conversation?.conversationId;
     if (!conversationId || supportBusy) return;
@@ -1269,6 +1288,15 @@ export default function AdminDashboard() {
                   className="w-full resize-none rounded-xl border border-white/[0.1] bg-black px-3 py-3 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-white/25"
                 />
                 <div className="flex flex-wrap justify-end gap-2">
+                  {conversation.status === "ESCALATED" && (
+                    <button
+                      onClick={returnSupportToAi}
+                      disabled={supportBusy}
+                      className="rounded-lg border border-sky-400/20 bg-sky-400/[0.06] px-4 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-400/[0.1] disabled:opacity-40"
+                    >
+                      Return to AI
+                    </button>
+                  )}
                   <button
                     onClick={closeSupportCase}
                     disabled={supportBusy}
