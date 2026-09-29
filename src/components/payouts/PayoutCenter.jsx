@@ -364,6 +364,92 @@ function Journey({ overview }) {
   );
 }
 
+function ActivePayoutTracker({ payout }) {
+  if (!payout) return null;
+
+  const stages = [
+    ["REQUESTED", "Requested", payout.requestedAt],
+    ["REVIEWING", "Reviewing", payout.reviewingAt],
+    ["APPROVED", "Approved", payout.approvedAt],
+    ["PROCESSING", "Processing", payout.processingAt],
+    ["SENT", "Sent", payout.sentAt],
+    ["PAID", "Paid", payout.paidAt],
+  ];
+  const currentStatus = String(payout.status || "").toUpperCase();
+  const currentIndex = Math.max(0, stages.findIndex(([status]) => status === currentStatus));
+  const reference = payout.reference?.txHash
+    || payout.reference?.utr
+    || payout.reference?.providerReference
+    || null;
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[#195be1]/20 bg-[#0A0A0A]">
+      <div className="border-b border-white/[0.07] px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <span className="text-[8px] font-semibold uppercase tracking-[0.13em] text-[#6f92e8]">Payout in progress</span>
+            <h3 className="mt-1.5 font-mono text-[20px] font-semibold text-white">{usd(payout.requestedAmountUsd)}</h3>
+            <p className="mt-1 text-[9px] text-[#666]">
+              {payout.method || "Payout"}{payout.destination?.destination ? ` · ${payout.destination.destination}` : ""}
+            </p>
+          </div>
+          <span className={`rounded-full border px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] ${statusTone(payout.status)}`}>
+            {String(payout.status || "").replaceAll("_", " ")}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-5 sm:p-6">
+        <div className="grid grid-cols-3 gap-y-5 sm:grid-cols-6">
+          {stages.map(([status, label, timestamp], index) => {
+            const reached = index <= currentIndex;
+            const current = index === currentIndex;
+            return (
+              <div key={status} className="relative min-w-0 text-center">
+                {index > 0 && (
+                  <span className={`absolute right-1/2 top-3 hidden h-px w-full sm:block ${index <= currentIndex ? "bg-[#195be1]/45" : "bg-white/[0.07]"}`} />
+                )}
+                <span className={`relative z-10 mx-auto grid size-6 place-items-center rounded-full border text-[8px] font-semibold ${
+                  current
+                    ? "border-[#195be1] bg-[#195be1]/15 text-[#a8c0ff]"
+                    : reached
+                      ? "border-[#195be1]/35 bg-[#080808] text-[#789bf2]"
+                      : "border-white/[0.08] bg-[#080808] text-[#4c4c4c]"
+                }`}>
+                  {reached && !current ? <Check size={9} /> : index + 1}
+                </span>
+                <strong className={`mt-2 block truncate text-[8px] font-semibold ${reached ? "text-[#aaa]" : "text-[#4f4f4f]"}`}>{label}</strong>
+                <span className="mt-1 block text-[7px] text-[#4f4f4f]">{timestamp ? dateLabel(timestamp) : "—"}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-3">
+          <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
+            <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">Method</span>
+            <strong className="mt-1 block text-[10px] text-[#aaa]">{payout.method || "—"}</strong>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
+            <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">Settlement</span>
+            <strong className="mt-1 block font-mono text-[10px] text-[#aaa]">
+              {payout.settlementAmount == null
+                ? "Provider pending"
+                : payout.settlementCurrency === "INR"
+                  ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number(payout.settlementAmount))
+                  : `${number(payout.settlementAmount).toLocaleString("en-US")} ${payout.settlementCurrency || ""}`}
+            </strong>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
+            <span className="text-[7px] font-semibold uppercase tracking-[0.1em] text-[#555]">Reference</span>
+            <strong className="mt-1 block truncate font-mono text-[9px] text-[#aaa]">{reference || "Appears after transfer"}</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PayoutHistory({ items }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0A0A0A]">
@@ -534,6 +620,8 @@ export default function PayoutCenter({ account }) {
       )}
 
       <Journey overview={overview} />
+
+      {activePayout && <ActivePayoutTracker payout={activePayout} />}
 
       <section className="rounded-2xl border border-white/[0.08] bg-[#0A0A0A] p-5 sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
