@@ -1608,6 +1608,11 @@ export default function AdminDashboard() {
               <section className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">{payout.providerLastError.code || "Provider execution needs attention"}</p>
                 <p className="mt-2 text-xs leading-5 text-zinc-300">{payout.providerLastError.message || "The provider operation needs to be retried."}</p>
+                {(payout.providerLastError.minimum != null || payout.providerLastError.maximum != null) && (
+                  <p className="mt-2 font-mono text-[10px] text-zinc-500">
+                    Provider range · {payout.providerLastError.minimum ?? "—"} – {payout.providerLastError.maximum ?? "—"}
+                  </p>
+                )}
               </section>
             )}
 
