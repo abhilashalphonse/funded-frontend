@@ -126,7 +126,7 @@ const statusTone = status => {
   const s = String(status || "").toUpperCase();
   if (["PAID", "ACTIVE", "FUNDED", "PASSED", "HEALTHY", "CONFIGURED", "READY", "OPEN"].includes(s)) return "text-emerald-300 bg-emerald-400/10 border-emerald-400/20";
   if (["FAILED", "REJECTED", "CANCELLED", "BREACHED", "BLOCKED", "CLOSED", "NOT_CONFIGURED"].includes(s)) return "text-red-300 bg-red-400/10 border-red-400/20";
-  if (["PENDING", "WAITING", "CONFIRMING", "REQUESTED", "REVIEWING", "APPROVED", "PROCESSING", "SENT", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT", "NOT_INTEGRATED"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
+  if (["PENDING", "WAITING", "CONFIRMING", "REQUESTED", "REVIEWING", "APPROVED", "PROCESSING", "SENT", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT", "NOT_INTEGRATED", "NOT_READY", "FEE_GROSS_UP_REQUIRED"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
   return "text-zinc-300 bg-white/5 border-white/10";
 };
 
@@ -1074,7 +1074,7 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-white">Payout execution</h3>
-              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-500">Customer payout requests and admin review are live in the feature branch. Money movement remains manual until an exact payout-provider adapter is configured.</p>
+              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-500">ACG pays payout-provider fees. Customer requests and admin review are ready; automated Sunpay execution stays closed until Sunpay can guarantee the trader receives the full quoted amount after provider fees.</p>
             </div>
             <Badge>{data?.capabilities?.payoutAutomation ? "AUTOMATED" : "MANUAL"}</Badge>
           </div>
@@ -1092,9 +1092,13 @@ export default function AdminDashboard() {
                 </div>
                 <p className="mt-3 text-[10px] leading-4 text-zinc-500">
                   {provider.automatic
-                    ? provider.configured
-                      ? "Provider can execute payout operations automatically."
-                      : "Automatic adapter is not connected."
+                    ? !provider.configured
+                      ? "Automatic adapter credentials are not connected."
+                      : provider.automaticReady
+                        ? "Provider can execute payout operations automatically."
+                        : provider.status === "FEE_GROSS_UP_REQUIRED"
+                          ? "Credentials are connected. Automation is intentionally blocked because ACG covers the fee and Sunpay does not expose a pre-submit gross-up mechanism in the supplied API."
+                          : "Provider is connected but not ready for automatic payout execution."
                     : "Operator completes the transfer externally and records the reference here."}
                 </p>
               </div>
@@ -1565,7 +1569,8 @@ export default function AdminDashboard() {
                   ["Previously paid", money(payout?.snapshot?.previouslyPaidUsd)],
                   ["Reserved before request", money(payout?.snapshot?.previouslyReservedUsd)],
                   ["Available at request", money(payout?.snapshot?.availableBeforeRequestUsd)],
-                  ["Settlement", payout?.settlementAmount == null ? "Provider pending" : money(payout.settlementAmount, payout.settlementCurrency || "USD")],
+                  ["Fee policy", payout?.feePolicy === "ACG_COVERS" ? "Paid by ACG" : humanize(payout?.feePolicy)],
+                  ["Trader settlement", payout?.settlementAmount == null ? "Provider pending" : money(payout.settlementAmount, payout.settlementCurrency || "USD")],
                   ["FX rate", payout?.fxRate ? String(payout.fxRate) : "—"],
                   ["Cycle", payout?.cycle?.frequency || "—"],
                 ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 text-xs text-zinc-200">{value}</p></div>)}
@@ -1582,8 +1587,8 @@ export default function AdminDashboard() {
                   ["UTR", payout?.utr],
                   ["Transaction hash", payout?.txHash],
                   ["Network", payout?.network],
-                  ["Provider fee", payout?.providerFee == null ? null : money(payout.providerFee, payout.settlementCurrency || "INR")],
-                  ["Provider net amount", payout?.providerNetAmount == null ? null : money(payout.providerNetAmount, payout.settlementCurrency || "INR")],
+                  ["Provider fee · ACG cost", payout?.providerFee == null ? null : money(payout.providerFee, payout.settlementCurrency || "INR")],
+                  ["Provider net reported", payout?.providerNetAmount == null ? null : money(payout.providerNetAmount, payout.settlementCurrency || "INR")],
                   ["Last status check", payout?.providerStatusCheckedAt ? dateTime(payout.providerStatusCheckedAt) : null],
                   ["Webhook received", payout?.providerWebhookAt ? dateTime(payout.providerWebhookAt) : null],
                   ["Quote status", payout?.quoteStatus],
@@ -1650,7 +1655,7 @@ export default function AdminDashboard() {
                   </button>
                 ))}
 
-                {payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
+                {data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
                   <button
                     type="button"
                     onClick={() => setPayoutAction({ value: "RETRY_EXECUTION", label: "Retry automatic transfer", tone: "positive", id: payout.payoutId })}
@@ -1672,7 +1677,7 @@ export default function AdminDashboard() {
               </div>
 
               {!actions.length && !(
-                (payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError)
+                (data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError)
                 || (["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay")
               ) && (
                 <p className="mt-4 text-xs text-zinc-600">This payout is in a terminal state.</p>
