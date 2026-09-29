@@ -715,7 +715,7 @@ export default function PayoutCenter({ account }) {
         <PayoutCertificateModal payout={certificate} onClose={() => setCertificate(null)} />
       )}
 
-      {requestOpen && overview?.eligibility?.canRequest && (
+      {requestOpen && overview && (
         <PayoutRequestModal
           accountId={account.accountId}
           overview={overview}
