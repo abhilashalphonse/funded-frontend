@@ -7,7 +7,7 @@ import {
   Clock3,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
+  Lock,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -65,9 +65,7 @@ function localPreview(account) {
   const isMaster = status === "FUNDED";
   const configuredSplit = Number(account.commercialTerms?.profitSplit);
   const hasConfiguredSplit = Number.isFinite(configuredSplit) && configuredSplit > 0;
-  const split = hasConfiguredSplit ? configuredSplit : isTrial ? 80 : null;
-  const profit = Math.max(0, number(account.projections?.profit));
-  const share = split != null ? profit * split / 100 : null;
+  const split = hasConfiguredSplit ? configuredSplit : null;
 
   return {
     accountId: account.accountId,
@@ -76,18 +74,18 @@ function localPreview(account) {
     mode: isTrial ? "PREVIEW" : isMaster ? "REAL" : "JOURNEY",
     commercialTerms: {
       profitSplitPercent: split,
-      profitSplitSource: hasConfiguredSplit ? "ACCOUNT_TERMS" : isTrial ? "ILLUSTRATIVE_DEFAULT" : null,
+      profitSplitSource: hasConfiguredSplit ? "ACCOUNT_TERMS" : null,
       payoutFrequency: account.commercialTerms?.payoutFrequency || null,
     },
     performance: {
-      realizedProfitUsd: profit,
-      estimatedTraderShareUsd: share,
-      source: "LOCAL_PREVIEW",
+      realizedProfitUsd: null,
+      estimatedTraderShareUsd: null,
+      source: "LOCAL_FALLBACK",
     },
     ledger: {
       lifetimePaidUsd: 0,
       activeReservedUsd: 0,
-      availableUsd: isMaster ? null : 0,
+      availableUsd: null,
       payoutCount: 0,
       largestPayoutUsd: 0,
       activePayout: null,
@@ -175,8 +173,8 @@ function usePayoutData(account) {
         if (loadError?.name === "AbortError") return;
         if (!cancelled) {
           setError(loadError?.message || "Unable to load payout information.");
-          // Trial/Challenge previews remain useful if the read-only payout API is
-          // temporarily unavailable. Master money stays locked behind backend data.
+          // Keep the screen usable without inventing payout balances. Real Master
+          // money stays locked behind authoritative backend payout data.
           setOverview(current => current || localPreview(account));
         }
       } finally {
@@ -241,21 +239,19 @@ function stageCopy(overview) {
 
   if (overview.mode === "PREVIEW") {
     return {
-      eyebrow: "Payout Preview",
-      title: "See what this performance could become",
-      description: overview.commercialTerms?.profitSplitSource === "ILLUSTRATIVE_DEFAULT"
-        ? "Trial profit is simulated and not withdrawable. This preview uses an illustrative 80% profit split to show what the same realized performance could look like on a Master Account."
-        : "Trial profit is simulated and not withdrawable. This preview shows what the same realized performance could look like on a Master Account using the selected profit split.",
+      eyebrow: "Payouts",
+      title: "Payouts begin on a Master Account",
+      description: "Free Trial results are simulated and are not payout balances.",
     };
   }
 
   if (overview.mode === "JOURNEY") {
     return {
-      eyebrow: overview.accountStage === "MASTER_REVIEW" ? "Almost at Master" : "Payout Journey",
+      eyebrow: "Payouts",
       title: overview.accountStage === "MASTER_REVIEW"
-        ? "Your challenge is complete. Master comes next."
-        : "Build the performance that leads to a payout",
-      description: "Challenge profits are evaluation results, not withdrawable funds. Your selected payout terms become active after Master Account activation.",
+        ? "Master Account activation is next"
+        : "Complete your evaluation to unlock payouts",
+      description: "Evaluation results are not payout balances. Payout tracking starts only after Master Account activation.",
     };
   }
 
@@ -388,6 +384,83 @@ function Journey({ overview }) {
         })}
       </div>
     </section>
+  );
+}
+
+function LockedPayoutState({ overview, account }) {
+  const stage = overview?.accountStage || (account?.accountMode === "DEMO" ? "TRIAL" : "CHALLENGE");
+  const configuredSplit = Number(overview?.commercialTerms?.profitSplitPercent ?? account?.commercialTerms?.profitSplit);
+  const split = Number.isFinite(configuredSplit) && configuredSplit > 0 ? configuredSplit : null;
+  const payoutFrequency = overview?.commercialTerms?.payoutFrequency || account?.commercialTerms?.payoutFrequency || null;
+  const methods = overview?.methods || localPreview(account)?.methods || [];
+
+  const copy = stage === "TRIAL"
+    ? {
+        eyebrow: "Free Trial",
+        title: "Payouts begin on a Master Account",
+        description: "Your Free Trial is for testing the ACG experience. Trial results are simulated and are never presented as withdrawable money.",
+      }
+    : stage === "MASTER_REVIEW"
+      ? {
+          eyebrow: "Evaluation complete",
+          title: "Master Account activation is next",
+          description: "Your evaluation is complete. Payout balances and eligibility will appear here after your Master Account is activated.",
+        }
+      : {
+          eyebrow: "Evaluation",
+          title: "Complete your evaluation to unlock payouts",
+          description: "Challenge performance determines your progression to Master. Evaluation P&L is not shown as a payout balance.",
+        };
+
+  return (
+    <div className="space-y-5 pb-6 animate-fade-in">
+      <section className="relative overflow-hidden rounded-2xl border border-white/[0.09] bg-[#080808]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/[0.18]" />
+        <div className="p-5 sm:p-7">
+          <div className="grid size-10 place-items-center rounded-xl border border-white/[0.1] bg-white/[0.03] text-[#a0a0a0]">
+            <Lock size={16} />
+          </div>
+          <span className="mt-5 block text-[8px] font-semibold uppercase tracking-[0.14em] text-[#666]">{copy.eyebrow}</span>
+          <h2 className="mt-2 max-w-2xl text-[clamp(1.45rem,4vw,2.35rem)] font-semibold leading-[1.05] tracking-[-0.045em] text-white">
+            {copy.title}
+          </h2>
+          <p className="mt-3 max-w-2xl text-[11px] leading-5 text-[#777]">{copy.description}</p>
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1.5 text-[9px] text-[#777]">
+            <ShieldCheck size={11} />
+            Balances appear only from verified Master Account payout data
+          </div>
+        </div>
+      </section>
+
+      <Journey overview={overview} />
+
+      <section className="rounded-2xl border border-white/[0.08] bg-[#0A0A0A] p-5 sm:p-6">
+        <div>
+          <h3 className="text-[12px] font-semibold text-white">Your payout terms</h3>
+          <p className="mt-1 text-[10px] text-[#666]">Only terms attached to this account are shown. No hypothetical payout amount is calculated.</p>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-white/[0.07] bg-black/25 p-4">
+            <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[#555]">Profit split</span>
+            <strong className="mt-2 block font-mono text-[15px] font-semibold text-white">{split == null ? "Not set" : `${split}%`}</strong>
+          </div>
+          <div className="rounded-xl border border-white/[0.07] bg-black/25 p-4">
+            <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[#555]">Payout schedule</span>
+            <strong className="mt-2 block text-[13px] font-semibold text-white">{payoutFrequency || "Not set"}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-[#0A0A0A] p-5 sm:p-6">
+        <div>
+          <h3 className="text-[12px] font-semibold text-white">Payout methods</h3>
+          <p className="mt-1 text-[10px] text-[#666]">Shown for reference. A method becomes actionable only when an eligible Master payout is available.</p>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {methods.map(method => <MethodCard key={method.id} method={method} />)}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -535,22 +608,19 @@ export default function PayoutCenter({ account }) {
   const { overview, history, loading, error, retry } = usePayoutData(account);
   const [requestOpen, setRequestOpen] = useState(false);
   const [certificate, setCertificate] = useState(null);
-  const copy = stageCopy(overview);
-  const isPreview = overview?.mode === "PREVIEW";
-  const isJourney = overview?.mode === "JOURNEY";
   const isReal = overview?.mode === "REAL";
   const split = overview?.commercialTerms?.profitSplitPercent;
   const realized = overview?.performance?.realizedProfitUsd;
-  const estimatedShare = overview?.performance?.estimatedTraderShareUsd;
   const available = overview?.ledger?.availableUsd;
   const activePayout = overview?.ledger?.activePayout;
   const blockers = overview?.eligibility?.blockers || [];
+  const hasCompletedPayout = number(overview?.ledger?.payoutCount) > 0
+    || history.some(item => String(item.status || "").toUpperCase() === "PAID");
 
   const heroAmount = useMemo(() => {
-    if (!overview) return "—";
-    if (isReal) return available == null ? "—" : usd(available);
-    return estimatedShare == null ? "—" : usd(estimatedShare);
-  }, [available, estimatedShare, isReal, overview]);
+    if (!overview || !isReal || available == null) return "—";
+    return usd(available);
+  }, [available, isReal, overview]);
 
   if (!account) {
     return (
@@ -558,11 +628,17 @@ export default function PayoutCenter({ account }) {
         <div className="max-w-sm">
           <Wallet size={20} className="mx-auto text-[#555]" />
           <h2 className="mt-4 text-[14px] font-semibold text-white">Choose a trading account</h2>
-          <p className="mt-2 text-[10px] leading-5 text-[#666]">Your payout preview and payout history are account-specific.</p>
+          <p className="mt-2 text-[10px] leading-5 text-[#666]">Payout information is account-specific.</p>
         </div>
       </section>
     );
   }
+
+  if (!isReal) {
+    return <LockedPayoutState overview={overview} account={account} />;
+  }
+
+  const copy = stageCopy(overview);
 
   return (
     <div className="space-y-5 pb-6 animate-fade-in">
@@ -584,7 +660,7 @@ export default function PayoutCenter({ account }) {
         <div className="grid lg:grid-cols-[1.3fr_.7fr]">
           <div className="p-5 sm:p-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.025] px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#8a8a8a]">
-              {isPreview ? <Sparkles size={10} /> : isReal ? <ShieldCheck size={10} /> : <ArrowRight size={10} />}
+              <ShieldCheck size={10} />
               {copy.eyebrow}
             </div>
 
@@ -595,17 +671,15 @@ export default function PayoutCenter({ account }) {
 
             <div className="mt-7">
               <span className="block text-[8px] font-semibold uppercase tracking-[0.14em] text-[#555]">
-                {isReal ? "Available payout" : "Estimated trader share"}
+                Available payout
               </span>
               <strong className={`mt-2 block font-mono text-[clamp(2rem,7vw,4rem)] font-semibold leading-none tracking-[-0.055em] ${
-                isReal && number(available) > 0 ? "text-white" : "text-[#f1f1f1]"
+                number(available) > 0 ? "text-white" : "text-[#f1f1f1]"
               }`}>
                 {heroAmount}
               </strong>
               <p className="mt-3 text-[9px] text-[#666]">
-                {isPreview && "Hypothetical only · Trial profits cannot be withdrawn."}
-                {isJourney && "Illustrative only · Evaluation profits cannot be withdrawn."}
-                {isReal && (loading ? "Checking your live payout ledger…" : "Calculated from realized Master Account profit and your selected profit split.")}
+                {loading ? "Checking your live payout ledger…" : "Calculated from realized Master Account profit and your selected profit split."}
               </p>
             </div>
 
@@ -637,20 +711,20 @@ export default function PayoutCenter({ account }) {
             <div className="grid grid-cols-2 divide-x divide-y divide-white/[0.06] lg:grid-cols-1 lg:divide-x-0">
               <HeroStat label="Realized profit" value={realized == null ? "—" : signedUsd(realized)} />
               <HeroStat
-                label={isPreview && overview?.commercialTerms?.profitSplitSource === "ILLUSTRATIVE_DEFAULT" ? "Preview profit split" : "Your profit split"}
-                value={split == null ? "—" : `${split}%${isPreview && overview?.commercialTerms?.profitSplitSource === "ILLUSTRATIVE_DEFAULT" ? " example" : ""}`}
+                label="Your profit split"
+                value={split == null ? "—" : `${split}%`}
               />
               <HeroStat label="Payout schedule" value={overview?.commercialTerms?.payoutFrequency || "—"} />
               <HeroStat
-                label={isReal ? "Next eligible" : "Master payout"}
-                value={isReal ? dateLabel(overview?.cycle?.nextEligibleAt) : "After activation"}
+                label="Next eligible"
+                value={dateLabel(overview?.cycle?.nextEligibleAt)}
               />
             </div>
           </div>
         </div>
       </section>
 
-      {isReal && (
+      {hasCompletedPayout && (
         <section className="grid gap-3 sm:grid-cols-3">
           <LedgerCard label="Lifetime paid" value={usd(overview?.ledger?.lifetimePaidUsd)} helper={`${overview?.ledger?.payoutCount || 0} completed payout${overview?.ledger?.payoutCount === 1 ? "" : "s"}`} />
           <LedgerCard label="Largest payout" value={usd(overview?.ledger?.largestPayoutUsd)} helper="Your best completed payout" />
@@ -669,12 +743,11 @@ export default function PayoutCenter({ account }) {
       <section className="rounded-2xl border border-white/[0.08] bg-[#0A0A0A] p-5 sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="text-[12px] font-semibold text-white">{isReal ? "Receive your payout" : "How ACG pays traders"}</h3>
+            <h3 className="text-[12px] font-semibold text-white">Receive your payout</h3>
             <p className="mt-1 text-[10px] text-[#666]">
-              {isReal ? "Your trader payout amount is shown before you confirm. ACG covers payout-provider fees." : "These methods become available once you reach an eligible Master Account payout."}
+              Your trader payout amount is shown before you confirm. ACG covers payout-provider fees.
             </p>
           </div>
-          {isPreview && <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[#555]">Preview only</span>}
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -721,15 +794,13 @@ export default function PayoutCenter({ account }) {
             <SnapshotRow label="Account" value={overview?.accountId || account.accountId || "—"} />
             <SnapshotRow label="Account stage" value={String(overview?.accountStage || "—").replaceAll("_", " ")} />
             <SnapshotRow label="Realized profit" value={realized == null ? "—" : signedUsd(realized)} />
-            <SnapshotRow label={isReal ? "Available now" : "Estimated share"} value={isReal ? (available == null ? "—" : usd(available)) : (estimatedShare == null ? "—" : usd(estimatedShare))} />
+            <SnapshotRow label="Available now" value={available == null ? "—" : usd(available)} />
             <SnapshotRow label="Payout cycle" value={overview?.commercialTerms?.payoutFrequency || "—"} />
             <SnapshotRow label="Provider fees" value={overview?.fees?.traderPaysProviderFee === false ? "Paid by ACG" : "—"} />
           </div>
 
           <p className="mt-4 border-t border-white/[0.06] pt-4 text-[9px] leading-4 text-[#555]">
-            {isReal
-              ? "Real payout availability comes from ACG Funded's payout ledger and Master Account state. Floating P&L is not treated as withdrawable profit. Payout-provider fees are paid by ACG."
-              : "Preview values are educational projections only. Trial and Challenge account profits are not payable."}
+            Real payout availability comes from ACG Funded's payout ledger and Master Account state. Floating P&L is not treated as withdrawable profit. Payout-provider fees are paid by ACG.
           </p>
         </section>
       </div>
