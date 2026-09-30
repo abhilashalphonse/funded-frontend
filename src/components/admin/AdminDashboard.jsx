@@ -91,6 +91,7 @@ const PAGE_STATUS_OPTIONS = {
   funded: ["FUNDED_REVIEW", "FUNDED"],
   orders: ["CREATED", "WAITING", "CONFIRMING", "PAID", "FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"],
   payments: ["CREATED", "WAITING", "CONFIRMING", "PAID", "FAILED", "EXPIRED", "UNDERPAID", "REFUNDED"],
+  payouts: ["REQUESTED", "REVIEWING", "APPROVED", "PROCESSING", "SENT", "PAID", "FAILED", "REJECTED", "CANCELLED"],
   support: ["OPEN", "ESCALATED", "CLOSED"],
 };
 
@@ -124,8 +125,8 @@ const lossLimitAmount = (account, rulePercent) => lossBase(account) * Number(rul
 const statusTone = status => {
   const s = String(status || "").toUpperCase();
   if (["PAID", "ACTIVE", "FUNDED", "PASSED", "HEALTHY", "CONFIGURED", "READY", "OPEN"].includes(s)) return "text-emerald-300 bg-emerald-400/10 border-emerald-400/20";
-  if (["FAILED", "BREACHED", "BLOCKED", "CLOSED", "NOT_CONFIGURED"].includes(s)) return "text-red-300 bg-red-400/10 border-red-400/20";
-  if (["PENDING", "WAITING", "CONFIRMING", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT", "NOT_INTEGRATED"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
+  if (["FAILED", "REJECTED", "CANCELLED", "BREACHED", "BLOCKED", "CLOSED", "NOT_CONFIGURED"].includes(s)) return "text-red-300 bg-red-400/10 border-red-400/20";
+  if (["PENDING", "WAITING", "CONFIRMING", "REQUESTED", "REVIEWING", "APPROVED", "PROCESSING", "SENT", "PHASE_2", "FUNDED_REVIEW", "ESCALATED", "LOCKED", "DEVELOPMENT", "NOT_INTEGRATED", "NOT_READY", "FEE_GROSS_UP_REQUIRED"].includes(s)) return "text-amber-300 bg-amber-400/10 border-amber-400/20";
   return "text-zinc-300 bg-white/5 border-white/10";
 };
 
@@ -167,7 +168,7 @@ function DataTable({ columns, rows, onRow, empty = "No records found." }) {
           </thead>
           <tbody className="divide-y divide-white/[0.05]">
             {rows.map((row, index) => (
-              <tr key={row._id || row.customerId || row.accountId || row.orderId || row.conversationId || index}
+              <tr key={row._id || row.payoutId || row.customerId || row.accountId || row.orderId || row.conversationId || index}
                 onClick={() => onRow?.(row)}
                 className={onRow ? "cursor-pointer transition hover:bg-white/[0.035]" : ""}>
                 {columns.map(col => <td key={col.key} className="whitespace-nowrap px-4 py-3 text-zinc-300">{col.render ? col.render(row) : row[col.key] ?? "—"}</td>)}
@@ -245,6 +246,211 @@ function ConfirmModal({ action, entity, onClose, onConfirm, busy }) {
   );
 }
 
+
+function payoutActionsFor(status) {
+  const value = String(status || "").toUpperCase();
+  if (value === "REQUESTED") return [
+    { value: "START_REVIEW", label: "Start review", tone: "neutral" },
+    { value: "APPROVE", label: "Approve", tone: "positive" },
+    { value: "REJECT", label: "Reject", tone: "negative" },
+    { value: "CANCEL", label: "Cancel", tone: "negative" },
+  ];
+  if (value === "REVIEWING") return [
+    { value: "APPROVE", label: "Approve", tone: "positive" },
+    { value: "REJECT", label: "Reject", tone: "negative" },
+    { value: "CANCEL", label: "Cancel", tone: "negative" },
+  ];
+  if (value === "APPROVED") return [
+    { value: "MARK_PROCESSING", label: "Mark processing", tone: "positive" },
+    { value: "FAIL", label: "Mark failed", tone: "negative" },
+  ];
+  if (value === "PROCESSING") return [
+    { value: "MARK_SENT", label: "Mark sent", tone: "positive" },
+    { value: "FAIL", label: "Mark failed", tone: "negative" },
+  ];
+  if (value === "SENT") return [
+    { value: "MARK_PAID", label: "Mark paid", tone: "positive" },
+    { value: "FAIL", label: "Mark failed", tone: "negative" },
+  ];
+  return [];
+}
+
+function PayoutActionModal({ action, payout, onClose, onConfirm, busy }) {
+  const [reason, setReason] = useState("");
+  const [provider, setProvider] = useState(payout?.provider || "");
+  const [providerReference, setProviderReference] = useState(payout?.providerReference || "");
+  const [utr, setUtr] = useState(payout?.utr || "");
+  const [txHash, setTxHash] = useState(payout?.txHash || "");
+  const [network, setNetwork] = useState(payout?.network || payout?.destination?.network || "TRC20");
+  const [settlementAmount, setSettlementAmount] = useState(payout?.settlementAmount ?? "");
+  const [traderReceivedAmount, setTraderReceivedAmount] = useState("");
+  const [providerFeePaidByAcg, setProviderFeePaidByAcg] = useState(
+    payout?.providerFeePaidByAcg ?? payout?.providerFee ?? ""
+  );
+  const method = String(payout?.method || "").toUpperCase();
+  const needsTransferReference = action?.value === "MARK_SENT" && ["UPI", "BANK"].includes(method);
+  const needsTxHash = action?.value === "MARK_SENT" && method === "USDT";
+  const needsPaidAccounting = action?.value === "MARK_PAID";
+  const expectedSettlement = Number(payout?.settlementAmount);
+  const receivedAmount = Number(traderReceivedAmount);
+  const acgFeeAmount = Number(providerFeePaidByAcg);
+  const exactReceiptConfirmed = !needsPaidAccounting || (
+    Number.isFinite(expectedSettlement)
+    && Number.isFinite(receivedAmount)
+    && Number.isFinite(acgFeeAmount)
+    && receivedAmount > 0
+    && acgFeeAmount >= 0
+    && Math.round(receivedAmount * 100) === Math.round(expectedSettlement * 100)
+  );
+  const canSubmit = reason.trim()
+    && (!needsTransferReference || providerReference.trim() || utr.trim())
+    && (!needsTxHash || txHash.trim())
+    && exactReceiptConfirmed;
+
+  const inputClass = "mt-1.5 h-10 w-full rounded-lg border border-white/10 bg-black px-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/25";
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/75 px-4 backdrop-blur-sm" onMouseDown={onClose}>
+      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#111] p-5" onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-white">{action.label}</h3>
+            <p className="mt-1 font-mono text-[10px] text-zinc-500">{payout?.payoutId}</p>
+          </div>
+          <Badge>{payout?.status}</Badge>
+        </div>
+
+        {(action.value === "MARK_PROCESSING" || action.value === "MARK_SENT") && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Provider</span>
+              <input value={provider} onChange={e => setProvider(e.target.value)} className={inputClass} placeholder="Provider name" />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Settlement amount</span>
+              <input value={settlementAmount} onChange={e => setSettlementAmount(e.target.value)} inputMode="decimal" className={inputClass} placeholder="Optional" />
+            </label>
+          </div>
+        )}
+
+        {action.value === "MARK_SENT" && method !== "USDT" && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Provider reference</span>
+              <input value={providerReference} onChange={e => setProviderReference(e.target.value)} className={inputClass} placeholder="Transfer reference" />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">UTR</span>
+              <input value={utr} onChange={e => setUtr(e.target.value)} className={inputClass} placeholder="UTR / bank reference" />
+            </label>
+          </div>
+        )}
+
+        {action.value === "MARK_SENT" && method === "USDT" && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Network</span>
+              <input value={network} onChange={e => setNetwork(e.target.value.toUpperCase())} className={inputClass} placeholder="TRC20" />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-medium text-zinc-500">Transaction hash</span>
+              <input value={txHash} onChange={e => setTxHash(e.target.value)} className={inputClass} placeholder="Required before SENT" />
+            </label>
+          </div>
+        )}
+
+        {needsPaidAccounting && (
+          <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/25 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold text-white">Exact receipt verification</p>
+                <p className="mt-1 text-[10px] leading-4 text-zinc-500">ACG covers provider fees. Confirm the trader received the full quoted settlement before marking this payout paid.</p>
+              </div>
+              <Badge>ACG COVERS</Badge>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-[10px] font-medium text-zinc-500">Quoted trader amount</span>
+                <input
+                  value={Number.isFinite(expectedSettlement) ? expectedSettlement : ""}
+                  readOnly
+                  className={inputClass + " cursor-not-allowed text-zinc-500"}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-medium text-zinc-500">Trader actually received</span>
+                <input
+                  value={traderReceivedAmount}
+                  onChange={e => setTraderReceivedAmount(e.target.value)}
+                  inputMode="decimal"
+                  className={inputClass}
+                  placeholder={Number.isFinite(expectedSettlement) ? String(expectedSettlement) : "Required"}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-[10px] font-medium text-zinc-500">Provider fee paid by ACG</span>
+                <input
+                  value={providerFeePaidByAcg}
+                  onChange={e => setProviderFeePaidByAcg(e.target.value)}
+                  inputMode="decimal"
+                  className={inputClass}
+                  placeholder="Enter 0 if there was no provider fee"
+                />
+              </label>
+            </div>
+
+            {traderReceivedAmount && !exactReceiptConfirmed && (
+              <p className="mt-3 text-[10px] text-amber-300">
+                The received amount must exactly equal the quoted trader amount. Do not mark this payout paid until any shortfall has been topped up.
+              </p>
+            )}
+
+            {exactReceiptConfirmed && needsPaidAccounting && (
+              <p className="mt-3 text-[10px] text-zinc-500">
+                ACG total payout cost · {money(receivedAmount + acgFeeAmount, payout?.settlementCurrency || "INR")}
+              </p>
+            )}
+          </div>
+        )}
+
+        <label className="mt-4 block">
+          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-500">Reason</span>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            rows={4}
+            className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-white/25"
+            placeholder="Required for the audit log"
+          />
+        </label>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} disabled={busy} className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-40">Cancel</button>
+          <button
+            disabled={!canSubmit || busy}
+            onClick={() => onConfirm({
+              reason,
+              provider: provider.trim() || undefined,
+              providerReference: providerReference.trim() || undefined,
+              utr: utr.trim() || undefined,
+              txHash: txHash.trim() || undefined,
+              network: network.trim() || undefined,
+              settlementAmount: settlementAmount === "" ? undefined : Number(settlementAmount),
+              settlementCurrency: payout?.settlementCurrency || undefined,
+              traderReceivedAmount: needsPaidAccounting ? Number(traderReceivedAmount) : undefined,
+              providerFeePaidByAcg: needsPaidAccounting ? Number(providerFeePaidByAcg) : undefined,
+            })}
+            className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black disabled:opacity-40"
+          >
+            {busy ? "Applying…" : action.label}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user, getAccessToken, signOut } = useAuth();
   const initialPage = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("page") || "overview" : "overview";
@@ -266,6 +472,8 @@ export default function AdminDashboard() {
   const [actionBusy, setActionBusy] = useState(false);
   const [supportReply, setSupportReply] = useState("");
   const [supportBusy, setSupportBusy] = useState(false);
+  const [payoutAction, setPayoutAction] = useState(null);
+  const [payoutBusy, setPayoutBusy] = useState(false);
 
   const adminFetch = useCallback(async (path, options = {}) => {
     const token = await getAccessToken();
@@ -304,6 +512,7 @@ export default function AdminDashboard() {
           : s;
       return `/${page}?limit=100${p}${q}${attention}`;
     }
+    if (page === "payouts") return `/payouts?limit=100${p}${q}${s}`;
     if (page === "trades") return "/trades?limit=200";
     if (page === "risk" || page === "breaches") return "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
@@ -314,7 +523,7 @@ export default function AdminDashboard() {
     if (page === "launch-readiness") return "/launch-readiness?limit=20";
     if (page === "audit") return `/audit?limit=100${p}`;
     if (page === "admins") return "/admin-users";
-    if (["jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
+    if (["jobs", "integrations", "errors", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
     return "/overview";
   }, [page, search, status, days, listPage, queue]);
 
@@ -417,6 +626,7 @@ export default function AdminDashboard() {
       if (page === "users") setSelectedDetail(await adminFetch(`/users/${encodeURIComponent(row.customerId)}`));
       if (["challenges", "trials", "funded", "breaches"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
       if (page === "orders" || page === "payments") setSelectedDetail({ payment: row });
+      if (page === "payouts") setSelectedDetail(await adminFetch(`/payouts/${encodeURIComponent(row.payoutId)}`));
       if (page === "trades" && row.account?.externalRef) {
         const detail = await adminFetch(`/challenges/${encodeURIComponent(row.account.externalRef)}`);
         setSelected({
@@ -462,7 +672,39 @@ export default function AdminDashboard() {
 
   const rows = data?.rows || [];
 
-  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "launch-readiness", "jobs", "integrations", "errors", "payouts", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
+  const performPayoutAction = async input => {
+    if (!payoutAction?.id) return;
+    setPayoutBusy(true);
+    setError("");
+    try {
+      const payoutId = encodeURIComponent(payoutAction.id);
+      const path = payoutAction.value === "RETRY_EXECUTION"
+        ? `/payouts/${payoutId}/execute`
+        : payoutAction.value === "RECONCILE"
+          ? `/payouts/${payoutId}/reconcile`
+          : `/payouts/${payoutId}/action`;
+
+      const body = payoutAction.value === "RETRY_EXECUTION" || payoutAction.value === "RECONCILE"
+        ? { reason: input.reason }
+        : { action: payoutAction.value, ...input };
+
+      await adminFetch(path, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      const detail = await adminFetch(`/payouts/${payoutId}`);
+      setSelected(detail?.payout || selected);
+      setSelectedDetail(detail);
+      setPayoutAction(null);
+      await load();
+    } catch (err) {
+      setError(err?.message || "Unable to update payout.");
+    } finally {
+      setPayoutBusy(false);
+    }
+  };
+
+  const toolbar = !["overview", "risk", "breaches", "funnel", "revenue", "launch-readiness", "jobs", "integrations", "errors", "refunds", "products", "pricing", "platforms", "affiliates", "admins", "audit"].includes(page);
 
 
   const sendHumanSupportReply = async () => {
@@ -804,6 +1046,53 @@ export default function AdminDashboard() {
     return <div className="space-y-5"><div className="grid gap-3 sm:grid-cols-3"><Kpi label="Paid events" value={paid} /><Kpi label="Activated challenges" value={activated} /><Kpi label="Window" value={`${days} days`} /></div><Empty title="Revenue ledger analytics are not yet materialized" text="The current backend stores payment records and funnel events. Revenue-by-product, country, affiliate, refunds and chargebacks should be added after the payment ledger/refund workflow is implemented." /></div>;
   };
 
+  const renderPayouts = () => {
+    const requested = rows.filter(row => row.status === "REQUESTED").length;
+    const reviewing = rows.filter(row => ["REVIEWING", "APPROVED"].includes(row.status)).length;
+    const processing = rows.filter(row => ["PROCESSING", "SENT"].includes(row.status)).length;
+    const paidRows = rows.filter(row => row.status === "PAID");
+    const paid = paidRows.reduce((sum, row) => sum + Number(row.requestedAmountUsd || 0), 0);
+    const acgFeesInr = paidRows
+      .filter(row => String(row.accountingCurrency || row.settlementCurrency || "").toUpperCase() === "INR")
+      .reduce((sum, row) => sum + Number(row.providerFeePaidByAcg || 0), 0);
+    const exactReceiptCount = paidRows.filter(row =>
+      row.traderReceivedAmount != null
+      && row.settlementAmount != null
+      && Math.round(Number(row.traderReceivedAmount) * 100) === Math.round(Number(row.settlementAmount) * 100)
+    ).length;
+
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <Kpi label="Requested" value={requested} detail="Awaiting payout review" />
+          <Kpi label="Review / Approved" value={reviewing} detail="Operator attention" />
+          <Kpi label="Processing / Sent" value={processing} detail="Money moving" />
+          <Kpi label="Paid to traders" value={money(paid)} detail="Completed payout value" />
+          <Kpi label="ACG payout fees · INR" value={money(acgFeesInr, "INR")} detail={`${exactReceiptCount}/${paidRows.length} exact receipts verified`} />
+        </div>
+
+        <DataTable
+          rows={rows}
+          onRow={openRow}
+          empty="No payout requests found."
+          columns={[
+            { key: "payoutId", label: "Payout" },
+            { key: "accountId", label: "Account" },
+            { key: "customerId", label: "Customer" },
+            { key: "requestedAmountUsd", label: "Amount", render: row => money(row.requestedAmountUsd) },
+            { key: "method", label: "Method", render: row => row.method || "—" },
+            { key: "destination", label: "Destination", render: row => row.destination?.destination || "—" },
+            { key: "settlement", label: "Trader Settlement", render: row => row.settlementAmount == null ? "Pending" : money(row.settlementAmount, row.settlementCurrency || "USD") },
+            { key: "acgCost", label: "ACG Cost", render: row => row.acgTotalCostAmount == null ? "—" : money(row.acgTotalCostAmount, row.accountingCurrency || row.settlementCurrency || "INR") },
+            { key: "status", label: "Status", render: row => <Badge>{row.status}</Badge> },
+            { key: "requestedAt", label: "Requested", render: row => dateTime(row.requestedAt) },
+          ]}
+        />
+        <Pagination pagination={data?.pagination} onPage={goToListPage} />
+      </div>
+    );
+  };
+
   const renderSupport = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
     { key: "conversationId", label: "Case" },
     { key: "channel", label: "Channel", render: r => <Badge>{r.channel || "WEB"}</Badge> },
@@ -865,6 +1154,55 @@ export default function AdminDashboard() {
         </section>
       )}
 
+      {page === "integrations" && (
+        <section className="rounded-xl border border-white/[0.07] bg-[#111] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Payout execution</h3>
+              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-500">ACG pays payout-provider fees. Customer requests and admin review are ready; automated Sunpay execution stays closed until Sunpay can guarantee the trader receives the full quoted amount after provider fees.</p>
+            </div>
+            <Badge>{data?.capabilities?.payoutAutomation ? "AUTOMATED" : "MANUAL"}</Badge>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {(data?.payoutProviders || []).map(provider => (
+              <div key={provider.id} className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-100">{provider.label}</p>
+                    <p className="mt-1 text-[10px] text-zinc-600">{(provider.methods || []).join(" · ") || "No methods"}</p>
+                    {provider.feePolicy && <p className="mt-1 text-[9px] uppercase tracking-wider text-zinc-700">Fee policy · {humanize(provider.feePolicy)}</p>}
+                  </div>
+                  <Badge>{provider.status}</Badge>
+                </div>
+                <p className="mt-3 text-[10px] leading-4 text-zinc-500">
+                  {provider.automatic
+                    ? !provider.configured
+                      ? "Automatic adapter credentials are not connected."
+                      : provider.automaticReady
+                        ? "Provider can execute payout operations automatically."
+                        : provider.status === "FEE_GROSS_UP_REQUIRED"
+                          ? "Credentials are connected. Automation is intentionally blocked because ACG covers the fee and Sunpay does not expose a pre-submit gross-up mechanism in the supplied API."
+                          : "Provider is connected but not ready for automatic payout execution."
+                    : "Operator completes the transfer externally and records the reference here."}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-black/20 px-3 py-3 text-[11px]">
+              <span className="text-zinc-500">Destination encryption</span>
+              <Badge>{data?.payoutSecurity?.destinationEncryption ? "READY" : "NOT CONFIGURED"}</Badge>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-black/20 px-3 py-3 text-[11px]">
+              <span className="text-zinc-500">Signed payout quotes</span>
+              <Badge>{data?.payoutSecurity?.signedQuotes ? "READY" : "NOT CONFIGURED"}</Badge>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div className="rounded-xl border border-white/[0.07] bg-[#111] p-5"><h3 className="text-sm font-semibold text-white">Runtime</h3><div className="mt-4 grid gap-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Environment</p><p className="mt-1 text-sm text-zinc-300">{data?.environment}</p></div><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Trading provider</p><p className="mt-1 text-sm text-zinc-300">{data?.tradingProvider}</p></div></div></div>
     </div>
   );
@@ -902,7 +1240,7 @@ export default function AdminDashboard() {
       { key: "current", label: "Current", render: r => r.current ? <Badge>ACTIVE</Badge> : "—" },
     ]} /><p className="text-xs text-zinc-600">{data?.note}</p></div>;
     if (page === "audit") return renderAudit();
-    if (page === "payouts") return unavailable("Payout workflow is not connected yet", "Funded-review accounts are visible, but the backend currently has no payout entity or payout processing lifecycle.", "payouts");
+    if (page === "payouts") return renderPayouts();
     if (page === "refunds") return unavailable("Refund workflow is not connected yet", "Payments can reach REFUNDED from the provider, but there is not yet a first-class admin refund request/approval workflow.", "refunds");
     if (page === "products") return unavailable("Challenge product admin is not connected yet", "Current challenge rules/pricing are code-driven. Product versioning should be introduced before making these editable.", "challengeProductAdmin");
     if (page === "pricing") return unavailable("Pricing admin is not connected yet", "Pricing is currently code-driven. Publishing mutable pricing without version snapshots would risk changing historical challenge terms.", "pricingAdmin");
@@ -1248,6 +1586,203 @@ export default function AdminDashboard() {
         </div>
       </Inspector>}
 
+      {selected && page === "payouts" && <Inspector
+        title={selectedDetail?.payout?.payoutId || selected.payoutId || "Payout"}
+        subtitle={selectedDetail?.payout ? `${selectedDetail.payout.accountId} · ${selectedDetail.payout.customerId}` : selected.accountId}
+        onClose={() => { setSelected(null); setSelectedDetail(null); setPayoutAction(null); }}
+      >
+        {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load payout" text={selectedDetail.error} /> : (() => {
+          const payout = selectedDetail.payout;
+          const destination = selectedDetail.destinationDetails;
+          const actions = payoutActionsFor(payout?.status);
+          const timeline = [
+            ["Requested", payout?.requestedAt],
+            ["Reviewing", payout?.reviewingAt],
+            ["Approved", payout?.approvedAt],
+            ["Processing", payout?.processingAt],
+            ["Sent", payout?.sentAt],
+            ["Paid", payout?.paidAt],
+          ].filter(([, value]) => value);
+
+          return <div className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Kpi label="Payout Amount" value={money(payout?.requestedAmountUsd)} />
+              <Kpi label="Method" value={payout?.method || "—"} />
+              <Kpi label="Status" value={humanize(payout?.status)} />
+            </div>
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-white">Payout destination</p>
+                  <p className="mt-1 text-[11px] text-zinc-500">Sensitive payout details · verify before approval.</p>
+                </div>
+                <Badge>{payout?.method}</Badge>
+              </div>
+
+              {selectedDetail.destinationError ? (
+                <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2 text-[11px] text-amber-200">
+                  {selectedDetail.destinationError.message}
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                  {payout?.method === "UPI" && <>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Beneficiary</p><p className="mt-1 text-xs text-zinc-200">{destination?.beneficiaryName || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">UPI ID</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{destination?.upiId || "—"}</p></div>
+                  </>}
+                  {payout?.method === "BANK" && <>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Beneficiary</p><p className="mt-1 text-xs text-zinc-200">{destination?.beneficiaryName || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Bank</p><p className="mt-1 text-xs text-zinc-200">{destination?.bankName || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Account number</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{destination?.accountNumber || "—"}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">IFSC</p><p className="mt-1 font-mono text-xs text-zinc-200">{destination?.ifsc || "—"}</p></div>
+                  </>}
+                  {payout?.method === "USDT" && <>
+                    <div><p className="text-[10px] uppercase tracking-wider text-zinc-600">Network</p><p className="mt-1 text-xs text-zinc-200">{destination?.network || payout?.network || "—"}</p></div>
+                    <div className="sm:col-span-2"><p className="text-[10px] uppercase tracking-wider text-zinc-600">Wallet address</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{destination?.walletAddress || "—"}</p></div>
+                  </>}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <p className="text-xs font-semibold text-white">Financial snapshot</p>
+              <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  ["Realized profit", money(payout?.snapshot?.realizedProfitUsd)],
+                  ["Profit split", payout?.snapshot?.profitSplitPercent != null ? `${payout.snapshot.profitSplitPercent}%` : "—"],
+                  ["Trader entitlement", money(payout?.snapshot?.entitlementUsd)],
+                  ["Previously paid", money(payout?.snapshot?.previouslyPaidUsd)],
+                  ["Reserved before request", money(payout?.snapshot?.previouslyReservedUsd)],
+                  ["Available at request", money(payout?.snapshot?.availableBeforeRequestUsd)],
+                  ["Fee policy", payout?.feePolicy === "ACG_COVERS" ? "Paid by ACG" : humanize(payout?.feePolicy)],
+                  ["Quoted trader settlement", payout?.settlementAmount == null ? "Provider pending" : money(payout.settlementAmount, payout.settlementCurrency || "USD")],
+                  ["Trader actually received", payout?.traderReceivedAmount == null ? "Not verified yet" : money(payout.traderReceivedAmount, payout.accountingCurrency || payout.settlementCurrency || "USD")],
+                  ["Provider fee paid by ACG", payout?.providerFeePaidByAcg == null ? "Not verified yet" : money(payout.providerFeePaidByAcg, payout.accountingCurrency || payout.settlementCurrency || "USD")],
+                  ["Total ACG payout cost", payout?.acgTotalCostAmount == null ? "Not verified yet" : money(payout.acgTotalCostAmount, payout.accountingCurrency || payout.settlementCurrency || "USD")],
+                  ["Accounting source", payout?.accountingSource ? humanize(payout.accountingSource) : "—"],
+                  ["Accounting verified", payout?.accountingVerifiedAt ? dateTime(payout.accountingVerifiedAt) : "—"],
+                  ["FX rate", payout?.fxRate ? String(payout.fxRate) : "—"],
+                  ["Cycle", payout?.cycle?.frequency || "—"],
+                ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 text-xs text-zinc-200">{value}</p></div>)}
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <p className="text-xs font-semibold text-white">Transfer tracking</p>
+              <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                {[
+                  ["Provider", payout?.provider],
+                  ["Provider status", payout?.providerStatus],
+                  ["Provider reference", payout?.providerReference],
+                  ["UTR", payout?.utr],
+                  ["Transaction hash", payout?.txHash],
+                  ["Network", payout?.network],
+                  ["Provider fee · ACG cost", payout?.providerFee == null ? null : money(payout.providerFee, payout.settlementCurrency || "INR")],
+                  ["Provider net reported", payout?.providerNetAmount == null ? null : money(payout.providerNetAmount, payout.settlementCurrency || "INR")],
+                  ["Last status check", payout?.providerStatusCheckedAt ? dateTime(payout.providerStatusCheckedAt) : null],
+                  ["Webhook received", payout?.providerWebhookAt ? dateTime(payout.providerWebhookAt) : null],
+                  ["Quote status", payout?.quoteStatus],
+                ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 break-all font-mono text-xs text-zinc-200">{value || "—"}</p></div>)}
+              </div>
+
+              <div className="mt-5 border-t border-white/[0.06] pt-4">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-600">Timeline</p>
+                <div className="mt-3 space-y-2">
+                  {timeline.length ? timeline.map(([label, value], index) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <span className={`grid size-5 shrink-0 place-items-center rounded-full border text-[8px] ${index === timeline.length - 1 ? "border-white/20 text-white" : "border-emerald-400/20 text-emerald-300"}`}>{index + 1}</span>
+                      <span className="min-w-[72px] text-[10px] text-zinc-300">{label}</span>
+                      <span className="text-[10px] text-zinc-600">{dateTime(value)}</span>
+                    </div>
+                  )) : <p className="text-xs text-zinc-600">No lifecycle timestamps recorded.</p>}
+                </div>
+              </div>
+            </section>
+
+            {payout?.providerLastError && (
+              <section className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">{payout.providerLastError.code || "Provider execution needs attention"}</p>
+                <p className="mt-2 text-xs leading-5 text-zinc-300">{payout.providerLastError.message || "The provider operation needs to be retried."}</p>
+                {(payout.providerLastError.minimum != null || payout.providerLastError.maximum != null) && (
+                  <p className="mt-2 font-mono text-[10px] text-zinc-500">
+                    Provider range · {payout.providerLastError.minimum ?? "—"} – {payout.providerLastError.maximum ?? "—"}
+                  </p>
+                )}
+                {(payout.providerLastError.expectedAmount != null || payout.providerLastError.receivedAmount != null) && (
+                  <p className="mt-2 font-mono text-[10px] text-zinc-500">
+                    Expected {payout.providerLastError.expectedAmount ?? "—"} {payout.providerLastError.currency || ""}
+                    {" · "}Provider reported {payout.providerLastError.receivedAmount ?? "—"} {payout.providerLastError.currency || ""}
+                  </p>
+                )}
+              </section>
+            )}
+
+            {payout?.failure && (
+              <section className="rounded-xl border border-red-400/20 bg-red-400/[0.05] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-red-300">{payout.failure.code || "Payout failure"}</p>
+                <p className="mt-2 text-xs leading-5 text-zinc-300">{payout.failure.message || "No failure message recorded."}</p>
+              </section>
+            )}
+
+            <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-white">Review actions</p>
+                  <p className="mt-1 text-[11px] text-zinc-500">Every action requires a reason and is written to the admin audit log.</p>
+                </div>
+                <Badge>{payout?.status}</Badge>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {actions.map(item => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setPayoutAction({ ...item, id: payout.payoutId })}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      item.tone === "positive"
+                        ? "border-emerald-400/20 text-emerald-300 hover:bg-emerald-400/[0.07]"
+                        : item.tone === "negative"
+                          ? "border-red-400/20 text-red-300 hover:bg-red-400/[0.07]"
+                          : "border-white/10 text-zinc-300 hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+
+                {data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
+                  <button
+                    type="button"
+                    onClick={() => setPayoutAction({ value: "RETRY_EXECUTION", label: "Retry automatic transfer", tone: "positive", id: payout.payoutId })}
+                    className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/[0.07]"
+                  >
+                    Retry automatic transfer
+                  </button>
+                )}
+
+                {["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay" && (
+                  <button
+                    type="button"
+                    onClick={() => setPayoutAction({ value: "RECONCILE", label: "Verify Sunpay status", tone: "neutral", id: payout.payoutId })}
+                    className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/[0.05]"
+                  >
+                    Verify Sunpay status
+                  </button>
+                )}
+              </div>
+
+              {!actions.length && !(
+                (data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError)
+                || (["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay")
+              ) && (
+                <p className="mt-4 text-xs text-zinc-600">This payout is in a terminal state.</p>
+              )}
+            </section>
+          </div>;
+        })()}
+      </Inspector>}
+
       {selected && page === "support" && <Inspector
         title={selectedDetail?.conversation?.email?.subject || "Support case"}
         subtitle={selectedDetail?.conversation?.email?.customerEmail || selectedDetail?.customer?.primaryEmail || selected.conversationId}
@@ -1318,6 +1853,15 @@ export default function AdminDashboard() {
         })()}
       </Inspector>}
 
+      {payoutAction && selectedDetail?.payout && (
+        <PayoutActionModal
+          action={payoutAction}
+          payout={selectedDetail.payout}
+          busy={payoutBusy}
+          onClose={() => setPayoutAction(null)}
+          onConfirm={performPayoutAction}
+        />
+      )}
       {action && <ConfirmModal action={action} entity={action.id} busy={actionBusy} onClose={() => setAction(null)} onConfirm={performAction} />}
     </div>
   );
