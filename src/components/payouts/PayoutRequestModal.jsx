@@ -51,7 +51,7 @@ function requestIdempotencyKey() {
   return `payout-${fallback || Date.now().toString(36)}`;
 }
 
-function MethodOption({ method, selected, onSelect }) {
+function MethodOption({ method, selected, onSelect, disabled = false }) {
   const Icon = method.id === "UPI" ? Zap : method.id === "BANK" ? Building2 : CircleDollarSign;
   const helper = method.id === "UPI"
     ? method.limits
@@ -59,13 +59,16 @@ function MethodOption({ method, selected, onSelect }) {
       : "Provider limits verified at processing"
     : method.id === "BANK"
       ? "Direct INR transfer"
-      : "TRC20 wallet";
+      : method.networks?.length
+        ? "Network selected before confirmation"
+        : "Provider network pending";
 
   return (
     <button
       type="button"
       onClick={() => onSelect(method.id)}
-      className={`min-w-0 rounded-xl border p-3 text-left transition ${
+      disabled={disabled}
+      className={`min-w-0 rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-35 ${
         selected
           ? "border-[#195be1]/70 bg-[#195be1]/[0.06]"
           : "border-white/[0.08] bg-black/20 hover:border-white/[0.16]"
@@ -109,7 +112,7 @@ function destinationSummary(method, destination) {
   }
   if (method === "USDT") {
     const wallet = String(destination.walletAddress || "");
-    return wallet.length > 12 ? `${wallet.slice(0, 6)}…${wallet.slice(-4)} · ${destination.network || "TRC20"}` : wallet || "—";
+    return wallet.length > 12 ? `${wallet.slice(0, 6)}…${wallet.slice(-4)} · ${destination.network || "Network pending"}` : wallet || "—";
   }
   return "—";
 }
@@ -151,7 +154,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
     bankName: "",
     accountNumber: "",
     ifsc: "",
-    network: "TRC20",
+    network: "",
     walletAddress: "",
   });
   const [quote, setQuote] = useState(null);
@@ -351,7 +354,13 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
                 <span className="text-[9px] font-semibold text-white">Payout method</span>
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {methods.map(item => (
-                    <MethodOption key={item.id} method={item} selected={method === item.id} onSelect={chooseMethod} />
+                    <MethodOption
+                      key={item.id}
+                      method={item}
+                      selected={method === item.id}
+                      onSelect={chooseMethod}
+                      disabled={item.id === "USDT" && !(item.networks?.length)}
+                    />
                   ))}
                 </div>
               </div>
@@ -392,10 +401,11 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
                           onChange={event => updateDestination("network", event.target.value)}
                           className="h-11 w-full rounded-lg border border-white/[0.09] bg-black px-3 text-[11px] text-white outline-none focus:border-[#195be1]/55"
                         >
-                          {(selectedMethod?.networks || ["TRC20"]).map(network => <option key={network} value={network}>{network}</option>)}
+                          <option value="" disabled>Select network</option>
+                          {(selectedMethod?.networks || []).map(network => <option key={network} value={network}>{network}</option>)}
                         </select>
                       </label>
-                      <TextField label="USDT wallet address" value={destination.walletAddress} onChange={value => updateDestination("walletAddress", value)} placeholder="TRC20 wallet address" autoComplete="off" />
+                      <TextField label="USDT wallet address" value={destination.walletAddress} onChange={value => updateDestination("walletAddress", value)} placeholder="Wallet address" autoComplete="off" />
                       <p className="text-[8px] leading-4 text-amber-200/70">Crypto transfers are irreversible. The wallet and network must match exactly.</p>
                     </div>
                   )}
