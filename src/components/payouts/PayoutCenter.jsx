@@ -107,7 +107,7 @@ function localPreview(account) {
     methods: [
       { id: "UPI", label: "UPI", settlementCurrency: "INR", limits: null },
       { id: "BANK", label: "Bank Transfer", settlementCurrency: "INR", limits: null },
-      { id: "USDT", label: "USDT", settlementCurrency: "USDT", limits: null, networks: ["TRC20"] },
+      { id: "USDT", label: "USDT", settlementCurrency: "USDT", limits: null, networks: [] },
     ],
   };
 }
@@ -323,7 +323,9 @@ function MethodCard({ method }) {
       : "Provider limits verified at processing"
     : method.id === "BANK"
       ? "Provider limits verified at processing"
-      : "Network selected before confirmation";
+      : method.networks?.length
+        ? "Network selected before confirmation"
+        : "Provider network pending";
 
   return (
     <div className="rounded-xl border border-white/[0.08] bg-[#080808] p-4">
@@ -620,7 +622,7 @@ export default function PayoutCenter({ account }) {
                 </button>
                 <span className="text-[9px] text-[#555]">
                   {overview?.eligibility?.canRequest
-                    ? "Choose UPI, Bank Transfer or USDT."
+                    ? "Choose UPI or Bank Transfer. USDT activates after provider network terms are configured."
                     : activePayout
                       ? "Your current payout is already being tracked."
                       : blockers.length
