@@ -54,7 +54,9 @@ function requestIdempotencyKey() {
 function MethodOption({ method, selected, onSelect }) {
   const Icon = method.id === "UPI" ? Zap : method.id === "BANK" ? Building2 : CircleDollarSign;
   const helper = method.id === "UPI"
-    ? "₹100 – ₹20,000"
+    ? method.limits
+      ? `₹${method.limits.min.toLocaleString()} – ₹${method.limits.max.toLocaleString()}`
+      : "Provider limits verified at processing"
     : method.id === "BANK"
       ? "Direct INR transfer"
       : "TRC20 wallet";
