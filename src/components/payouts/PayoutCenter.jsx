@@ -105,7 +105,7 @@ function localPreview(account) {
       description: "ACG covers payout-provider fees.",
     },
     methods: [
-      { id: "UPI", label: "UPI", settlementCurrency: "INR", limits: { min: 100, max: 20000, unit: "INR" } },
+      { id: "UPI", label: "UPI", settlementCurrency: "INR", limits: null },
       { id: "BANK", label: "Bank Transfer", settlementCurrency: "INR", limits: null },
       { id: "USDT", label: "USDT", settlementCurrency: "USDT", limits: null, networks: ["TRC20"] },
     ],
@@ -318,9 +318,11 @@ function MethodCard({ method }) {
       ? "Direct INR bank settlement"
       : "USDT wallet payout";
   const helper = method.id === "UPI"
-    ? "₹100 – ₹20,000 per payout"
+    ? method.limits
+      ? `₹${method.limits.min.toLocaleString()} – ₹${method.limits.max.toLocaleString()} per payout`
+      : "Provider limits verified at processing"
     : method.id === "BANK"
-      ? "Limits shown when provider is configured"
+      ? "Provider limits verified at processing"
       : "Network selected before confirmation";
 
   return (
@@ -678,7 +680,7 @@ export default function PayoutCenter({ account }) {
         </div>
 
         <div className="mt-4 rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3 text-[9px] leading-4 text-[#666]">
-          UPI is limited to ₹100–₹20,000 per payout. INR conversion and the trader payout amount are confirmed before a real payout request. ACG covers payout-provider fees. Bank and USDT provider limits will only be shown from configured payout-provider data.
+          INR conversion and the trader payout amount are confirmed before a real payout request. ACG covers payout-provider fees. Provider-specific payout limits are enforced from provider configuration instead of being hardcoded in ACG.
         </div>
       </section>
 
