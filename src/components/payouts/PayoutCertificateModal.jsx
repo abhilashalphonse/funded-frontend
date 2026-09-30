@@ -87,8 +87,8 @@ export default function PayoutCertificateModal({ payout, onClose }) {
           id="acg-payout-certificate"
           className="relative overflow-hidden rounded-[26px] border border-white/[0.12] bg-[#050505] px-6 py-8 text-white sm:px-12 sm:py-12"
         >
-          <div className="absolute inset-x-0 top-0 h-[3px] bg-[#195be1]" />
-          <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full border border-[#195be1]/15" />
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-white/80" />
+          <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full border border-white/[0.08]" />
           <div className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full border border-white/[0.05]" />
 
           <header className="relative flex items-start justify-between gap-6">
@@ -106,7 +106,7 @@ export default function PayoutCertificateModal({ payout, onClose }) {
           </header>
 
           <div className="relative mt-16 sm:mt-20">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[#5d75ad]">Payout certificate</span>
+            <span className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[#9a9a9a]">Payout certificate</span>
             <h1 className="mt-4 max-w-2xl text-[clamp(2rem,7vw,4.5rem)] font-semibold leading-[0.95] tracking-[-0.06em] text-white">
               Trading performance.<br />
               <span className="text-[#777]">Reward delivered.</span>
