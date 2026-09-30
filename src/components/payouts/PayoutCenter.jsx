@@ -55,7 +55,7 @@ function statusTone(status) {
   const value = String(status || "").toUpperCase();
   if (value === "PAID") return "text-emerald-300 border-emerald-400/20 bg-emerald-400/[0.06]";
   if (["FAILED", "REJECTED", "CANCELLED"].includes(value)) return "text-rose-300 border-rose-400/20 bg-rose-400/[0.06]";
-  return "text-[#8fb0ff] border-[#195be1]/25 bg-[#195be1]/[0.08]";
+  return "text-[#d6d6d6] border-white/[0.12] bg-white/[0.04]";
 }
 
 function localPreview(account) {
@@ -363,7 +363,7 @@ function Journey({ overview }) {
               key={step.label}
               className={`relative rounded-xl border p-4 ${
                 current
-                  ? "border-[#195be1]/45 bg-[#195be1]/[0.055]"
+                  ? "border-white/[0.18] bg-white/[0.04]"
                   : done
                     ? "border-white/[0.1] bg-white/[0.025]"
                     : "border-white/[0.06] bg-black/20"
@@ -372,14 +372,14 @@ function Journey({ overview }) {
               <div className="flex items-center justify-between gap-3">
                 <span className={`grid size-6 place-items-center rounded-full border text-[9px] font-semibold ${
                   current
-                    ? "border-[#195be1]/60 text-[#8fb0ff]"
+                    ? "border-white/[0.28] text-[#d6d6d6]"
                     : done
                       ? "border-emerald-400/20 text-emerald-300"
                       : "border-white/[0.08] text-[#555]"
                 }`}>
                   {done ? <Check size={11} /> : index + 1}
                 </span>
-                {current && <span className="text-[7px] font-semibold uppercase tracking-[0.12em] text-[#6f92e8]">You are here</span>}
+                {current && <span className="text-[7px] font-semibold uppercase tracking-[0.12em] text-[#a8a8a8]">You are here</span>}
               </div>
               <strong className={`mt-4 block text-[11px] font-semibold ${current || done ? "text-white" : "text-[#666]"}`}>{step.label}</strong>
               <span className="mt-1 block text-[9px] text-[#555]">{step.hint}</span>
@@ -410,11 +410,11 @@ function ActivePayoutTracker({ payout }) {
     || null;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#195be1]/20 bg-[#0A0A0A]">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0A0A0A]">
       <div className="border-b border-white/[0.07] px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <span className="text-[8px] font-semibold uppercase tracking-[0.13em] text-[#6f92e8]">Payout in progress</span>
+            <span className="text-[8px] font-semibold uppercase tracking-[0.13em] text-[#a8a8a8]">Payout in progress</span>
             <h3 className="mt-1.5 font-mono text-[20px] font-semibold text-white">{usd(payout.requestedAmountUsd)}</h3>
             <p className="mt-1 text-[9px] text-[#666]">
               {payout.method || "Payout"}{payout.destination?.destination ? ` · ${payout.destination.destination}` : ""}
@@ -434,13 +434,13 @@ function ActivePayoutTracker({ payout }) {
             return (
               <div key={status} className="relative min-w-0 text-center">
                 {index > 0 && (
-                  <span className={`absolute right-1/2 top-3 hidden h-px w-full sm:block ${index <= currentIndex ? "bg-[#195be1]/45" : "bg-white/[0.07]"}`} />
+                  <span className={`absolute right-1/2 top-3 hidden h-px w-full sm:block ${index <= currentIndex ? "bg-white/[0.18]" : "bg-white/[0.07]"}`} />
                 )}
                 <span className={`relative z-10 mx-auto grid size-6 place-items-center rounded-full border text-[8px] font-semibold ${
                   current
-                    ? "border-[#195be1] bg-[#195be1]/15 text-[#a8c0ff]"
+                    ? "border-white/50 bg-white/[0.08] text-white"
                     : reached
-                      ? "border-[#195be1]/35 bg-[#080808] text-[#789bf2]"
+                      ? "border-white/[0.2] bg-[#080808] text-[#b8b8b8]"
                       : "border-white/[0.08] bg-[#080808] text-[#4c4c4c]"
                 }`}>
                   {reached && !current ? <Check size={9} /> : index + 1}
@@ -580,7 +580,7 @@ export default function PayoutCenter({ account }) {
       )}
 
       <section className="relative overflow-hidden rounded-2xl border border-white/[0.09] bg-[#080808]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[#195be1]/45" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/[0.18]" />
         <div className="grid lg:grid-cols-[1.3fr_.7fr]">
           <div className="p-5 sm:p-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.025] px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#8a8a8a]">
