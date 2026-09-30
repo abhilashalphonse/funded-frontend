@@ -70,17 +70,17 @@ function MethodOption({ method, selected, onSelect, disabled = false }) {
       disabled={disabled}
       className={`min-w-0 rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-35 ${
         selected
-          ? "border-[#195be1]/70 bg-[#195be1]/[0.06]"
+          ? "border-white/35 bg-white/[0.05]"
           : "border-white/[0.08] bg-black/20 hover:border-white/[0.16]"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <span className={`grid size-8 place-items-center rounded-lg border ${
-          selected ? "border-[#195be1]/40 text-[#8fb0ff]" : "border-white/[0.08] text-[#777]"
+          selected ? "border-white/25 text-white" : "border-white/[0.08] text-[#777]"
         }`}>
           <Icon size={13} />
         </span>
-        {selected && <Check size={13} className="text-[#8fb0ff]" />}
+        {selected && <Check size={13} className="text-white/80" />}
       </div>
       <strong className="mt-3 block text-[11px] font-semibold text-white">{method.label}</strong>
       <span className="mt-1 block text-[8px] text-[#666]">{helper}</span>
@@ -98,7 +98,7 @@ function TextField({ label, value, onChange, placeholder, inputMode, autoComplet
         placeholder={placeholder}
         inputMode={inputMode}
         autoComplete={autoComplete}
-        className="h-11 w-full rounded-lg border border-white/[0.09] bg-black px-3 text-[11px] text-white outline-none transition placeholder:text-[#444] focus:border-[#195be1]/55"
+        className="h-11 w-full rounded-lg border border-white/[0.09] bg-black px-3 text-[11px] text-white outline-none transition placeholder:text-[#444] focus:border-white/35"
       />
     </label>
   );
@@ -399,7 +399,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
                         <select
                           value={destination.network}
                           onChange={event => updateDestination("network", event.target.value)}
-                          className="h-11 w-full rounded-lg border border-white/[0.09] bg-black px-3 text-[11px] text-white outline-none focus:border-[#195be1]/55"
+                          className="h-11 w-full rounded-lg border border-white/[0.09] bg-black px-3 text-[11px] text-white outline-none focus:border-white/35"
                         >
                           <option value="" disabled>Select network</option>
                           {(selectedMethod?.networks || []).map(network => <option key={network} value={network}>{network}</option>)}
@@ -465,7 +465,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
                       type="checkbox"
                       checked={destinationConfirmed}
                       onChange={event => setDestinationConfirmed(event.target.checked)}
-                      className="mt-0.5 size-4 accent-[#195be1]"
+                      className="mt-0.5 size-4 accent-white"
                     />
                     <span className="text-[9px] leading-4 text-[#888]">
                       I confirm the payout amount, method and destination above are correct. ACG covers payout-provider fees; they are not deducted from my quoted payout.
