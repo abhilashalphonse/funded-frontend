@@ -331,7 +331,7 @@ export default function PayoutRequestModal({ accountId, overview, methods = [], 
 
                 <label className="mt-4 block">
                   <span className="mb-1.5 block text-[9px] font-medium text-[#777]">Payout amount · USD</span>
-                  <div className="flex h-11 items-center rounded-lg border border-white/[0.09] bg-black px-3 focus-within:border-[#195be1]/55">
+                  <div className="flex h-11 items-center rounded-lg border border-white/[0.09] bg-black px-3 focus-within:border-white/35">
                     <span className="mr-1 font-mono text-[11px] text-[#666]">$</span>
                     <input
                       value={amount}
