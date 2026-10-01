@@ -122,6 +122,17 @@ const lossPct = (lossAmount, baseAmount) => {
 };
 const lossBase = account => Number(account?.initialDeposit || account?.accountSize || 0);
 const lossLimitAmount = (account, rulePercent) => lossBase(account) * Number(rulePercent || 0) / 100;
+const paymentChallengeLabel = payment => {
+  const definition = payment?.challengeDefinition;
+  const size = Number(definition?.accountSize);
+  if (!Number.isFinite(size) || size <= 0) return "—";
+  const sizeLabel = size >= 1000
+    ? `${Number(size / 1000).toLocaleString("en-US", { maximumFractionDigits: 2 })}K`
+    : money(size, "USD");
+  const step = String(definition?.step || "").toLowerCase();
+  const type = step === "2step" ? "2-Step" : step === "1step" ? "1-Step" : definition?.step || "Challenge";
+  return `${sizeLabel} · ${type}`;
+};
 const statusTone = status => {
   const s = String(status || "").toUpperCase();
   if (["PAID", "ACTIVE", "FUNDED", "PASSED", "HEALTHY", "CONFIGURED", "READY", "OPEN"].includes(s)) return "text-emerald-300 bg-emerald-400/10 border-emerald-400/20";
@@ -885,11 +896,12 @@ export default function AdminDashboard() {
   const paymentColumns = [
     { key: "orderId", label: "Order" },
     { key: "email", label: "Customer" },
-    { key: "amount", label: "Amount", render: r => money(r.amount, r.currency || "USD") },
+    { key: "challenge", label: "Requested Challenge", render: r => paymentChallengeLabel(r) },
+    { key: "amount", label: "Price", render: r => money(r.amount, r.currency || "USD") },
     { key: "paymentMethod", label: "Method" },
     { key: "provider", label: "Provider" },
-    { key: "providerPaymentId", label: "Provider Ref" },
-    { key: "accountId", label: "Account" },
+    { key: "providerPaymentId", label: "Provider Ref", render: r => r.providerPaymentId || r.providerInvoiceId || "—" },
+    { key: "accountId", label: "Account", render: r => r.accountId || "Not created" },
     { key: "createdAt", label: "Created", render: r => dateTime(r.createdAt) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ];
@@ -1568,10 +1580,42 @@ export default function AdminDashboard() {
           <Kpi label="Payment" value={selected.status || "—"} />
           <Kpi label="Activation" value={selected.activation?.status || "NOT_STARTED"} />
         </div>
+
         <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-white">Requested challenge</p>
+              <p className="mt-1 text-[11px] text-zinc-500">Immutable checkout configuration captured before payment.</p>
+            </div>
+            <Badge>{selected.challengeDefinition?.step === "2step" ? "2-STEP" : selected.challengeDefinition?.step === "1step" ? "1-STEP" : "CHALLENGE"}</Badge>
+          </div>
+          <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Account size</p><p className="mt-1 text-sm font-semibold text-white">{selected.challengeDefinition?.accountSize ? money(selected.challengeDefinition.accountSize, "USD") : "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Evaluation</p><p className="mt-1 text-xs text-zinc-300">{selected.challengeDefinition?.step === "2step" ? "2-Step Challenge" : selected.challengeDefinition?.step === "1step" ? "1-Step Challenge" : selected.challengeDefinition?.step || "—"}</p></div>
+            {selected.challengeDefinition?.step === "2step" ? <>
+              <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Phase 1 target</p><p className="mt-1 text-xs text-zinc-300">{selected.challengeDefinition?.rules?.phase1ProfitTarget != null ? `${selected.challengeDefinition.rules.phase1ProfitTarget}%` : "—"}</p></div>
+              <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Phase 2 target</p><p className="mt-1 text-xs text-zinc-300">{selected.challengeDefinition?.rules?.phase2ProfitTarget != null ? `${selected.challengeDefinition.rules.phase2ProfitTarget}%` : "—"}</p></div>
+            </> : <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Profit target</p><p className="mt-1 text-xs text-zinc-300">{selected.challengeDefinition?.rules?.profitTarget != null ? `${selected.challengeDefinition.rules.profitTarget}%` : "—"}</p></div>}
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Daily loss</p><p className="mt-1 text-xs text-zinc-300">{selected.challengeDefinition?.rules?.dailyLoss != null ? `${selected.challengeDefinition.rules.dailyLoss}%` : "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Maximum loss</p><p className="mt-1 text-xs text-zinc-300">{selected.challengeDefinition?.rules?.maxLoss != null ? `${selected.challengeDefinition.rules.maxLoss}%` : "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Minimum trading days</p><p className="mt-1 text-xs text-zinc-300">{selected.challengeDefinition?.rules?.minTradingDays ?? "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Profit split</p><p className="mt-1 text-xs text-zinc-300">{selected.commercialConfig?.profitSplit != null ? `${selected.commercialConfig.profitSplit}%` : "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Payout frequency</p><p className="mt-1 text-xs text-zinc-300">{selected.commercialConfig?.payoutFrequency || "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">News trading</p><p className="mt-1 text-xs text-zinc-300">{selected.commercialConfig?.newsTrading == null ? "—" : selected.commercialConfig.newsTrading ? "Allowed" : "Restricted"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Weekend holding</p><p className="mt-1 text-xs text-zinc-300">{selected.commercialConfig?.weekendHolding == null ? "—" : selected.commercialConfig.weekendHolding ? "Allowed" : "Restricted"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Platform</p><p className="mt-1 text-xs text-zinc-300">ACG Trader</p></div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+          <p className="text-xs font-semibold text-white">Payment & activation</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Method</p><p className="mt-1 text-xs text-zinc-300">{selected.paymentMethod || "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Provider</p><p className="mt-1 text-xs text-zinc-300">{selected.provider || "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Provider amount</p><p className="mt-1 text-xs text-zinc-300">{selected.providerAmount != null ? money(selected.providerAmount, selected.providerCurrency || "INR") : "—"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Provider status</p><p className="mt-1 text-xs text-zinc-300">{selected.providerStatus || "—"}</p></div>
             <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Provider reference</p><p className="mt-1 break-all text-xs text-zinc-300">{selected.providerPaymentId || selected.providerInvoiceId || "—"}</p></div>
-            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Funded account</p><p className="mt-1 text-xs text-zinc-300">{selected.accountId || "Not activated"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Challenge account</p><p className="mt-1 text-xs text-zinc-300">{selected.accountId || "Not created yet"}</p></div>
             <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Last activation attempt</p><p className="mt-1 text-xs text-zinc-300">{dateTime(selected.activation?.attemptedAt)}</p></div>
             <div><p className="text-[10px] uppercase tracking-widest text-zinc-600">Activation error</p><p className="mt-1 text-xs text-zinc-300">{selected.activation?.error || "—"}</p></div>
           </div>
