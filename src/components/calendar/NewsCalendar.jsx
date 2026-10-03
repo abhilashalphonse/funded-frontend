@@ -92,12 +92,15 @@ function restrictionText(restriction) {
     if (restriction.blockedFrom && restriction.blockedUntil) {
       const from = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(restriction.blockedFrom));
       const until = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(restriction.blockedUntil));
-      return { tone: "restricted", title: "Trading restricted", detail: `${from} – ${until} local time · ${restriction.beforeMinutes}m before / ${restriction.afterMinutes}m after` };
+      return { tone: "restricted", title: "News restriction window", detail: `${from} – ${until} local time · Existing positions may remain open; closing or reducing is always allowed.` };
     }
-    return { tone: "restricted", title: "Trading restricted", detail: "This event is covered by the account's news restriction." };
+    return { tone: "restricted", title: "News restriction window", detail: "This high-impact event is covered by the account's news-trading rule." };
   }
-  if (restriction.status === "NOT_SPECIFIED") {
-    return { tone: "neutral", title: "News rule not specified", detail: "This account does not have an explicit news-trading setting." };
+  if (restriction.status === "DATA_STALE") {
+    return { tone: "neutral", title: "Calendar data is stale", detail: "Cached events are shown for awareness, but stale data is not authoritative for automated restrictions." };
+  }
+  if (restriction.status === "TIME_UNAVAILABLE") {
+    return { tone: "neutral", title: "Exact event time unavailable", detail: "ACG will not impose an automated restriction without a reliable event time." };
   }
   return { tone: "neutral", title: "No account rule", detail: "Select a trading account to see its news-trading rule." };
 }
@@ -308,6 +311,7 @@ function NextEventCard({ event, now }) {
           </div>
           <h3 className="mt-3 text-[17px] font-semibold tracking-[-0.025em] text-white">{event.title}</h3>
           <p className="mt-1 text-[10px] text-[#666]">{dayLabel(event)} · {timeLabel(event)} local time</p>
+          {event.affectedMarkets?.groups?.length > 0 && <p className="mt-1.5 text-[9px] text-[#595959]">Affected: {event.affectedMarkets.groups.join(" · ")}</p>}
         </div>
         <div className="shrink-0 md:text-right">
           <div className="font-mono text-[18px] font-semibold text-white">{countdownLabel(event.timestamp, now)}</div>
@@ -342,6 +346,7 @@ function EventRow({ event, now }) {
           <span className="text-[8px] text-[#4f4f4f]">{countdownLabel(event.timestamp, now)}</span>
         </div>
         <h4 className="mt-2 text-[11px] font-medium leading-5 text-[#dedede]">{event.title}</h4>
+        {event.affectedMarkets?.groups?.length > 0 && <p className="mt-1 text-[8px] text-[#555]">Affected: {event.affectedMarkets.groups.join(" · ")}</p>}
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[9px]">
           <span className="text-[#555]">Forecast <strong className="font-mono font-medium text-[#999]">{valueLabel(event.forecast)}</strong></span>
           <span className="text-[#555]">Previous <strong className="font-mono font-medium text-[#999]">{valueLabel(event.previous)}</strong></span>
