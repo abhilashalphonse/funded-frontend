@@ -298,9 +298,10 @@ export default function RulesPage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
-          <div className="max-w-3xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Drawdown</p>
+        <section>
+          <div className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Drawdown</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">How Daily Loss and Maximum Loss work</h2>
               <p className="mt-3 text-[13px] leading-6 text-[#858A94]">
                 These are the hard account-loss limits. They are separate from optional Stop Loss settings or the Risk sizing tool.
