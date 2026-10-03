@@ -34,21 +34,38 @@ const POLICY_RULES = [
     body: (
       <>
         <p>
-          News trading is selected with the challenge configuration. If news trading is not enabled,
-          traders must not open or execute new positions within 30 minutes before or 30 minutes after
-          an applicable high-impact economic event.
+          News Trading is selected with the challenge configuration and carries forward unchanged to
+          Phase 2 and the ACG Master account. If News Trading is not enabled, affected instruments have
+          a restricted window from 5 minutes before until 5 minutes after scheduled high-impact news.
         </p>
-        <p>The setting shown at checkout and on the account is the setting that applies.</p>
+        <p>
+          Positions opened before the restricted window may remain open. Traders may always close or
+          reduce an existing position, and protective Stop Loss / Take Profit instructions remain active.
+          New positions, exposure increases, reversals that create fresh exposure, and pending-entry
+          executions are not permitted inside the restricted window.
+        </p>
+        <p>
+          The ACG Economic Calendar is the user-facing reference for high-impact events. Restrictions
+          apply only when ACG has a reliable event time; stale or unavailable calendar data is not used
+          to impose an automated restriction.
+        </p>
       </>
     ),
   },
   {
     title: 'Weekend Holding',
     body: (
-      <p>
-        Weekend holding is selected with the challenge configuration. If weekend holding is not
-        enabled, positions must be closed before the applicable market closes for the weekend.
-      </p>
+      <>
+        <p>
+          Weekend Holding is selected with the challenge configuration and carries forward unchanged to
+          Phase 2 and the ACG Master account.
+        </p>
+        <p>
+          If Weekend Holding is not enabled, ACG Trader will close open positions 5 minutes before the
+          applicable instrument's weekend market shutdown. This protective system close is not a breach.
+          Cutoffs follow the instrument's actual trading session rather than a single universal Friday time.
+        </p>
+      </>
     ),
   },
   {
