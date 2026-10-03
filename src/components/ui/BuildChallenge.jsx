@@ -464,6 +464,9 @@ function RuleConfigurator({ step, rules, onRuleChange, fieldErrors }) {
           unit=""
           bounds={RULE_BOUNDS.minTradingDays}
           onChange={(v) => onRuleChange('minTradingDays', v)}
+          helpText={step === STEP_TYPES.TWO_STEP
+            ? "Per phase. A day counts when you open at least one new position during a UTC calendar day."
+            : "A day counts when you open at least one new position during a UTC calendar day."}
           error={fieldErrors.minTradingDays}
         />
       </div>
@@ -637,6 +640,10 @@ function ChallengeSummary({ step, accountSize, rules, advanced, pricing, isValid
         )}
         <SummaryLine label="Daily Loss" value={`${rules.dailyLoss}%`} />
         <SummaryLine label="Maximum Loss" value={`${rules.maxLoss}%`} />
+        <SummaryLine
+          label="Minimum Trading Days"
+          value={step === STEP_TYPES.TWO_STEP ? `${rules.minTradingDays} / phase` : String(rules.minTradingDays)}
+        />
         <SummaryLine label="Profit Split" value={`${advanced.profitSplit}%`} />
         <SummaryLine label="Payout" value={advanced.payoutFrequency} />
       </ul>

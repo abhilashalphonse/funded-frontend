@@ -236,7 +236,7 @@ export default function RulesPage() {
                 ['Phase 2 target', `${twoStep.phase2ProfitTarget}%`],
                 ['Daily loss', `${twoStep.dailyLoss}%`],
                 ['Maximum loss', `${twoStep.maxLoss}%`],
-                ['Minimum trading days', String(twoStep.minTradingDays)],
+                ['Minimum trading days', `${twoStep.minTradingDays} per phase`],
                 ['Time limit', 'None'],
               ]}
             />
@@ -244,6 +244,61 @@ export default function RulesPage() {
         </section>
 
         <section className="border-y border-white/[0.06] bg-white/[0.012]">
+          <div className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Minimum Trading Days</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">What counts as a Trading Day</h2>
+              <p className="mt-3 text-[13px] leading-6 text-[#858A94]">
+                A Trading Day is a UTC calendar day (00:00:00–23:59:59 UTC) during which you open at least one new position.
+                Trading Days do not need to be consecutive.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <article className="rounded-2xl border border-white/[0.08] bg-[#05060A] p-5 sm:p-6">
+                <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-white">Opening a new position is what counts</h3>
+                <div className="mt-4 space-y-3 text-[12px] leading-6 text-[#858A94]">
+                  <p>
+                    Opening one or more positions during the same UTC calendar day counts as <strong className="font-semibold text-white">one Trading Day</strong>.
+                  </p>
+                  <p>
+                    Holding a position overnight does not create another Trading Day. Closing an existing position on a later day also does not count unless you open a new position on that UTC day.
+                  </p>
+                  <p>
+                    Manual closes, partial closes, Stop Loss, Take Profit, reverse-close actions and liquidation do not create a Trading Day by themselves.
+                  </p>
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-white/[0.08] bg-[#05060A] p-5 sm:p-6">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#727985]">Example</span>
+                <div className="mt-4 space-y-3 text-[12px] leading-5">
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+                    <span className="text-[#7C828C]">Monday</span>
+                    <p className="mt-1 text-[#B5BBC4]">Open a position → <strong className="text-white">1 Trading Day</strong></p>
+                  </div>
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+                    <span className="text-[#7C828C]">Tuesday</span>
+                    <p className="mt-1 text-[#B5BBC4]">Close Monday's position only → <strong className="text-white">still 1</strong></p>
+                  </div>
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+                    <span className="text-[#7C828C]">Tuesday</span>
+                    <p className="mt-1 text-[#B5BBC4]">Open a new position → <strong className="text-white">2 Trading Days</strong></p>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-white/[0.07] bg-[#05060A] px-5 py-5">
+              <h3 className="text-[13px] font-semibold text-white">Does holding or closing a position on another day count?</h3>
+              <p className="mt-2 text-[11px] leading-5 text-[#7C828C]">
+                No. A new position must be opened during that UTC calendar day. For a 2-Step challenge, the selected Minimum Trading Days requirement applies separately to each evaluation phase.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
           <div className="mx-auto max-w-[1040px] px-6 py-14 sm:py-16">
             <div className="max-w-3xl">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#737985]">Drawdown</p>
@@ -306,7 +361,7 @@ export default function RulesPage() {
             <OptionCard title="2-Step targets" value={rangeLabel(RULE_BOUNDS.phase1ProfitTarget)} detail={`Defaults ${twoStep.phase1ProfitTarget}% / ${twoStep.phase2ProfitTarget}%`} />
             <OptionCard title="Daily Loss" value={rangeLabel(RULE_BOUNDS.dailyLoss)} detail={`Defaults ${oneStep.dailyLoss}% or ${twoStep.dailyLoss}%`} />
             <OptionCard title="Maximum Loss" value={rangeLabel(RULE_BOUNDS.maxLoss)} detail={`Defaults ${oneStep.maxLoss}% or ${twoStep.maxLoss}%`} />
-            <OptionCard title="Minimum Trading Days" value={rangeLabel(RULE_BOUNDS.minTradingDays, '')} detail={`Default ${oneStep.minTradingDays} days`} />
+            <OptionCard title="Minimum Trading Days" value={rangeLabel(RULE_BOUNDS.minTradingDays, '')} detail={`Default ${oneStep.minTradingDays} days · new position opened on a UTC day`} />
             <OptionCard title="News Trading" value="Yes / No" detail={DEFAULT_COMMERCIAL_CONFIG.newsTrading ? 'Enabled by default' : 'Disabled by default'} />
             <OptionCard title="Weekend Holding" value="Yes / No" detail={DEFAULT_COMMERCIAL_CONFIG.weekendHolding ? 'Enabled by default' : 'Disabled by default'} />
             <OptionCard title="Profit Split" value={PROFIT_SPLIT_OPTIONS.map(value => `${value}%`).join(' · ')} detail={`Default ${DEFAULT_COMMERCIAL_CONFIG.profitSplit}%`} />
