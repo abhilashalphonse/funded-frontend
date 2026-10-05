@@ -1274,6 +1274,9 @@ export default function AdminDashboard() {
   const tradingOrders = tradingDetail?.orders?.items || [];
   const lifecycleEvents = tradingDetail?.lifecycle || [];
   const tradingPolicyShadowEvents = tradingDetail?.tradingPolicyShadowEvents || [];
+  const effectivePermissions = tradingDetail?.tradingPermissionStatus?.effectivePolicies;
+  const permissionControl = tradingDetail?.tradingPermissionStatus?.enforcementControl;
+  const weekendActions = tradingDetail?.weekendActions || [];
   const initialBalance = Number(accountDetail?.initialDeposit || accountDetail?.accountSize || 0);
   const reconstructedDailyLoss = Math.max(0, Number(accountDetail?.dailyStartEquity || initialBalance) - Number(accountDetail?.equity || 0));
   const reconstructedTotalLoss = Math.max(0, initialBalance - Number(accountDetail?.equity || 0));
@@ -1535,7 +1538,7 @@ export default function AdminDashboard() {
               </section>
 
               <section className="mt-5">
-                <div className="mb-3 flex items-end justify-between gap-3"><div><h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Trading permission shadow events</h3><p className="mt-1 text-[11px] text-zinc-600">{tradingPolicyShadowEvents.length} recent would-block / would-close observations</p></div><Badge>SHADOW</Badge></div>
+                <div className="mb-3 flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Trading permission observations</h3><p className="mt-1 text-[11px] text-zinc-600">{tradingPolicyShadowEvents.length} recent observations · Permission version {tradingDetail?.tradingPermissionStatus?.permissionVersion ?? 'unknown'}</p></div><div className="flex flex-wrap gap-2"><Badge>NEWS {permissionControl?.newsDisabled ? 'DISABLED BY OPERATOR' : effectivePermissions?.newsTrading?.mode || 'UNKNOWN'}</Badge><Badge>WEEKEND {permissionControl?.weekendDisabled ? 'DISABLED BY OPERATOR' : effectivePermissions?.weekendHolding?.mode || 'UNKNOWN'}</Badge></div></div>
                 <DataTable rows={tradingPolicyShadowEvents} empty="No news/weekend shadow events recorded for this account." columns={[
                   { key: "observedAt", label: "Observed", render: r => dateTime(r.observedAt) },
                   { key: "type", label: "Event", render: r => humanize(r.type) },
@@ -1544,6 +1547,20 @@ export default function AdminDashboard() {
                   { key: "eventTitle", label: "News / cutoff", render: r => r.eventTitle || (r.weekendAutoCloseAt ? `Weekend cutoff ${dateTime(r.weekendAutoCloseAt)}` : "—") },
                   { key: "eventCurrency", label: "Currency", render: r => r.eventCurrency || "—" },
                   { key: "enforcementEnabled", label: "Enforced", render: r => r.enforcementEnabled ? <Badge>YES</Badge> : <span className="text-zinc-500">No</span> },
+                ]} />
+              </section>
+
+              <section className="mt-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">Weekend closure jobs</h3>
+                <DataTable rows={weekendActions} empty="No weekend closure jobs planned for this account." columns={[
+                  { key: 'symbol', label: 'Symbol' },
+                  { key: 'mode', label: 'Mode', render: r => <Badge>{r.mode}</Badge> },
+                  { key: 'state', label: 'State', render: r => <Badge>{r.state}</Badge> },
+                  { key: 'processingStartAt', label: 'Begins', render: r => dateTime(r.processingStartAt) },
+                  { key: 'requiredFlatAt', label: 'Flat target', render: r => dateTime(r.requiredFlatAt) },
+                  { key: 'confirmedAt', label: 'Confirmed', render: r => r.confirmedAt ? `${dateTime(r.confirmedAt)}${r.late ? ' · LATE' : ''}` : '—' },
+                  { key: 'attempt', label: 'Attempts' },
+                  { key: 'lastError', label: 'Last error', render: r => r.lastError || '—' },
                 ]} />
               </section>
 

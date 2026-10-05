@@ -88,19 +88,19 @@ function restrictionText(restriction) {
   if (restriction.status === "ALLOWED") {
     return { tone: "allowed", title: "News trading allowed", detail: "This account does not restrict trading around this event." };
   }
-  if (restriction.status === "RESTRICTED") {
+  if (["CONFIGURED", "RESTRICTED"].includes(restriction.status)) {
     if (restriction.blockedFrom && restriction.blockedUntil) {
       const from = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(restriction.blockedFrom));
       const until = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(restriction.blockedUntil));
-      return { tone: "restricted", title: "News restriction window", detail: `${from} – ${until} local time · Existing positions may remain open; closing or reducing is always allowed.` };
+      return { tone: "neutral", title: "Configured news window", detail: `${from} – ${until} local time · Check the Trader terminal for active enforcement. Existing positions may remain open; closing or reducing is always allowed.` };
     }
-    return { tone: "restricted", title: "News restriction window", detail: "This high-impact event is covered by the account's news-trading rule." };
+    return { tone: "neutral", title: "Configured news window", detail: "This event is covered by the account's configured rule. The Trader terminal shows whether enforcement is active." };
   }
   if (restriction.status === "DATA_STALE") {
     return { tone: "neutral", title: "Calendar data is stale", detail: "Cached events are shown for awareness, but stale data is not authoritative for automated restrictions." };
   }
   if (restriction.status === "TIME_UNAVAILABLE") {
-    return { tone: "neutral", title: "Exact event time unavailable", detail: "ACG will not impose an automated restriction without a reliable event time." };
+    return { tone: "neutral", title: "Exact event time unavailable", detail: "This calendar cannot determine the event window. Check the Trader terminal for current execution availability." };
   }
   return { tone: "neutral", title: "No account rule", detail: "Select a trading account to see its news-trading rule." };
 }

@@ -7,6 +7,12 @@ const AuthContext = createContext({});
 export const AuthProvider = ({ children }) => { 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryMode, setRecoveryMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.location.pathname === '/auth/reset-password'
+      || new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery'
+      || new URLSearchParams(window.location.search).get('type') === 'recovery';
+  });
 
   useEffect(() => {
     // Check active sessions on initial load
@@ -20,6 +26,7 @@ export const AuthProvider = ({ children }) => {
 
     // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -82,10 +89,18 @@ const signUp = useCallback((email, password, metadata) => {
     if (refreshError) throw refreshError;
     return refreshedSession?.access_token || null;
   }, []);
+  const updatePassword = useCallback(async (password) => {
+    const result = await supabase.auth.updateUser({ password });
+    if (!result.error) {
+      setRecoveryMode(false);
+      window.history.replaceState({}, document.title, '/');
+    }
+    return result;
+  }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signUp, signIn, signInWithGoogle, resendSignupVerification, signOut, resetPassword, getAccessToken }),
-    [user, loading, signUp, signIn, signInWithGoogle, resendSignupVerification, signOut, resetPassword, getAccessToken]
+    () => ({ user, loading, recoveryMode, updatePassword, signUp, signIn, signInWithGoogle, resendSignupVerification, signOut, resetPassword, getAccessToken }),
+    [user, loading, recoveryMode, updatePassword, signUp, signIn, signInWithGoogle, resendSignupVerification, signOut, resetPassword, getAccessToken]
   );
 
   return (
