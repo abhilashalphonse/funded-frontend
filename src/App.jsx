@@ -3,6 +3,7 @@ import { useAuth } from "./AuthContext.jsx";
 
 import Homepage from "./components/ui/Homepage.jsx";
 import Auth from "./components/ui/Auth.jsx";
+import ResetPassword from "./components/ui/ResetPassword.jsx";
 import Dashboard from "./components/ui/Dashboard.jsx";
 import BuildChallenge from "./components/ui/BuildChallenge.jsx";
 import PaymentPage from "./components/PaymentPage.jsx";
@@ -96,7 +97,7 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     return params.get("accountId") || window.sessionStorage.getItem("acg:postPurchaseAccountId") || "";
   });
-  const { user, loading: authLoading, getAccessToken } = useAuth();
+  const { user, loading: authLoading, recoveryMode, getAccessToken } = useAuth();
   const checkoutEmailHint = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("email") || window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""
     : "";
@@ -122,7 +123,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (screen !== "auth-callback" || authLoading) return;
+    if (screen !== "auth-callback" || authLoading || recoveryMode) return;
     if (user) {
       cleanAuthCallbackUrl();
       setScreen("dashboard");
@@ -131,7 +132,7 @@ function App() {
     cleanAuthCallbackUrl();
     setPostAuthScreen("dashboard");
     setScreen("auth");
-  }, [authLoading, screen, user]);
+  }, [authLoading, screen, user, recoveryMode]);
 
   useEffect(() => {
     if (!user || typeof window === "undefined") return;
@@ -281,6 +282,8 @@ const currentPath = typeof window !== "undefined" ? window.location.pathname : "
     }
     return <AdminDashboard />;
   }
+
+  if (recoveryMode) return <ResetPassword onDone={() => setScreen("dashboard")} />;
 
   if (screen === "auth-callback") {
     return (

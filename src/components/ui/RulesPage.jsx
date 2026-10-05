@@ -36,18 +36,21 @@ const POLICY_RULES = [
         <p>
           News Trading is selected with the challenge configuration and carries forward unchanged to
           Phase 2 and the ACG Master account. If News Trading is not enabled, affected instruments have
-          a restricted window from 5 minutes before until 5 minutes after scheduled high-impact news.
+          a configured window from 5 minutes before until 5 minutes after scheduled high-impact news.
+          Automated restrictions apply only when enforcement is active for the account; monitoring
+          mode records the configured policy without blocking new exposure.
         </p>
         <p>
           Positions opened before the restricted window may remain open. Traders may always close or
           reduce an existing position, and protective Stop Loss / Take Profit instructions remain active.
           New positions, exposure increases, reversals that create fresh exposure, and pending-entry
-          executions are not permitted inside the restricted window.
+          executions are not permitted inside the restricted window when enforcement is active.
         </p>
         <p>
           The ACG Economic Calendar is the user-facing reference for high-impact events. Restrictions
-          apply only when ACG has a reliable event time; stale or unavailable calendar data is not used
-          to impose an automated restriction.
+          use verified calendar snapshots. When enforcement is active and calendar verification expires,
+          new exposure may be paused until verification recovers. Closing and reducing remain permitted
+          by the news policy.
         </p>
       </>
     ),
@@ -61,9 +64,12 @@ const POLICY_RULES = [
           Phase 2 and the ACG Master account.
         </p>
         <p>
-          If Weekend Holding is not enabled, ACG Trader will close open positions 5 minutes before the
-          applicable instrument's weekend market shutdown. This protective system close is not a breach.
+          When weekend enforcement is active and Weekend Holding is not enabled, ACG Trader schedules
+          protective closure beginning at the cutoff displayed in the terminal, with a target to be flat
+          5 minutes before the applicable instrument's weekend market shutdown. This protective system close is not a breach.
           Cutoffs follow the instrument's actual trading session rather than a single universal Friday time.
+          Monitoring mode does not automatically close positions. The Trader terminal shows the current
+          enforcement state.
         </p>
       </>
     ),
