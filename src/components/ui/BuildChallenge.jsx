@@ -885,7 +885,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
 };
 
   return (
-    <div ref={builderRoot} className="relative min-h-screen bg-[#05060A] text-white font-sans selection:bg-white/20 selection:text-white">
+    <div className="relative min-h-screen bg-[#05060A] text-white font-sans selection:bg-white/20 selection:text-white">
       <div
         className="absolute inset-0 z-0 opacity-40 pointer-events-none"
         style={{
@@ -900,7 +900,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
       />
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 pb-10 pt-10 sm:px-6 sm:py-24">
-        <ChallengeHeader onBack={onBack} />
+        <div ref={builderRoot}><ChallengeHeader onBack={onBack} /></div>
 <PathSelector step={step} onChange={handleStepChange} />
 <AccountSizeSelector
   step={step}
