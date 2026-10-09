@@ -726,7 +726,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
       if (!entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= 0.35)) return;
       if (measuredEngagement.current) return;
       measuredEngagement.current = true;
-      void trackEvent("challenge_builder_engaged", { mode: "paid" }, { entryIntent: "paid" });
+      void trackEvent("challenge_builder_viewed", { mode: "paid" }, { entryIntent: "paid" });
       observer.disconnect();
     }, { threshold: [0.35] });
     observer.observe(root);
