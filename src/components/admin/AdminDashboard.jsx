@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, AlertTriangle, BarChart3, Bell, ChevronRight, CircleDollarSign,
   CreditCard, FileClock, Gauge, LayoutDashboard, LifeBuoy, ListChecks, LogOut,
@@ -476,6 +476,9 @@ export default function AdminDashboard() {
   const [queue, setQueue] = useState("");
   const [tradeLoadingMore, setTradeLoadingMore] = useState(false);
   const [days, setDays] = useState("30");
+  const [journeyView, setJourneyView] = useState("trial");
+  const [acquisitionSearch, setAcquisitionSearch] = useState("");
+  const loadSequence = useRef(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [selectedDetail, setSelectedDetail] = useState(null);
@@ -539,17 +542,20 @@ export default function AdminDashboard() {
   }, [page, search, status, days, listPage, queue]);
 
   const load = useCallback(async () => {
+    const requestId = ++loadSequence.current;
     setLoading(true);
     setError("");
     try {
       const result = await adminFetch(endpoint);
+      if (requestId !== loadSequence.current) return;
       setData(result);
       if (endpoint === "/system") setSystem(result);
     } catch (err) {
+      if (requestId !== loadSequence.current) return;
       setError(err.message || "Unable to load admin data.");
       setData(null);
     } finally {
-      setLoading(false);
+      if (requestId === loadSequence.current) setLoading(false);
     }
   }, [adminFetch, endpoint]);
 
@@ -794,7 +800,11 @@ export default function AdminDashboard() {
 
   const renderOverview = () => {
     const k = data?.kpis || {};
-    const funnel = data?.funnel?.byEvent || {};
+    const funnel = data?.funnel || {};
+    const trialSteps = funnel.journeys?.trial?.stages || [];
+    const checkoutSteps = funnel.journeys?.paid?.stages || [];
+    const trialCount = key => trialSteps.find(stage => stage.key === key)?.count || 0;
+    const paidCount = key => checkoutSteps.find(stage => stage.key === key)?.count || 0;
     return (
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -812,15 +822,19 @@ export default function AdminDashboard() {
 
         <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
           <section className="rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
-            <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-white">30-day funnel</h3><p className="mt-1 text-xs text-zinc-500">Unique sessions/events captured by the current analytics layer.</p></div><button onClick={() => changePage("funnel")} className="text-xs text-zinc-400 hover:text-white">View funnel</button></div>
+            <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-white">30-day funnel</h3><p className="mt-1 text-xs text-zinc-500">Ordered tracked-session journeys plus confirmed payment records.</p></div><button onClick={() => changePage("funnel")} className="text-xs text-zinc-400 hover:text-white">View funnel</button></div>
             <div className="mt-5 space-y-3">
               {[
-                ["landing_view", "Visitors"], ["signup_completed", "Registrations"], ["trial_created", "Free trials"],
-                ["trial_first_trade", "Activated trial"], ["checkout_started", "Checkout"], ["payment_completed", "Paid"],
-              ].map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between border-b border-white/[0.05] pb-3 last:border-0">
+                ["Free trial · visitors", trialCount("landing_view")],
+                ["Free trial · registrations", trialCount("signup_completed")],
+                ["Free trial · first trade", trialCount("trial_first_trade")],
+                ["Checkout · started", paidCount("checkout_started")],
+                ["Checkout · paid in journey", paidCount("payment_completed")],
+                ["Confirmed paid orders", funnel.revenueSummary?.paidPayments || 0],
+              ].map(([label, count]) => (
+                <div key={label} className="flex items-center justify-between border-b border-white/[0.05] pb-3 last:border-0">
                   <span className="text-xs text-zinc-400">{label}</span>
-                  <span className="text-sm font-semibold text-white">{funnel[key]?.sessions || funnel[key]?.events || 0}</span>
+                  <span className="text-sm font-semibold text-white">{count}</span>
                 </div>
               ))}
             </div>
@@ -981,81 +995,135 @@ export default function AdminDashboard() {
     );
   };
 
+
   const renderFunnel = () => {
-    const e = data?.byEvent || {};
     const k = data?.kpis || {};
-    const acquisition = data?.acquisition || [];
-    const countFor = key => {
-      if (key === "trial_outcome") return Number(k.trialOutcomes || 0);
-      return Number(e[key]?.sessions || e[key]?.events || 0);
-    };
-    const stages = [
-      ["landing_view", "Visitors"],
-      ["signup_completed", "Registrations"],
-      ["trial_created", "Free trials"],
-      ["trial_first_trade", "Activated trials"],
-      ["trial_outcome", "Trial outcome"],
-      ["checkout_started", "Checkout"],
-      ["payment_completed", "Paid"],
-    ];
-    const first = countFor(stages[0][0]);
+    const revenue = data?.revenueSummary || {};
+    const journey = data?.journeys?.[journeyView] || {};
+    const stages = journey.stages || [];
+    const acquisition = (data?.acquisition || []).filter(row =>
+      [row.source, row.campaign, row.creatorId, row.creativeId, row.market, row.language]
+        .some(value => String(value || "").toLowerCase().includes(acquisitionSearch.trim().toLowerCase())),
+    );
     const acquisitionColumns = [
       { key: "source", label: "Source" },
       { key: "campaign", label: "Campaign", render: row => row.campaign || "—" },
       { key: "creatorId", label: "Creator", render: row => row.creatorId || "—" },
       { key: "creativeId", label: "Creative", render: row => row.creativeId || "—" },
       { key: "market", label: "Market", render: row => row.market || "—" },
-      { key: "language", label: "Language", render: row => row.language || "—" },
       { key: "registrations", label: "Registrations" },
       { key: "trialsCreated", label: "Trials" },
-      { key: "activatedTrials", label: "Activated" },
-      { key: "paidConversions", label: "Paid" },
-      { key: "revenue", label: "Revenue", render: row => money(row.revenue) },
+      { key: "activatedTrials", label: "First trades" },
+      { key: "paidConversions", label: "Paid orders" },
+      { key: "revenue", label: "Confirmed sales", render: row => money(row.revenue) },
     ];
-
     return (
       <div className="space-y-5">
-        <div className="flex gap-2">{["7","30","90"].map(v => <button key={v} onClick={() => setDays(v)} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${days===v ? "border-white bg-white text-black" : "border-white/10 text-zinc-400"}`}>{v}D</button>)}</div>
-
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {["7", "30", "90"].map(value => (
+              <button key={value} type="button" onClick={() => setDays(value)}
+                className={"rounded-lg border px-3 py-2 text-xs font-semibold " + (days === value ? "border-white bg-white text-black" : "border-white/10 text-zinc-400")}>{value}D</button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {[["trial", "Free Trial"], ["paid", "Paid Checkout"]].map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setJourneyView(value)}
+                className={"rounded-lg border px-3 py-2 text-xs font-semibold " + (journeyView === value ? "border-white bg-white text-black" : "border-white/10 text-zinc-400")}>{label}</button>
+            ))}
+          </div>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Kpi label="Registrations" value={k.registrations || 0} detail={`${pct((k.visitorToRegistration || 0) * 100)} visitor → registration`} />
-          <Kpi label="Activated Trials" value={k.activatedTrials || 0} detail={`${pct((k.trialToActivation || 0) * 100)} trial → first trade`} />
-          <Kpi label="Paid Conversions" value={k.paidConversions || 0} detail={`${pct((k.checkoutToPaid || 0) * 100)} checkout → paid`} />
-          <Kpi label="Attributed Revenue" value={money(k.revenue || 0)} detail={`${k.trialOutcomes || 0} trial outcomes · ${k.trialPassed || 0} passed · ${k.trialFailed || 0} failed`} />
+          <Kpi label="Tracked visitors" value={k.visitors || 0} detail="Browser identities, not verified people" />
+          <Kpi label="Free trials created" value={k.trialsCreated || 0} detail="Recorded trial creation events" />
+          <Kpi label="Confirmed paid orders" value={revenue.paidPayments || 0} detail="Current PAID records in period" />
+          <Kpi label="Confirmed sales · USD" value={money(revenue.confirmedSalesUsd)} detail="Payment ledger; not net profit" />
         </div>
-
-        <div className="grid gap-3 lg:grid-cols-4">
-          {stages.map(([key,label], i) => {
-            const count = countFor(key);
-            const previous = i === 0 ? 0 : countFor(stages[i - 1][0]);
-            const stepConversion = i === 0 ? 100 : previous ? (count / previous) * 100 : 0;
-            const overall = first ? (count / first) * 100 : 0;
-            return <div key={key} className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
-              <p className="text-xs text-zinc-500">{label}</p><p className="mt-2 text-2xl font-semibold text-white">{count}</p>
-              <div className="mt-3 flex justify-between text-[10px] text-zinc-500"><span>Step {pct(stepConversion)}</span><span>Overall {pct(overall)}</span></div>
-            </div>;
-          })}
-        </div>
-
         <section className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-white">Acquisition sources</h3>
-            <p className="mt-1 text-xs text-zinc-500">First-touch attribution from campaign → creator → creative through trial activation and paid conversion.</p>
+            <h3 className="text-sm font-semibold text-white">{journey.label || "Observed journey"}</h3>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">Observed sessions reaching each stage in order during this reporting window. These rates exclude visitors whose entry occurred before the window or on another device. Paid Checkout includes direct buyers and former trial users; confirmed paid orders above come from payment records.</p>
           </div>
-          <DataTable
-            rows={acquisition}
-            columns={acquisitionColumns}
-            empty="No attributed acquisition activity yet."
-          />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {stages.map((stage, index) => (
+              <div key={stage.key} className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-zinc-500">{stage.label}</p>
+                  <span className="text-[10px] text-zinc-600">{index + 1}/{stages.length}</span>
+                </div>
+                <p className="mt-2 text-2xl font-semibold text-white">{stage.count || 0}</p>
+                <div className="mt-3 flex justify-between text-[10px] text-zinc-500">
+                  <span>Step {pct((stage.stepRate || 0) * 100)}</span>
+                  <span>From entry {pct((stage.overallRate || 0) * 100)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Acquisition sources</h3>
+              <p className="mt-1 text-xs text-zinc-500">First-touch source, campaign, creator and creative. Paid orders and USD sales are reconciled to current payment records.</p>
+            </div>
+            <input type="search" value={acquisitionSearch} onChange={event => setAcquisitionSearch(event.target.value)}
+              placeholder="Filter source, creator, campaign…" aria-label="Filter acquisition sources"
+              className="h-10 w-full rounded-lg border border-white/10 bg-[#101010] px-3 text-xs text-white placeholder:text-zinc-600 sm:w-72" />
+          </div>
+          <DataTable rows={acquisition} columns={acquisitionColumns}
+            empty="No matching attributed activity in this period." />
         </section>
       </div>
     );
   };
 
   const renderRevenue = () => {
-    const paid = data?.byEvent?.payment_completed?.events || 0;
-    const activated = data?.byEvent?.challenge_activated?.events || 0;
-    return <div className="space-y-5"><div className="grid gap-3 sm:grid-cols-3"><Kpi label="Paid events" value={paid} /><Kpi label="Activated challenges" value={activated} /><Kpi label="Window" value={`${days} days`} /></div><Empty title="Revenue ledger analytics are not yet materialized" text="The current backend stores payment records and funnel events. Revenue-by-product, country, affiliate, refunds and chargebacks should be added after the payment ledger/refund workflow is implemented." /></div>;
+    const summary = data?.revenueSummary || {};
+    const methods = summary.byMethod || [];
+    const products = summary.byProduct || [];
+    return (
+      <div className="space-y-5">
+        <div className="flex gap-2">
+          {["7", "30", "90"].map(value => (
+            <button key={value} type="button" onClick={() => setDays(value)}
+              className={"rounded-lg border px-3 py-2 text-xs font-semibold " + (days === value ? "border-white bg-white text-black" : "border-white/10 text-zinc-400")}>{value}D</button>
+          ))}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Kpi label="Confirmed sales · USD" value={money(summary.confirmedSalesUsd)} detail="Current PAID payments in the period" />
+          <Kpi label="Attributed sales · USD" value={money(summary.attributedSalesUsd)} detail="Paid orders with recorded acquisition tags" />
+          <Kpi label="Unattributed sales · USD" value={money(summary.unattributedSalesUsd)} detail="Paid orders missing acquisition tags" />
+          <Kpi label="Confirmed paid orders" value={summary.paidPayments || 0} detail="Authoritative payment records" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold text-white">Sales by payment method</h3>
+            <DataTable rows={methods} columns={[
+              { key: "method", label: "Method" },
+              { key: "paidPayments", label: "Paid orders" },
+              { key: "salesUsd", label: "Confirmed USD", render: row => money(row.salesUsd) },
+            ]} empty="No confirmed payments for this period." />
+          </section>
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold text-white">Sales by challenge</h3>
+            <DataTable rows={products} columns={[
+              { key: "accountSize", label: "Account size", render: row => row.accountSize ? money(row.accountSize) : "—" },
+              { key: "step", label: "Steps", render: row => row.step || "—" },
+              { key: "paidPayments", label: "Paid orders" },
+              { key: "salesUsd", label: "Confirmed USD", render: row => money(row.salesUsd) },
+            ]} empty="No confirmed challenge sales for this period." />
+          </section>
+        </div>
+        <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+          <h3 className="text-sm font-semibold text-white">Refund activity</h3>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Kpi label="Refunded payments" value={summary.refundedPayments || 0} detail="Refunded records updated in period" />
+            <Kpi label="Refunded amount · USD" value={money(summary.refundedAmountUsd)} detail="Original order amounts; not net settlements" />
+          </div>
+          <p className="mt-3 text-xs leading-5 text-zinc-500">Confirmed sales are current PAID orders with payment dates in the selected window; refunded orders are excluded. Refund activity uses the last update date and may include orders paid in earlier periods. Provider charges, affiliate commissions, and profit are not calculated here.</p>
+        </section>
+      </div>
+    );
   };
 
   const renderPayouts = () => {
