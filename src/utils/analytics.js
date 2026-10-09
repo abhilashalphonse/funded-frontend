@@ -1,6 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || "";
 
-const SESSION_KEY = "acg:analyticsSessionId";
+const SESSION_KEY = "acg:analyticsVisitId";
+const LEGACY_ID_KEY = "acg:analyticsSessionId";
 const ATTRIBUTION_KEY = "acg:attribution";
 const ATTRIBUTION_VERSION = 2;
 const TOUCH_FIELDS = [
@@ -26,10 +27,20 @@ function randomId() {
 
 export function getAnalyticsSessionId() {
   if (typeof window === "undefined") return "server";
-  let id = window.localStorage.getItem(SESSION_KEY);
+  let id = window.sessionStorage.getItem(SESSION_KEY);
   if (!id) {
     id = randomId();
-    window.localStorage.setItem(SESSION_KEY, id);
+    window.sessionStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+}
+
+function getAnalyticsVisitorId() {
+  if (typeof window === "undefined") return "server";
+  let id = window.localStorage.getItem(LEGACY_ID_KEY);
+  if (!id) {
+    id = randomId();
+    window.localStorage.setItem(LEGACY_ID_KEY, id);
   }
   return id;
 }
@@ -120,7 +131,7 @@ function publicAttribution(stored = {}) {
 
   return {
     version: ATTRIBUTION_VERSION,
-    anonymousId: cleanValue(stored.anonymousId, 128) || getAnalyticsSessionId(),
+    anonymousId: cleanValue(stored.anonymousId, 128) || getAnalyticsVisitorId(),
     ...(hasTouch(flat) ? flat : {}),
     ...(hasTouch(firstTouch) ? { firstTouch } : {}),
     ...(hasTouch(lastTouch) ? { lastTouch } : {}),
@@ -144,7 +155,7 @@ export function captureAttribution() {
 
   const next = {
     version: ATTRIBUTION_VERSION,
-    anonymousId: migrated.anonymousId || getAnalyticsSessionId(),
+    anonymousId: migrated.anonymousId || getAnalyticsVisitorId(),
     ...(hasTouch(firstTouch) ? { firstTouch } : {}),
     ...(hasTouch(lastTouch) ? { lastTouch } : {}),
   };
