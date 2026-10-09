@@ -42,6 +42,17 @@ function deviceType() {
   return "desktop";
 }
 
+// Attribution parameters are captured separately. Never persist checkout,
+// password recovery, payment-reference, or email query strings in analytics.
+function safeReferrer() {
+  if (typeof document === "undefined" || !document.referrer) return "";
+  try {
+    return new URL(document.referrer).origin;
+  } catch {
+    return "";
+  }
+}
+
 function readStoredAttribution() {
   if (typeof window === "undefined") return {};
   try {
@@ -154,8 +165,8 @@ export async function trackEvent(event, properties = {}, options = {}) {
     sessionId: getAnalyticsSessionId(),
     attribution: getAttribution(),
     context: {
-      path: window.location.pathname + window.location.search,
-      referrer: document.referrer || "",
+      path: window.location.pathname,
+      referrer: safeReferrer(),
       device: deviceType(),
       entryIntent: options.entryIntent,
     },
