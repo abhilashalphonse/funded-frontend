@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Minus, Plus, ChevronDown, ChevronLeft, ArrowRight, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 import {
@@ -716,10 +716,21 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
   const [advanced, setAdvanced] = useState(DEFAULT_COMMERCIAL_CONFIG);
   const [activePresetId, setActivePresetId] = useState('balanced');
 
+  const builderRoot = useRef(null);
+  const measuredEngagement = useRef(false);
   useEffect(() => {
-    void trackEvent("challenge_builder_viewed", {
-      mode: actionLabel === "Start Free Trial" ? "trial" : "paid",
-    }, { entryIntent: actionLabel === "Start Free Trial" ? "trial" : "paid" });
+    if (actionLabel === "Start Free Trial" || measuredEngagement.current) return undefined;
+    const root = builderRoot.current;
+    if (!root || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= 0.35)) return;
+      if (measuredEngagement.current) return;
+      measuredEngagement.current = true;
+      void trackEvent("challenge_builder_engaged", { mode: "paid" }, { entryIntent: "paid" });
+      observer.disconnect();
+    }, { threshold: [0.35] });
+    observer.observe(root);
+    return () => observer.disconnect();
   }, [actionLabel]);
 
   const handleStepChange = useCallback((nextStep) => {
@@ -874,7 +885,7 @@ export default function BuildChallenge({ onSelectPlan, onBack, actionLabel = "St
 };
 
   return (
-    <div className="relative min-h-screen bg-[#05060A] text-white font-sans selection:bg-white/20 selection:text-white">
+    <div ref={builderRoot} className="relative min-h-screen bg-[#05060A] text-white font-sans selection:bg-white/20 selection:text-white">
       <div
         className="absolute inset-0 z-0 opacity-40 pointer-events-none"
         style={{
