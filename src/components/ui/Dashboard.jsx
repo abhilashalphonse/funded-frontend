@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from "../../AuthContext"; 
 import { getAnalyticsSessionId, trackEvent } from "../../utils/analytics.js";
+import { accountTimelineLabel } from "../../utils/accountTimeline.js";
 import Academy from "../academy/Academy.jsx";
 import CalendarWorkspace from "../calendar/CalendarWorkspace.jsx";
 import PayoutCenter from "../payouts/PayoutCenter.jsx";
@@ -26,17 +27,6 @@ const pageDetails = {
   profile: { title: 'Settings', description: 'Profile, security and preferences' },
 };
 
-const formatFreshness = (value) => {
-  if (!value) return "Waiting for account data";
-  const ageMs = Math.max(0, Date.now() - new Date(value).getTime());
-  if (!Number.isFinite(ageMs)) return "Waiting for account data";
-  const seconds = Math.floor(ageMs / 1000);
-  if (seconds < 5) return "Updated just now";
-  if (seconds < 60) return `Updated ${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  return `Updated ${minutes}m ago`;
-};
-
 const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, onNewChallenge, traderLaunching, trialChecking, launchError, loading = false }) => {
   const page = pageDetails[activeTab] || pageDetails.overview;
   const isOverview = activeTab === "overview";
@@ -45,7 +35,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
   const breached = String(activeChallenge?.status || "").toUpperCase() === "BREACHED";
   const transitionLocked = isAccountTransitionLocked(activeChallenge);
   const isTrial = activeChallenge?.accountMode === "DEMO";
-  const freshness = formatFreshness(activeChallenge?.lastPlatformSnapshotAt || activeChallenge?.updatedAt);
+  const timelineLabel = accountTimelineLabel(activeChallenge);
   const accountLabel = getTraderAccountLabel(activeChallenge);
   const statusLabel = formatAccountStatus(activeChallenge?.status);
 
@@ -93,7 +83,7 @@ const PageHeader = ({ activeTab, activeChallenge, onOpenTrader, onStartTrial, on
             </>
           )}
           <span className="text-[#4f4f4f]">•</span>
-          <span className="text-[#6f6f6f]">{freshness}</span>
+          <span className="text-[#6f6f6f]">{timelineLabel}</span>
         </div>
         <h1 className="truncate text-[clamp(1.45rem,3.5vw,2rem)] font-semibold tracking-[-0.04em] text-white">
           {activeChallenge?.accountId || "No active trading account"}
