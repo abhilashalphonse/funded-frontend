@@ -107,6 +107,25 @@ const money = (value, currency = "USD") => {
 };
 
 const dateTime = value => value ? new Date(value).toLocaleString() : "—";
+const ACTIVITY_LABELS = {
+  signup_completed: "Registration",
+  trial_created: "Free trial created",
+  trial_first_trade: "Trial first trade",
+  trial_phase_1_passed: "Trial phase 1 passed",
+  trial_passed: "Trial passed",
+  trial_failed: "Trial failed",
+  trial_expired: "Trial expired",
+  trial_cancelled: "Trial cancelled",
+  phase_1_passed: "Paid phase 1 passed",
+  phase_2_started: "Paid phase 2 started",
+  evaluation_passed: "Evaluation passed",
+  checkout_started: "Checkout started",
+  payment_started: "Payment started",
+  payment_completed: "Payment completed",
+  payment_failed: "Payment failed",
+  payment_expired: "Payment expired",
+  account_activated: "Account activated",
+};
 const pct = value => `${Number(value || 0).toFixed(2)}%`;
 const humanize = value => String(value || "—").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
 const signedMoney = (value, currency = "USD") => {
@@ -857,6 +876,17 @@ export default function AdminDashboard() {
           </section>
         </div>
 
+        <section className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">Recent customer activity</h3>
+          <DataTable rows={data?.recentActivity || []} columns={[
+            { key: "event", label: "Activity", render: row => ACTIVITY_LABELS[row.event] || humanize(row.event) },
+            { key: "email", label: "Customer", render: row => row.email || "—" },
+            { key: "accountId", label: "Account", render: row => row.accountId || "—" },
+            { key: "occurredAt", label: "When", render: row => dateTime(row.occurredAt) },
+          ]} empty="No recent funnel activity recorded." />
+          <p className="text-xs text-zinc-500">Latest tracked events; payment and account records remain authoritative for sales and activation state.</p>
+        </section>
+
         <div className="grid gap-5 xl:grid-cols-2">
           <section><h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">Recent payments</h3>
             <DataTable rows={data?.recentPayments || []} onRow={openPaymentDetail} columns={[
@@ -1114,6 +1144,19 @@ export default function AdminDashboard() {
             ]} empty="No confirmed challenge sales for this period." />
           </section>
         </div>
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-white">Unsuccessful payment outcomes</h3>
+            <button type="button" onClick={() => changePage("payments")}
+              className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white">Review payments</button>
+          </div>
+          <DataTable rows={summary.failedPaymentOutcomes || []} columns={[
+            { key: "provider", label: "Payment provider" },
+            { key: "status", label: "Latest order status" },
+            { key: "payments", label: "Orders" },
+          ]} empty="No failed, expired, or underpaid orders updated in this period." />
+          <p className="text-xs text-zinc-500">Counts of currently unsuccessful payment records updated during this window, grouped by provider and status. These are orders, not unique customers or unrecovered revenue.</p>
+        </section>
         <section className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
           <h3 className="text-sm font-semibold text-white">Refund activity</h3>
           <div className="mt-3 grid grid-cols-2 gap-3">
