@@ -820,6 +820,7 @@ export default function AdminDashboard() {
   const renderOverview = () => {
     const k = data?.kpis || {};
     const funnel = data?.funnel || {};
+    const eventCounts = funnel.byEvent || {};
     const trialSteps = funnel.journeys?.trial?.stages || [];
     const checkoutSteps = funnel.journeys?.paid?.stages || [];
     const trialCount = key => trialSteps.find(stage => stage.key === key)?.count || 0;
@@ -844,11 +845,11 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-white">30-day funnel</h3><p className="mt-1 text-xs text-zinc-500">Tracking signals are preliminary; confirmed payments use actual payment records.</p></div><button onClick={() => changePage("funnel")} className="text-xs text-zinc-400 hover:text-white">View funnel</button></div>
             <div className="mt-5 space-y-3">
               {[
-                ["Free trial · visitors", trialCount("landing_view")],
-                ["Free trial · registrations", trialCount("signup_completed")],
-                ["Free trial · first trade", trialCount("trial_first_trade")],
-                ["Checkout · started", paidCount("checkout_started")],
-                ["Checkout · paid in journey", paidCount("payment_completed")],
+                ["Observed browser visits", eventCounts.landing_view?.sessions || 0],
+                ["Observed signup events", eventCounts.signup_completed?.events || 0],
+                ["Trial customers", trialCount("trial_created")],
+                ["Trial traders", trialCount("trial_first_trade")],
+                ["Direct purchase customers", paidCount("payment_completed")],
                 ["Confirmed paid orders", funnel.revenueSummary?.paidPayments || 0],
               ].map(([label, count]) => (
                 <div key={label} className="flex items-center justify-between border-b border-white/[0.05] pb-3 last:border-0">
