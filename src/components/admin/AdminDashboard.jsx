@@ -1057,22 +1057,22 @@ export default function AdminDashboard() {
             ))}
           </div>
           <div className="flex gap-2">
-            {[["trial", "Free Trial"], ["paid", "Paid Checkout"]].map(([value, label]) => (
+            {[["trial", "Free Trial"], ["paid", "Direct Purchase"]].map(([value, label]) => (
               <button key={value} type="button" onClick={() => setJourneyView(value)}
                 className={"rounded-lg border px-3 py-2 text-xs font-semibold " + (journeyView === value ? "border-white bg-white text-black" : "border-white/10 text-zinc-400")}>{label}</button>
             ))}
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Kpi label="Tracked visitors" value={k.visitors || 0} detail="Browser identities, not verified people" />
-          <Kpi label="Free trials created" value={k.trialsCreated || 0} detail="Recorded trial creation events" />
+          <Kpi label="Observed visits" value={k.visitors || 0} detail="Browser tracking; not unique customers" />
+          <Kpi label="Trial creation events" value={k.trialsCreated || 0} detail="Event count; customer cohort shown below" />
           <Kpi label="Confirmed paid orders" value={revenue.paidPayments || 0} detail="Current PAID records in period" />
           <Kpi label="Confirmed sales · USD" value={money(revenue.confirmedSalesUsd)} detail="Payment ledger; not net profit" />
         </div>
         <section className="space-y-3">
           <div>
             <h3 className="text-sm font-semibold text-white">{journey.label || "Observed journey"}</h3>
-            <p className="mt-1 text-xs leading-5 text-amber-300/80">Preliminary activity counts: browser visits, trials, and trading events currently use different identifiers. Conversion rates remain hidden until customer/account/payment identity reconciliation is complete. Confirmed paid orders and sales above are authoritative.</p>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">{journey.identity === "customer" ? journey.description : "Conversion rates unavailable until linked customer records are returned. Activity events above are observational; sales come from confirmed payments."} Customer-cohort rates may increase as existing customers trade or pay later.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {stages.map((stage, index) => (
@@ -1082,7 +1082,14 @@ export default function AdminDashboard() {
                   <span className="text-[10px] text-zinc-600">{index + 1}/{stages.length}</span>
                 </div>
                 <p className="mt-2 text-2xl font-semibold text-white">{stage.count || 0}</p>
-                <div className="mt-3 text-[10px] text-zinc-500">Conversion rate unavailable until customer identity reconciliation</div>
+                <div className="mt-3 flex justify-between gap-2 text-[10px] text-zinc-500">
+                  {journey.identity === "customer" ? (
+                    <>
+                      <span>From cohort {pct((stage.overallRate || 0) * 100)}</span>
+                      <span>{stage.stepRate == null ? "Independent outcome" : `Step ${pct((stage.stepRate || 0) * 100)}`}</span>
+                    </>
+                  ) : <span>Conversion rate unavailable</span>}
+                </div>
               </div>
             ))}
           </div>
