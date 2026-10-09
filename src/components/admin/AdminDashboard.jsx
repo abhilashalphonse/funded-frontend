@@ -841,7 +841,7 @@ export default function AdminDashboard() {
 
         <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
           <section className="rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
-            <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-white">30-day funnel</h3><p className="mt-1 text-xs text-zinc-500">Ordered tracked-session journeys plus confirmed payment records.</p></div><button onClick={() => changePage("funnel")} className="text-xs text-zinc-400 hover:text-white">View funnel</button></div>
+            <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-white">30-day funnel</h3><p className="mt-1 text-xs text-zinc-500">Tracking signals are preliminary; confirmed payments use actual payment records.</p></div><button onClick={() => changePage("funnel")} className="text-xs text-zinc-400 hover:text-white">View funnel</button></div>
             <div className="mt-5 space-y-3">
               {[
                 ["Free trial · visitors", trialCount("landing_view")],
@@ -1072,7 +1072,7 @@ export default function AdminDashboard() {
         <section className="space-y-3">
           <div>
             <h3 className="text-sm font-semibold text-white">{journey.label || "Observed journey"}</h3>
-            <p className="mt-1 text-xs leading-5 text-zinc-500">Observed sessions reaching each stage in order during this reporting window. These rates exclude visitors whose entry occurred before the window or on another device. Paid Checkout includes direct buyers and former trial users; confirmed paid orders above come from payment records.</p>
+            <p className="mt-1 text-xs leading-5 text-amber-300/80">Preliminary activity counts: browser visits, trials, and trading events currently use different identifiers. Conversion rates remain hidden until customer/account/payment identity reconciliation is complete. Confirmed paid orders and sales above are authoritative.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {stages.map((stage, index) => (
@@ -1082,10 +1082,7 @@ export default function AdminDashboard() {
                   <span className="text-[10px] text-zinc-600">{index + 1}/{stages.length}</span>
                 </div>
                 <p className="mt-2 text-2xl font-semibold text-white">{stage.count || 0}</p>
-                <div className="mt-3 flex justify-between text-[10px] text-zinc-500">
-                  <span>Step {pct((stage.stepRate || 0) * 100)}</span>
-                  <span>From entry {pct((stage.overallRate || 0) * 100)}</span>
-                </div>
+                <div className="mt-3 text-[10px] text-zinc-500">Conversion rate unavailable until customer identity reconciliation</div>
               </div>
             ))}
           </div>
