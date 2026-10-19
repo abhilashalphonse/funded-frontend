@@ -1570,6 +1570,7 @@ export default function AdminDashboard() {
                   {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
                 </div>
               </div>
+              <div className="mt-4 grid gap-3 border-t border-white/[0.08] pt-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Joined</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.createdAt || selected?.createdAt)}</p></div><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Last login</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.lastAuthenticatedAt || selected?.lastAuthenticatedAt)}</p></div></div>
               <p className="mt-3 text-xs text-zinc-500">Review the account and purchase history before making a change. All privileged actions remain subject to server authorization and audit.</p>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1845,8 +1846,11 @@ export default function AdminDashboard() {
             {accountDetail?.status === "FUNDED_REVIEW" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"APPROVE_FUNDED",label:"Approve funded account"})} className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs font-semibold text-emerald-300">Approve Funded</button>}
             {accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
           </div></div></div>
-          <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><p className="text-xs font-semibold text-white">Rules snapshot</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><p className="text-[10px] text-zinc-600">Daily drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.dailyDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Max drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.maxDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Minimum trading days</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.rules?.minimumTradingDays || 0}</p></div><div><p className="text-[10px] text-zinc-600">Platform</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.platform || "—"}</p></div></div></div>
+
           </>)}
+          {accountTab === "risk" && (
+          <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><p className="text-xs font-semibold text-white">Rules snapshot</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><p className="text-[10px] text-zinc-600">Daily drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.dailyDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Max drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.maxDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Minimum trading days</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.rules?.minimumTradingDays || 0}</p></div><div><p className="text-[10px] text-zinc-600">Platform</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.platform || "—"}</p></div></div></div>
+          )}
         </>}
       </Inspector>}
 
