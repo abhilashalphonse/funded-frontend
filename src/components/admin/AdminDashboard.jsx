@@ -1665,20 +1665,30 @@ export default function AdminDashboard() {
             />
             <Kpi label="Trading Days" value={accountDetail?.projections?.tradingDays || 0} />
           </div>
-          <nav aria-label="Account detail sections" className="mt-5 flex gap-1 overflow-x-auto border-b border-white/[0.08]">
-            {[
-              ["overview", "Overview"],
-              ["trading", "Trading"],
-              ["risk", "Risk & Rules"],
-              ["history", "History"],
-            ].map(([id, label]) => (
-              <button key={id} type="button" onClick={() => setAccountTab(id)}
-                aria-current={accountTab === id ? "page" : undefined}
-                className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium ${accountTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
-                {label}
-              </button>
-            ))}
-          </nav>
+          <div className="mt-5">
+            <label htmlFor="account-detail-section" className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-zinc-500 sm:hidden">Account details</label>
+            <select id="account-detail-section" value={accountTab} onChange={e => setAccountTab(e.target.value)}
+              className="h-11 w-full rounded-lg border border-white/10 bg-[#111] px-3 text-sm font-medium text-white sm:hidden">
+              <option value="overview">Overview</option>
+              <option value="trading">Trading</option>
+              <option value="risk">Risk & Rules</option>
+              <option value="history">History</option>
+            </select>
+            <nav aria-label="Account detail sections" className="hidden gap-1 overflow-x-auto border-b border-white/[0.08] sm:flex">
+              {[
+                ["overview", "Overview"],
+                ["trading", "Trading"],
+                ["risk", "Risk & Rules"],
+                ["history", "History"],
+              ].map(([id, label]) => (
+                <button key={id} type="button" onClick={() => setAccountTab(id)}
+                  aria-current={accountTab === id ? "page" : undefined}
+                  className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium ${accountTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
+                  {label}
+                </button>
+              ))}
+            </nav>
+          </div>
           {accountTab === "risk" && breachDetail && (
             <section className="mt-5 rounded-xl border border-red-400/20 bg-red-400/[0.06] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
