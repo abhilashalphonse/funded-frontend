@@ -170,9 +170,9 @@ function Badge({ children }) {
 
 function Kpi({ label, value, detail }) {
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-[#111] p-4">
+    <div className="min-w-0 rounded-xl border border-white/[0.07] bg-[#111] p-3 sm:p-4">
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">{label}</p>
-      <p className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-white">{value}</p>
+      <p className="mt-2 break-words text-[19px] font-semibold tracking-[-0.04em] text-white [overflow-wrap:anywhere] sm:text-[24px]">{value}</p>
       {detail && <p className="mt-1 text-[11px] text-zinc-500">{detail}</p>}
     </div>
   );
@@ -193,23 +193,71 @@ function Loading() {
 
 function DataTable({ columns, rows, onRow, empty = "No records found." }) {
   if (!rows?.length) return <Empty title={empty} text="Adjust the current filters or check again when new activity is recorded." />;
+  const cell = (row, col) => col.render ? col.render(row) : row[col.key] ?? "—";
+  const rowKey = (row, index) => row._id || row.payoutId || row.customerId || row.accountId || row.orderId || row.conversationId || index;
+
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#0f0f0f]">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-xs">
-          <thead className="border-b border-white/[0.07] bg-white/[0.02] text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-            <tr>{columns.map(col => <th key={col.key} className="whitespace-nowrap px-4 py-3 font-medium">{col.label}</th>)}</tr>
-          </thead>
-          <tbody className="divide-y divide-white/[0.05]">
-            {rows.map((row, index) => (
-              <tr key={row._id || row.payoutId || row.customerId || row.accountId || row.orderId || row.conversationId || index}
-                onClick={() => onRow?.(row)}
-                className={onRow ? "cursor-pointer transition hover:bg-white/[0.035]" : ""}>
-                {columns.map(col => <td key={col.key} className="whitespace-nowrap px-4 py-3 text-zinc-300">{col.render ? col.render(row) : row[col.key] ?? "—"}</td>)}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="min-w-0">
+      {/* Mobile cards preserve every column and keep the existing row actions. */}
+      <div className="space-y-2 md:hidden" aria-label="Records">
+        {rows.map((row, index) => (
+          <article key={rowKey(row, index)} className="min-w-0 rounded-xl border border-white/[0.08] bg-[#101010] p-3.5">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">{columns[0]?.label}</p>
+                <div className="mt-1 break-words text-[13px] font-semibold text-white [overflow-wrap:anywhere]">{columns[0] ? cell(row, columns[0]) : "—"}</div>
+              </div>
+              {onRow && (
+                <button type="button" onClick={() => onRow(row)}
+                  aria-label={`Open ${columns[0]?.label || "record"} details`}
+                  className="flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-zinc-200 hover:bg-white/[0.06]">
+                  Open <ChevronRight size={14} />
+                </button>
+              )}
+            </div>
+            <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 border-t border-white/[0.06] pt-3">
+              {columns.slice(1, 5).map(col => (
+                <div key={col.key} className="min-w-0">
+                  <dt className="text-[10px] font-medium text-zinc-500">{col.label}</dt>
+                  <dd className="mt-1 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{cell(row, col)}</dd>
+                </div>
+              ))}
+            </dl>
+            {columns.length > 5 && (
+              <details className="mt-3 border-t border-white/[0.06] pt-2">
+                <summary className="cursor-pointer py-2 text-xs font-medium text-zinc-400 hover:text-white">
+                  More fields ({columns.length - 5})
+                </summary>
+                <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 pt-2">
+                  {columns.slice(5).map(col => (
+                    <div key={col.key} className="min-w-0">
+                      <dt className="text-[10px] font-medium text-zinc-500">{col.label}</dt>
+                      <dd className="mt-1 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{cell(row, col)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
+            )}
+          </article>
+        ))}
+      </div>
+      <div className="hidden min-w-0 overflow-hidden rounded-xl border border-white/[0.07] bg-[#0f0f0f] md:block">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-xs">
+            <thead className="border-b border-white/[0.07] bg-white/[0.02] text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+              <tr>{columns.map(col => <th key={col.key} className="whitespace-nowrap px-4 py-3 font-medium">{col.label}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.05]">
+              {rows.map((row, index) => (
+                <tr key={rowKey(row, index)}
+                  onClick={() => onRow?.(row)}
+                  className={onRow ? "cursor-pointer transition hover:bg-white/[0.035]" : ""}>
+                  {columns.map(col => <td key={col.key} className="whitespace-nowrap px-4 py-3 text-zinc-300">{cell(row, col)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -248,12 +296,12 @@ function Pagination({ pagination, onPage }) {
 function Inspector({ title, subtitle, children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/65 backdrop-blur-sm" onMouseDown={onClose}>
-      <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#0b0b0b] shadow-2xl" onMouseDown={e => e.stopPropagation()}>
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-white/[0.07] bg-[#0b0b0b]/95 px-6 py-5 backdrop-blur">
-          <div><h2 className="text-lg font-semibold tracking-[-0.03em] text-white">{title}</h2><p className="mt-1 text-xs text-zinc-500">{subtitle}</p></div>
-          <button onClick={onClose} className="rounded-lg border border-white/10 p-2 text-zinc-400 hover:bg-white/5 hover:text-white"><X size={15} /></button>
+      <div className="h-[100dvh] w-full min-w-0 max-w-2xl overflow-x-hidden overflow-y-auto overscroll-contain border-l border-white/10 bg-[#0b0b0b] shadow-2xl" role="dialog" aria-modal="true" onMouseDown={e => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 flex min-w-0 items-start justify-between gap-3 border-b border-white/[0.07] bg-[#0b0b0b]/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+          <div className="min-w-0 flex-1"><h2 className="break-words text-base font-semibold tracking-[-0.03em] text-white [overflow-wrap:anywhere] sm:text-lg">{title}</h2><p className="mt-1 break-words text-xs text-zinc-500 [overflow-wrap:anywhere]">{subtitle}</p></div>
+          <button type="button" onClick={onClose} aria-label="Close details" className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-zinc-400 hover:bg-white/5 hover:text-white"><X size={17} /></button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="min-w-0 p-3 pb-8 sm:p-6">{children}</div>
       </div>
     </div>
   );
@@ -262,8 +310,8 @@ function Inspector({ title, subtitle, children, onClose }) {
 function ConfirmModal({ action, entity, onClose, onConfirm, busy }) {
   const [reason, setReason] = useState("");
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 px-4 backdrop-blur-sm" onMouseDown={onClose}>
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111] p-5" onMouseDown={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] grid place-items-center overflow-y-auto bg-black/70 px-3 py-4 backdrop-blur-sm" onMouseDown={onClose}>
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#111] p-4 sm:p-5" onMouseDown={e => e.stopPropagation()}>
         <h3 className="text-base font-semibold text-white">{action.label}</h3>
         <p className="mt-1 text-xs text-zinc-500">{entity}</p>
         <label className="mt-5 block text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">Reason</label>
@@ -344,8 +392,8 @@ function PayoutActionModal({ action, payout, onClose, onConfirm, busy }) {
   const inputClass = "mt-1.5 h-10 w-full rounded-lg border border-white/10 bg-black px-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/25";
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/75 px-4 backdrop-blur-sm" onMouseDown={onClose}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#111] p-5" onMouseDown={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/75 px-3 py-4 backdrop-blur-sm" onMouseDown={onClose}>
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#111] p-4 sm:p-5" onMouseDown={e => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold text-white">{action.label}</h3>
