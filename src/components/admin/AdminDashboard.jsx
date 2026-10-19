@@ -1534,14 +1534,43 @@ export default function AdminDashboard() {
       {selected && page === "users" && <Inspector title={selected.primaryEmail} subtitle={selected.customerId} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load customer" text={selectedDetail.error} /> : <>
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Total Spend" value={money(selectedDetail.stats?.totalSpend)} /><Kpi label="Accounts" value={selectedDetail.stats?.accounts || 0} /><Kpi label="Orders" value={selectedDetail.stats?.orders || 0} /></div>
-          <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-zinc-500">Account status</p><div className="mt-2"><Badge>{userDetail?.status}</Badge></div></div><div className="flex gap-2">
-            {userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
-            {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
-          </div></div></div>
-          <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-zinc-500">Challenges & trials</h3>
-          <DataTable rows={selectedDetail.accounts || []} onRow={openAccountDetail} columns={challengeColumns.slice(0,7)} />
-          <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-zinc-500">Orders</h3>
-          <DataTable rows={selectedDetail.payments || []} onRow={openPaymentDetail} columns={paymentColumns.slice(0,6)} />
+          <nav aria-label="Customer profile sections" className="mt-5 flex gap-1 border-b border-white/[0.08]">
+            {[["overview", "Overview"], ["accounts", "Accounts"], ["orders", "Orders"]].map(([id, label]) => (
+              <button key={id} type="button" onClick={() => setCustomerTab(id)}
+                aria-current={customerTab === id ? "page" : undefined}
+                className={`border-b-2 px-3 py-3 text-xs font-medium ${customerTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          {customerTab === "overview" && (<>
+            <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-xs font-semibold text-white">Customer status</p><div className="mt-2"><Badge>{userDetail?.status}</Badge></div></div>
+                <div className="flex gap-2">
+                  {userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
+                  {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-zinc-500">Review the account and purchase history before making a change. All privileged actions remain subject to server authorization and audit.</p>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={() => setCustomerTab("accounts")} className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#111] p-4 text-left hover:bg-white/[0.05]">
+                <span><span className="block text-sm font-semibold">Trading accounts</span><span className="mt-1 block text-xs text-zinc-500">View trial, challenge and funded records</span></span><ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => setCustomerTab("orders")} className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#111] p-4 text-left hover:bg-white/[0.05]">
+                <span><span className="block text-sm font-semibold">Purchases & payments</span><span className="mt-1 block text-xs text-zinc-500">Review orders and activation</span></span><ChevronRight size={16} />
+              </button>
+            </div>
+          </>)}
+          {customerTab === "accounts" && (<section className="mt-5">
+            <h3 className="mb-3 text-sm font-semibold text-white">Challenges, trials & funded accounts</h3>
+            <DataTable rows={selectedDetail.accounts || []} onRow={openAccountDetail} columns={challengeColumns.slice(0,7)} />
+          </section>)}
+          {customerTab === "orders" && (<section className="mt-5">
+            <h3 className="mb-3 text-sm font-semibold text-white">Orders & payments</h3>
+            <DataTable rows={selectedDetail.payments || []} onRow={openPaymentDetail} columns={paymentColumns.slice(0,6)} />
+          </section>)}
         </>}
       </Inspector>}
 
@@ -1650,6 +1679,7 @@ export default function AdminDashboard() {
               <Kpi label="Win Rate" value={pct((Number(accountDetail?.totalTrades || 0) > 0 ? Number(accountDetail?.winningTrades || 0) / Number(accountDetail.totalTrades) : 0) * 100)} />
             </div>
           </section>
+          )}
 
           {accountTab === "trading" && selectedDetail?.tradingError && (
             <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-xs text-amber-200">
