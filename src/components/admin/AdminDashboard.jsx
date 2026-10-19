@@ -507,6 +507,7 @@ export default function AdminDashboard() {
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [customerTab, setCustomerTab] = useState("overview");
   const [accountTab, setAccountTab] = useState("overview");
+  const [returnCustomer, setReturnCustomer] = useState(null);
   const [action, setAction] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [supportReply, setSupportReply] = useState("");
@@ -622,7 +623,8 @@ export default function AdminDashboard() {
   };
 
   const openAccountDetail = async row => {
-    setAccountTab("overview");
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
+    setAccountTab(String(row?.status || "").toUpperCase() === "BREACHED" ? "risk" : "overview");
     const accountId = row?.accountId || row?.account?.externalRef;
     if (!accountId) return;
     const targetPage = row?.accountMode === "DEMO"
@@ -653,6 +655,7 @@ export default function AdminDashboard() {
   };
 
   const openPaymentDetail = row => {
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
     setPage("payments");
     setSearch("");
     setStatus("");
@@ -664,7 +667,10 @@ export default function AdminDashboard() {
 
   const openRow = async row => {
     if (page === "users") setCustomerTab("overview");
-    if (["challenges", "trials", "funded", "breaches", "risk", "trades"].includes(page)) setAccountTab("overview");
+    if (["challenges", "trials", "funded", "breaches", "risk", "trades"].includes(page)) {
+      setAccountTab(["risk", "breaches"].includes(page) || String(row?.status || "").toUpperCase() === "BREACHED" ? "risk" : page === "trades" ? "trading" : "overview");
+    }
+    setReturnCustomer(null);
     setSelected(row);
     setSelectedDetail(null);
     try {
@@ -713,6 +719,19 @@ export default function AdminDashboard() {
     } finally {
       setActionBusy(false);
     }
+  };
+
+  const returnToCustomer = () => {
+    if (!returnCustomer) return;
+    setPage("users");
+    setSearch("");
+    setStatus("");
+    setListPage(1);
+    setQueue("");
+    setSelected(returnCustomer.customer);
+    setSelectedDetail(returnCustomer.detail);
+    setCustomerTab("accounts");
+    setReturnCustomer(null);
   };
 
   const rows = data?.rows || [];
@@ -1575,6 +1594,7 @@ export default function AdminDashboard() {
 
       {selected && ["challenges","trials","funded","breaches","risk","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load account" text={selectedDetail.error} /> : <>
+          {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={signedMoney(currentProfit,"USD")} /></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Kpi
@@ -1831,6 +1851,7 @@ export default function AdminDashboard() {
       </Inspector>}
 
       {selected && ["orders","payments"].includes(page) && <Inspector title={selected.orderId || "Payment"} subtitle={selected.email || selected._id} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
+        {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
         <div className="grid gap-3 sm:grid-cols-3">
           <Kpi label="Amount" value={money(selected.amount, selected.currency || "USD")} />
           <Kpi label="Payment" value={selected.status || "—"} />
