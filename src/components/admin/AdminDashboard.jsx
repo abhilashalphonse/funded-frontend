@@ -910,13 +910,13 @@ export default function AdminDashboard() {
           </div>
           <span className="text-[11px] text-zinc-500">Live admin records · refresh to update</span>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Kpi label="Revenue Today" value={money(k.revenueToday)} detail={`${k.paidChallengesToday || 0} paid challenges`} />
           <Kpi label="New Users Today" value={k.newUsersToday || 0} detail={`${k.totalUsers || 0} active customers`} />
           <Kpi label="Active Challenges" value={k.activeChallenges || 0} detail={`${k.activeTrials || 0} active trials`} />
           <Kpi label="Funded Accounts" value={k.fundedAccounts || 0} detail={`${k.payoutReview || 0} in funded review`} />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Kpi label="Breaches Today" value={k.breachedToday || 0} />
           <Kpi label="Provisioning Attention" value={k.pendingProvisioning || 0} />
           <Kpi label="Failed Payments Today" value={k.failedPaymentsToday || 0} />
@@ -1060,7 +1060,7 @@ export default function AdminDashboard() {
 
     return (
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Kpi label="Executions Loaded" value={items.length} detail={data?.page?.hasMore ? "Showing latest 200 · more history available" : "Latest execution history"} />
           <Kpi label="Realized P&L" value={signedMoney(items.reduce((sum, item) => sum + Number(item.realizedPnl || 0), 0))} />
           <Kpi label="Commission" value={money(items.reduce((sum, item) => sum + Math.abs(Number(item.commission || 0)), 0))} />
@@ -1106,7 +1106,7 @@ export default function AdminDashboard() {
     const breachRows = page === "breaches" ? (data?.breached || []) : [...(data?.breached || []), ...(data?.locked || []), ...(data?.failedProvisioning || [])];
     return (
       <div className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Kpi label="Breached" value={data?.breached?.length || 0} />
           <Kpi label="Locked" value={data?.locked?.length || 0} />
           <Kpi label="Funded Review" value={data?.fundedReview?.length || 0} />
@@ -1155,7 +1155,7 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Kpi label="Observed visits" value={k.visitors || 0} detail="Browser tracking; not unique customers" />
           <Kpi label="Trial creation events" value={k.trialsCreated || 0} detail="Event count; customer cohort shown below" />
           <Kpi label="Confirmed paid orders" value={revenue.paidPayments || 0} detail="Current PAID records in period" />
@@ -1215,7 +1215,7 @@ export default function AdminDashboard() {
               className={"rounded-lg border px-3 py-2 text-xs font-semibold " + (days === value ? "border-white bg-white text-black" : "border-white/10 text-zinc-400")}>{value}D</button>
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
           <Kpi label="Confirmed sales · USD" value={money(summary.confirmedSalesUsd)} detail="Current PAID payments in the period" />
           <Kpi label="Attributed sales · USD" value={money(summary.attributedSalesUsd)} detail="Paid orders with recorded acquisition tags" />
           <Kpi label="Unattributed sales · USD" value={money(summary.unattributedSalesUsd)} detail="Paid orders missing acquisition tags" />
@@ -1282,7 +1282,7 @@ export default function AdminDashboard() {
 
     return (
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-5">
           <Kpi label="Requested (page)" value={requested} detail="Awaiting payout review" />
           <Kpi label="Review / Approved (page)" value={reviewing} detail="Operator attention" />
           <Kpi label="Processing / Sent (page)" value={processing} detail="Money moving" />
@@ -1526,12 +1526,12 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#090909] text-white">
       {sidebarOpen && <button aria-label="Close sidebar" className="fixed inset-0 z-30 bg-black/70 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-[238px] border-r border-white/[0.07] bg-[#0b0b0b] transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-[min(85vw,280px)] lg:w-[238px] border-r border-white/[0.07] bg-[#0b0b0b] transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-16 items-center justify-between border-b border-white/[0.06] px-5">
           <div><div className="text-sm font-bold tracking-[-0.02em] text-white">ACG FUNDED</div><div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-600">Admin</div></div>
-          <button className="text-zinc-500 lg:hidden" onClick={() => setSidebarOpen(false)}><X size={17} /></button>
+          <button className="flex size-10 items-center justify-center text-zinc-400 lg:hidden" aria-label="Close menu" onClick={() => setSidebarOpen(false)}><X size={17} /></button>
         </div>
-        <nav aria-label="Admin workspaces" className="h-[calc(100vh-128px)] overflow-y-auto px-3 py-5">
+        <nav aria-label="Admin workspaces" className="h-[calc(100dvh-128px)] overflow-y-auto px-3 py-5">
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Workspaces</p>
           {NAV.filter(item => item.id !== "integrations").map(item => {
             const Icon = item.icon;
@@ -1557,22 +1557,28 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      <div className="lg:pl-[238px]">
+      <div className="min-w-0 lg:pl-[238px]">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#090909]/90 px-4 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <button className="rounded-lg border border-white/10 p-2 text-zinc-400 lg:hidden" onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>
-            <div className="min-w-0"><h1 className="truncate text-[17px] font-semibold text-white">{NAV.find(item => item.id === workspaceId)?.label || TITLES[page]?.[0]}</h1><p className="hidden truncate text-[11px] text-zinc-500 sm:block">{TITLES[page]?.[1]}</p></div>
+            <button className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-zinc-400 lg:hidden" aria-label="Open menu" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>
+            <div className="min-w-0"><h1 className="truncate text-[15px] font-semibold text-white sm:text-[17px]">{NAV.find(item => item.id === workspaceId)?.label || TITLES[page]?.[0]}</h1><p className="hidden truncate text-[11px] text-zinc-500 sm:block">{TITLES[page]?.[1]}</p></div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} className="rounded-lg border border-white/[0.08] p-2 text-zinc-500 hover:text-white"><RefreshCw size={14} /></button>
+            <button onClick={load} className="flex size-10 items-center justify-center rounded-lg border border-white/[0.08] text-zinc-400 hover:text-white" aria-label="Refresh admin data"><RefreshCw size={16} /></button>
 
             <div className="hidden max-w-[220px] truncate rounded-lg border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-500 sm:block">{user?.email}</div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
+        <main className="mx-auto min-w-0 max-w-[1600px] px-3 py-4 sm:p-6">
           {workspaceTabs.length > 0 && (
-            <nav aria-label={`${NAV.find(item => item.id === workspaceId)?.label} sections`} className="mb-5 flex gap-1 overflow-x-auto border-b border-white/[0.08] pb-px">
+            <div className="mb-4 min-w-0">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 sm:hidden" htmlFor="admin-section-select">Section</label>
+              <select id="admin-section-select" value={page} onChange={e => changePage(e.target.value)}
+                className="h-11 w-full min-w-0 rounded-lg border border-white/[0.12] bg-[#111] px-3 text-sm font-medium text-white outline-none focus:border-white/30 sm:hidden">
+                {workspaceTabs.map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}
+              </select>
+              <nav aria-label={`${NAV.find(item => item.id === workspaceId)?.label} sections`} className="hidden gap-1 overflow-x-auto border-b border-white/[0.08] pb-px sm:flex">
               {workspaceTabs.map(tab => (
                 <button key={tab.id} type="button" onClick={() => changePage(tab.id)}
                   aria-current={page === tab.id ? "page" : undefined}
@@ -1580,7 +1586,8 @@ export default function AdminDashboard() {
                   {tab.label}
                 </button>
               ))}
-            </nav>
+              </nav>
+            </div>
           )}
           {toolbar && <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 flex-1"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" /><input value={search} onChange={e => { setSearch(e.target.value); setListPage(1); }} placeholder="Search by email, ID, order or account…" className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#0e0e0e] pl-9 pr-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/20" /></div>
