@@ -1,63 +1,67 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, AlertTriangle, BarChart3, Bell, ChevronRight, CircleDollarSign,
-  CreditCard, FileClock, Gauge, LayoutDashboard, LifeBuoy, ListChecks, LogOut,
-  Menu, RefreshCw, Search, Settings2, ShieldAlert, SlidersHorizontal, Users,
-  WalletCards, X, Zap
+  Activity, BarChart3, ChevronRight, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, RefreshCw, Search, Settings2, ShieldAlert, Users, WalletCards, X
 } from "lucide-react";
 import { useAuth } from "../../AuthContext.jsx";
 import LaunchReadinessPanel from "./LaunchReadinessPanel.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
+// Only everyday workspaces appear as primary navigation. Existing page IDs remain
+// addressable so links from notices, account details and bookmarks keep working.
 const NAV = [
-  { label: "Overview", items: [{ id: "overview", label: "Overview", icon: LayoutDashboard }] },
-  { label: "Customers", items: [{ id: "users", label: "Users", icon: Users }] },
-  { label: "Challenges", items: [
-    { id: "challenges", label: "Challenges", icon: Gauge },
-    { id: "trials", label: "Free Trials", icon: Zap },
-  ] },
-  { label: "Funded", items: [
-    { id: "funded", label: "Funded Accounts", icon: WalletCards },
-    { id: "payouts", label: "Payouts", icon: CircleDollarSign },
-  ] },
-  { label: "Commerce", items: [
-    { id: "orders", label: "Orders", icon: ListChecks },
-    { id: "payments", label: "Payments", icon: CreditCard },
-    { id: "refunds", label: "Refunds", icon: RefreshCw },
-  ] },
-  { label: "Trading", items: [
-    { id: "trades", label: "Trades", icon: Activity },
-  ] },
-  { label: "Risk", items: [
-    { id: "risk", label: "Risk Overview", icon: ShieldAlert },
-    { id: "breaches", label: "Breaches", icon: AlertTriangle },
-  ] },
-  { label: "Growth", items: [
-    { id: "funnel", label: "Funnel", icon: BarChart3 },
-    { id: "revenue", label: "Revenue", icon: Activity },
-    { id: "affiliates", label: "Affiliates", icon: Users },
-  ] },
-  { label: "Support", items: [{ id: "support", label: "Cases", icon: LifeBuoy }] },
-  { label: "Operations", items: [
-    { id: "launch-readiness", label: "Launch Readiness", icon: ShieldAlert },
-    { id: "jobs", label: "Jobs", icon: FileClock },
-    { id: "integrations", label: "Integrations", icon: Activity },
-    { id: "errors", label: "Errors", icon: AlertTriangle },
-  ] },
-  { label: "Configuration", items: [
-    { id: "products", label: "Challenge Products", icon: Settings2 },
-    { id: "pricing", label: "Pricing", icon: SlidersHorizontal },
-    { id: "platforms", label: "Trading Platforms", icon: Gauge },
-  ] },
-  { label: "Admin", items: [
-    { id: "admins", label: "Admin Users", icon: Users },
-    { id: "audit", label: "Audit Log", icon: FileClock },
-  ] },
+  { id: "overview", label: "Command Center", icon: LayoutDashboard },
+  { id: "users", label: "Customers", icon: Users },
+  { id: "challenges", label: "Trading Accounts", icon: Gauge },
+  { id: "orders", label: "Finance", icon: WalletCards },
+  { id: "risk", label: "Risk & Reviews", icon: ShieldAlert },
+  { id: "support", label: "Support", icon: LifeBuoy },
+  { id: "funnel", label: "Analytics", icon: BarChart3 },
+  { id: "integrations", label: "Settings & System", icon: Settings2 },
 ];
 
+const WORKSPACE_TABS = {
+  challenges: [
+    { id: "challenges", label: "Paid Challenges" },
+    { id: "trials", label: "Free Trials" },
+    { id: "funded", label: "Funded Accounts" },
+    { id: "trades", label: "Trade Activity" },
+  ],
+  orders: [
+    { id: "orders", label: "Orders" },
+    { id: "payments", label: "Payments" },
+    { id: "payouts", label: "Payouts" },
+  ],
+  risk: [
+    { id: "risk", label: "Risk Overview" },
+    { id: "breaches", label: "Breaches" },
+  ],
+  funnel: [
+    { id: "funnel", label: "Conversion Funnel" },
+    { id: "revenue", label: "Revenue" },
+  ],
+  integrations: [
+    { id: "integrations", label: "Integrations" },
+    { id: "platforms", label: "Trading Platforms" },
+    { id: "launch-readiness", label: "Launch Readiness" },
+    { id: "admins", label: "Administrators" },
+    { id: "audit", label: "Audit Log" },
+  ],
+};
+
+// Unconnected modules remain addressable through existing bookmarks, but do not
+// occupy everyday navigation until they provide a real operational workflow.
+const UNAVAILABLE_WORKSPACE_PAGES = {
+  refunds: "orders", affiliates: "funnel",
+  products: "integrations", pricing: "integrations",
+  jobs: "integrations", errors: "integrations",
+};
+const workspaceForPage = page =>
+  Object.keys(WORKSPACE_TABS).find(workspace => WORKSPACE_TABS[workspace].some(tab => tab.id === page))
+  || UNAVAILABLE_WORKSPACE_PAGES[page] || page;
+
 const TITLES = {
-  overview: ["Overview", "Business health and actions requiring attention"],
+  overview: ["Command Center", "Business health, priorities and actions requiring attention"],
   users: ["Users", "Canonical customer records and lifecycle activity"],
   challenges: ["Challenges", "Paid evaluation accounts and challenge state"],
   trials: ["Free Trials", "Demo evaluations and conversion readiness"],
@@ -501,6 +505,9 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [selectedDetail, setSelectedDetail] = useState(null);
+  const [customerTab, setCustomerTab] = useState("overview");
+  const [accountTab, setAccountTab] = useState("overview");
+  const [returnCustomer, setReturnCustomer] = useState(null);
   const [action, setAction] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [supportReply, setSupportReply] = useState("");
@@ -616,6 +623,8 @@ export default function AdminDashboard() {
   };
 
   const openAccountDetail = async row => {
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
+    setAccountTab(String(row?.status || "").toUpperCase() === "BREACHED" ? "risk" : "overview");
     const accountId = row?.accountId || row?.account?.externalRef;
     if (!accountId) return;
     const targetPage = row?.accountMode === "DEMO"
@@ -646,6 +655,7 @@ export default function AdminDashboard() {
   };
 
   const openPaymentDetail = row => {
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
     setPage("payments");
     setSearch("");
     setStatus("");
@@ -656,11 +666,16 @@ export default function AdminDashboard() {
   };
 
   const openRow = async row => {
+    if (page === "users") setCustomerTab("overview");
+    if (["challenges", "trials", "funded", "breaches", "risk", "trades"].includes(page)) {
+      setAccountTab(["risk", "breaches"].includes(page) || String(row?.status || "").toUpperCase() === "BREACHED" ? "risk" : page === "trades" ? "trading" : "overview");
+    }
+    setReturnCustomer(null);
     setSelected(row);
     setSelectedDetail(null);
     try {
       if (page === "users") setSelectedDetail(await adminFetch(`/users/${encodeURIComponent(row.customerId)}`));
-      if (["challenges", "trials", "funded", "breaches"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
+      if (["challenges", "trials", "funded", "breaches", "risk"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
       if (page === "orders" || page === "payments") setSelectedDetail({ payment: row });
       if (page === "payouts") setSelectedDetail(await adminFetch(`/payouts/${encodeURIComponent(row.payoutId)}`));
       if (page === "trades" && row.account?.externalRef) {
@@ -704,6 +719,19 @@ export default function AdminDashboard() {
     } finally {
       setActionBusy(false);
     }
+  };
+
+  const returnToCustomer = () => {
+    if (!returnCustomer) return;
+    setPage("users");
+    setSearch("");
+    setStatus("");
+    setListPage(1);
+    setQueue("");
+    setSelected(returnCustomer.customer);
+    setSelectedDetail(returnCustomer.detail);
+    setCustomerTab("accounts");
+    setReturnCustomer(null);
   };
 
   const rows = data?.rows || [];
@@ -827,6 +855,13 @@ export default function AdminDashboard() {
     const paidCount = key => checkoutSteps.find(stage => stage.key === key)?.count || 0;
     return (
       <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-white">Today at a glance</h2>
+            <p className="mt-1 text-xs text-zinc-400">Business results and work that needs an operator's attention.</p>
+          </div>
+          <span className="text-[11px] text-zinc-500">Live admin records · refresh to update</span>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi label="Revenue Today" value={money(k.revenueToday)} detail={`${k.paidChallengesToday || 0} paid challenges`} />
           <Kpi label="New Users Today" value={k.newUsersToday || 0} detail={`${k.totalUsers || 0} active customers`} />
@@ -840,8 +875,8 @@ export default function AdminDashboard() {
           <Kpi label="Human Support Queue" value={k.supportEscalated || 0} />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
-          <section className="rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
+        <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+          <section className="order-2 rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
             <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-white">30-day funnel</h3><p className="mt-1 text-xs text-zinc-500">Tracking signals are preliminary; confirmed payments use actual payment records.</p></div><button onClick={() => changePage("funnel")} className="text-xs text-zinc-400 hover:text-white">View funnel</button></div>
             <div className="mt-5 space-y-3">
               {[
@@ -860,17 +895,25 @@ export default function AdminDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
-            <h3 className="text-sm font-semibold text-white">Requires attention</h3>
+          <section className="order-1 rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
+            <div className="flex items-center justify-between">
+              <div><h3 className="text-sm font-semibold text-white">Action Center</h3>
+                <p className="mt-1 text-xs text-zinc-500">Open a queue to investigate, review or resolve a case.</p>
+              </div>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Priority queues</span>
+            </div>
             <div className="mt-4 space-y-2">
               {[
-                ["Provisioning", k.pendingProvisioning, "orders", "provisioning"],
-                ["Failed payments", k.failedPaymentsToday, "payments", "failed-payments"],
-                ["Breaches", k.breachedToday, "breaches", ""],
-                ["Support escalations", k.supportEscalated, "support", "escalated"],
-              ].map(([label, value, destination, nextQueue]) => (
-                <button key={label} onClick={() => openQueue(destination, nextQueue)} className="flex w-full items-center justify-between rounded-lg border border-white/[0.06] px-3 py-3 text-left hover:bg-white/[0.03]">
-                  <span className="text-xs text-zinc-400">{label}</span><span className="flex items-center gap-2 text-sm font-semibold text-white">{value || 0}<ChevronRight size={13} className="text-zinc-600" /></span>
+                ["Account activation", "Paid orders requiring provisioning attention", k.pendingProvisioning, "orders", "provisioning"],
+                ["Payment failures today", "Review unsuccessful transactions", k.failedPaymentsToday, "payments", "failed-payments"],
+                ["Breaches today", "Inspect rule breaches and evidence", k.breachedToday, "breaches", ""],
+                ["Support escalations", "Conversations waiting for a person", k.supportEscalated, "support", "escalated"],
+              ].map(([label, description, value, destination, nextQueue]) => (
+                <button key={label} type="button" onClick={() => openQueue(destination, nextQueue)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/[0.08] px-3 py-3 text-left transition hover:border-white/20 hover:bg-white/[0.04]">
+                  <span className="min-w-0"><span className="block text-[13px] font-medium text-zinc-200">{label}</span>
+                    <span className="mt-1 block text-[11px] text-zinc-500">{description}</span></span>
+                  <span className="flex shrink-0 items-center gap-2"><span className="min-w-7 rounded-md bg-white/[0.07] px-2 py-1 text-center text-xs font-semibold text-white">{value || 0}</span><ChevronRight size={15} className="text-zinc-500" /></span>
                 </button>
               ))}
             </div>
@@ -1192,10 +1235,10 @@ export default function AdminDashboard() {
     return (
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <Kpi label="Requested" value={requested} detail="Awaiting payout review" />
-          <Kpi label="Review / Approved" value={reviewing} detail="Operator attention" />
-          <Kpi label="Processing / Sent" value={processing} detail="Money moving" />
-          <Kpi label="Paid to traders" value={money(paid)} detail="Completed payout value" />
+          <Kpi label="Requested (page)" value={requested} detail="Awaiting payout review" />
+          <Kpi label="Review / Approved (page)" value={reviewing} detail="Operator attention" />
+          <Kpi label="Processing / Sent (page)" value={processing} detail="Money moving" />
+          <Kpi label="Paid to traders (page)" value={money(paid)} detail="Completed payout value for visible rows" />
           <Kpi label="ACG payout fees · INR" value={money(acgFeesInr, "INR")} detail={`${exactReceiptCount}/${paidRows.length} exact receipts verified`} />
         </div>
 
@@ -1217,6 +1260,7 @@ export default function AdminDashboard() {
           ]}
         />
         <Pagination pagination={data?.pagination} onPage={goToListPage} />
+        <p className="text-[11px] text-zinc-500">Payout summaries above cover only the records loaded on this page, not all payouts. A full-period aggregate requires a separate authoritative API.</p>
       </div>
     );
   };
@@ -1380,6 +1424,8 @@ export default function AdminDashboard() {
   };
 
   const pageStatusOptions = PAGE_STATUS_OPTIONS[page] || [];
+  const workspaceId = workspaceForPage(page);
+  const workspaceTabs = WORKSPACE_TABS[workspaceId] || [];
   const userDetail = selectedDetail?.customer;
   const accountDetail = selectedDetail?.account;
   const tradingDetail = selectedDetail?.trading;
@@ -1437,10 +1483,26 @@ export default function AdminDashboard() {
           <div><div className="text-sm font-bold tracking-[-0.02em] text-white">ACG FUNDED</div><div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-600">Admin</div></div>
           <button className="text-zinc-500 lg:hidden" onClick={() => setSidebarOpen(false)}><X size={17} /></button>
         </div>
-        <nav className="h-[calc(100vh-128px)] overflow-y-auto px-3 py-4">
-          {NAV.map(group => <div key={group.label} className="mb-5"><p className="mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-700">{group.label}</p>
-            {group.items.map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => changePage(item.id)} className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[12px] font-medium transition ${page===item.id ? "bg-white text-black" : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"}`}><Icon size={14} /><span>{item.label}</span></button>; })}
-          </div>)}
+        <nav aria-label="Admin workspaces" className="h-[calc(100vh-128px)] overflow-y-auto px-3 py-5">
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Workspaces</p>
+          {NAV.filter(item => item.id !== "integrations").map(item => {
+            const Icon = item.icon;
+            const active = workspaceId === item.id;
+            return <button key={item.id} onClick={() => changePage(item.id)} aria-current={active ? "page" : undefined}
+              className={`mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition ${active ? "bg-white text-black" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"}`}>
+              <Icon size={16} /><span>{item.label}</span>
+            </button>;
+          })}
+          <div className="my-5 border-t border-white/[0.08]" />
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Administration</p>
+          {NAV.filter(item => item.id === "integrations").map(item => {
+            const Icon = item.icon;
+            const active = workspaceId === item.id;
+            return <button key={item.id} onClick={() => changePage(item.id)} aria-current={active ? "page" : undefined}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition ${active ? "bg-white text-black" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"}`}>
+              <Icon size={16} /><span>{item.label}</span>
+            </button>;
+          })}
         </nav>
         <div className="absolute inset-x-0 bottom-0 border-t border-white/[0.06] p-3">
           <button onClick={signOut} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-zinc-500 hover:bg-white/[0.04] hover:text-white"><LogOut size={14} /> Sign out</button>
@@ -1451,16 +1513,27 @@ export default function AdminDashboard() {
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#090909]/90 px-4 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-lg border border-white/10 p-2 text-zinc-400 lg:hidden" onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>
-            <div className="min-w-0"><h1 className="truncate text-[15px] font-semibold text-white">{TITLES[page]?.[0]}</h1><p className="hidden truncate text-[10px] text-zinc-600 sm:block">{TITLES[page]?.[1]}</p></div>
+            <div className="min-w-0"><h1 className="truncate text-[17px] font-semibold text-white">{NAV.find(item => item.id === workspaceId)?.label || TITLES[page]?.[0]}</h1><p className="hidden truncate text-[11px] text-zinc-500 sm:block">{TITLES[page]?.[1]}</p></div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="rounded-lg border border-white/[0.08] p-2 text-zinc-500 hover:text-white"><RefreshCw size={14} /></button>
-            <button className="rounded-lg border border-white/[0.08] p-2 text-zinc-500"><Bell size={14} /></button>
+
             <div className="hidden max-w-[220px] truncate rounded-lg border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-500 sm:block">{user?.email}</div>
           </div>
         </header>
 
         <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
+          {workspaceTabs.length > 0 && (
+            <nav aria-label={`${NAV.find(item => item.id === workspaceId)?.label} sections`} className="mb-5 flex gap-1 overflow-x-auto border-b border-white/[0.08] pb-px">
+              {workspaceTabs.map(tab => (
+                <button key={tab.id} type="button" onClick={() => changePage(tab.id)}
+                  aria-current={page === tab.id ? "page" : undefined}
+                  className={`shrink-0 border-b-2 px-3 py-3 text-[12px] font-medium transition ${page === tab.id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          )}
           {toolbar && <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 flex-1"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" /><input value={search} onChange={e => { setSearch(e.target.value); setListPage(1); }} placeholder="Search by email, ID, order or account…" className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#0e0e0e] pl-9 pr-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/20" /></div>
             {pageStatusOptions.length > 0 && <select value={status} onChange={e => { setStatus(e.target.value); setListPage(1); setQueue(""); }} className="h-10 rounded-lg border border-white/[0.08] bg-[#0e0e0e] px-3 text-xs text-zinc-400 outline-none">
@@ -1479,19 +1552,50 @@ export default function AdminDashboard() {
       {selected && page === "users" && <Inspector title={selected.primaryEmail} subtitle={selected.customerId} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load customer" text={selectedDetail.error} /> : <>
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Total Spend" value={money(selectedDetail.stats?.totalSpend)} /><Kpi label="Accounts" value={selectedDetail.stats?.accounts || 0} /><Kpi label="Orders" value={selectedDetail.stats?.orders || 0} /></div>
-          <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-zinc-500">Account status</p><div className="mt-2"><Badge>{userDetail?.status}</Badge></div></div><div className="flex gap-2">
-            {userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
-            {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
-          </div></div></div>
-          <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-zinc-500">Challenges & trials</h3>
-          <DataTable rows={selectedDetail.accounts || []} onRow={openAccountDetail} columns={challengeColumns.slice(0,7)} />
-          <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-zinc-500">Orders</h3>
-          <DataTable rows={selectedDetail.payments || []} onRow={openPaymentDetail} columns={paymentColumns.slice(0,6)} />
+          <nav aria-label="Customer profile sections" className="mt-5 flex gap-1 border-b border-white/[0.08]">
+            {[["overview", "Overview"], ["accounts", "Accounts"], ["orders", "Orders"]].map(([id, label]) => (
+              <button key={id} type="button" onClick={() => setCustomerTab(id)}
+                aria-current={customerTab === id ? "page" : undefined}
+                className={`border-b-2 px-3 py-3 text-xs font-medium ${customerTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          {customerTab === "overview" && (<>
+            <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-xs font-semibold text-white">Customer status</p><div className="mt-2"><Badge>{userDetail?.status}</Badge></div></div>
+                <div className="flex gap-2">
+                  {userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
+                  {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 border-t border-white/[0.08] pt-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Joined</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.createdAt || selected?.createdAt)}</p></div><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Last login</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.lastAuthenticatedAt || selected?.lastAuthenticatedAt)}</p></div></div>
+              <p className="mt-3 text-xs text-zinc-500">Review the account and purchase history before making a change. All privileged actions remain subject to server authorization and audit.</p>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={() => setCustomerTab("accounts")} className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#111] p-4 text-left hover:bg-white/[0.05]">
+                <span><span className="block text-sm font-semibold">Trading accounts</span><span className="mt-1 block text-xs text-zinc-500">View trial, challenge and funded records</span></span><ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => setCustomerTab("orders")} className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#111] p-4 text-left hover:bg-white/[0.05]">
+                <span><span className="block text-sm font-semibold">Purchases & payments</span><span className="mt-1 block text-xs text-zinc-500">Review orders and activation</span></span><ChevronRight size={16} />
+              </button>
+            </div>
+          </>)}
+          {customerTab === "accounts" && (<section className="mt-5">
+            <h3 className="mb-3 text-sm font-semibold text-white">Challenges, trials & funded accounts</h3>
+            <DataTable rows={selectedDetail.accounts || []} onRow={openAccountDetail} columns={challengeColumns.slice(0,7)} />
+          </section>)}
+          {customerTab === "orders" && (<section className="mt-5">
+            <h3 className="mb-3 text-sm font-semibold text-white">Orders & payments</h3>
+            <DataTable rows={selectedDetail.payments || []} onRow={openPaymentDetail} columns={paymentColumns.slice(0,6)} />
+          </section>)}
         </>}
       </Inspector>}
 
-      {selected && ["challenges","trials","funded","breaches","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
+      {selected && ["challenges","trials","funded","breaches","risk","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load account" text={selectedDetail.error} /> : <>
+          {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={signedMoney(currentProfit,"USD")} /></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Kpi
@@ -1506,7 +1610,21 @@ export default function AdminDashboard() {
             />
             <Kpi label="Trading Days" value={accountDetail?.projections?.tradingDays || 0} />
           </div>
-          {breachDetail && (
+          <nav aria-label="Account detail sections" className="mt-5 flex gap-1 overflow-x-auto border-b border-white/[0.08]">
+            {[
+              ["overview", "Overview"],
+              ["trading", "Trading"],
+              ["risk", "Risk & Rules"],
+              ["history", "History"],
+            ].map(([id, label]) => (
+              <button key={id} type="button" onClick={() => setAccountTab(id)}
+                aria-current={accountTab === id ? "page" : undefined}
+                className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium ${accountTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          {accountTab === "risk" && breachDetail && (
             <section className="mt-5 rounded-xl border border-red-400/20 bg-red-400/[0.06] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -1540,7 +1658,8 @@ export default function AdminDashboard() {
             </section>
           )}
 
-          <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+          {accountTab === "overview" && (
+            <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-xs font-semibold text-white">Account 360°</p><p className="mt-1 text-[11px] text-zinc-500">Customer, platform, lifecycle and risk state.</p></div>
               <Badge>{accountDetail?.accountMode === "DEMO" ? "TRIAL" : accountDetail?.status === "FUNDED" ? "MASTER" : "CHALLENGE"}</Badge>
@@ -1567,8 +1686,10 @@ export default function AdminDashboard() {
                 ["Updated", dateTime(accountDetail?.updatedAt)],
               ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 break-all text-xs text-zinc-200">{value || "—"}</p></div>)}
             </div>
-          </section>
+            </section>
+          )}
 
+          {accountTab === "trading" && (
           <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
             <p className="text-xs font-semibold text-white">Trading statistics</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -1578,8 +1699,9 @@ export default function AdminDashboard() {
               <Kpi label="Win Rate" value={pct((Number(accountDetail?.totalTrades || 0) > 0 ? Number(accountDetail?.winningTrades || 0) / Number(accountDetail.totalTrades) : 0) * 100)} />
             </div>
           </section>
+          )}
 
-          {selectedDetail?.tradingError && (
+          {accountTab === "trading" && selectedDetail?.tradingError && (
             <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-xs text-amber-200">
               Trader history is temporarily unavailable: {selectedDetail.tradingError.message}
             </div>
@@ -1587,6 +1709,7 @@ export default function AdminDashboard() {
 
           {tradingDetail && (
             <>
+              {accountTab === "trading" && (<>
               <section className="mt-5">
                 <div className="mb-3 flex items-end justify-between"><div><h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Open positions</h3><p className="mt-1 text-[11px] text-zinc-600">{openPositions.length} currently open</p></div></div>
                 <DataTable rows={openPositions} empty="No open positions." columns={[
@@ -1653,6 +1776,8 @@ export default function AdminDashboard() {
                 ]} />
               </section>
 
+              </>)}
+              {accountTab === "risk" && (<>
               <section className="mt-5">
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Trading permission observations</h3><p className="mt-1 text-[11px] text-zinc-600">{tradingPolicyShadowEvents.length} recent observations · Permission version {tradingDetail?.tradingPermissionStatus?.permissionVersion ?? 'unknown'}</p></div><div className="flex flex-wrap gap-2"><Badge>NEWS {permissionControl?.newsDisabled ? 'DISABLED BY OPERATOR' : effectivePermissions?.newsTrading?.mode || 'UNKNOWN'}</Badge><Badge>WEEKEND {permissionControl?.weekendDisabled ? 'DISABLED BY OPERATOR' : effectivePermissions?.weekendHolding?.mode || 'UNKNOWN'}</Badge></div></div>
                 <DataTable rows={tradingPolicyShadowEvents} empty="No news/weekend shadow events recorded for this account." columns={[
@@ -1680,6 +1805,8 @@ export default function AdminDashboard() {
                 ]} />
               </section>
 
+              </>)}
+              {accountTab === "history" && (
               <section className="mt-5">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">Lifecycle timeline</h3>
                 <DataTable rows={lifecycleEvents} empty="No Trader lifecycle events recorded." columns={[
@@ -1691,9 +1818,11 @@ export default function AdminDashboard() {
                   { key: "actorType", label: "Actor" },
                 ]} />
               </section>
+              )}
             </>
           )}
 
+          {accountTab === "overview" && (<>
           <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
             <p className="text-xs font-semibold text-white">Commercial & activation</p>
             <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1717,11 +1846,16 @@ export default function AdminDashboard() {
             {accountDetail?.status === "FUNDED_REVIEW" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"APPROVE_FUNDED",label:"Approve funded account"})} className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs font-semibold text-emerald-300">Approve Funded</button>}
             {accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
           </div></div></div>
+
+          </>)}
+          {accountTab === "risk" && (
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><p className="text-xs font-semibold text-white">Rules snapshot</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><p className="text-[10px] text-zinc-600">Daily drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.dailyDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Max drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.maxDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Minimum trading days</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.rules?.minimumTradingDays || 0}</p></div><div><p className="text-[10px] text-zinc-600">Platform</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.platform || "—"}</p></div></div></div>
+          )}
         </>}
       </Inspector>}
 
       {selected && ["orders","payments"].includes(page) && <Inspector title={selected.orderId || "Payment"} subtitle={selected.email || selected._id} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
+        {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
         <div className="grid gap-3 sm:grid-cols-3">
           <Kpi label="Amount" value={money(selected.amount, selected.currency || "USD")} />
           <Kpi label="Payment" value={selected.status || "—"} />
