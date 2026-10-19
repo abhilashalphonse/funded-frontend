@@ -1221,7 +1221,7 @@ export default function AdminDashboard() {
           <Kpi label="Unattributed sales · USD" value={money(summary.unattributedSalesUsd)} detail="Paid orders missing acquisition tags" />
           <Kpi label="Confirmed paid orders" value={summary.paidPayments || 0} detail="Authoritative payment records" />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-white">Sales by payment method</h3>
             <DataTable rows={methods} columns={[
@@ -1606,7 +1606,7 @@ export default function AdminDashboard() {
 
       {selected && page === "users" && <Inspector title={selected.primaryEmail} subtitle={selected.customerId} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load customer" text={selectedDetail.error} /> : <>
-          <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Total Spend" value={money(selectedDetail.stats?.totalSpend)} /><Kpi label="Accounts" value={selectedDetail.stats?.accounts || 0} /><Kpi label="Orders" value={selectedDetail.stats?.orders || 0} /></div>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3"><Kpi label="Total Spend" value={money(selectedDetail.stats?.totalSpend)} /><Kpi label="Accounts" value={selectedDetail.stats?.accounts || 0} /><Kpi label="Orders" value={selectedDetail.stats?.orders || 0} /></div>
           <nav aria-label="Customer profile sections" className="mt-5 flex gap-1 border-b border-white/[0.08]">
             {[["overview", "Overview"], ["accounts", "Accounts"], ["orders", "Orders"]].map(([id, label]) => (
               <button key={id} type="button" onClick={() => setCustomerTab(id)}
@@ -1651,8 +1651,8 @@ export default function AdminDashboard() {
       {selected && ["challenges","trials","funded","breaches","risk","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load account" text={selectedDetail.error} /> : <>
           {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
-          <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={signedMoney(currentProfit,"USD")} /></div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={signedMoney(currentProfit,"USD")} /></div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3">
             <Kpi
               label="Daily Loss"
               value={lossPct(currentDailyLoss, lossBase(accountDetail))}
@@ -1921,7 +1921,7 @@ export default function AdminDashboard() {
 
       {selected && ["orders","payments"].includes(page) && <Inspector title={selected.orderId || "Payment"} subtitle={selected.email || selected._id} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3">
           <Kpi label="Amount" value={money(selected.amount, selected.currency || "USD")} />
           <Kpi label="Payment" value={selected.status || "—"} />
           <Kpi label="Activation" value={selected.activation?.status || "NOT_STARTED"} />
@@ -1995,7 +1995,7 @@ export default function AdminDashboard() {
           ].filter(([, value]) => value);
 
           return <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3">
               <Kpi label="Payout Amount" value={money(payout?.requestedAmountUsd)} />
               <Kpi label="Method" value={payout?.method || "—"} />
               <Kpi label="Status" value={humanize(payout?.status)} />
