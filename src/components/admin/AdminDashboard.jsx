@@ -10,54 +10,59 @@ import LaunchReadinessPanel from "./LaunchReadinessPanel.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
+// Only everyday workspaces appear as primary navigation. Existing page IDs remain
+// addressable so links from notices, account details and bookmarks keep working.
 const NAV = [
-  { label: "Overview", items: [{ id: "overview", label: "Overview", icon: LayoutDashboard }] },
-  { label: "Customers", items: [{ id: "users", label: "Users", icon: Users }] },
-  { label: "Challenges", items: [
-    { id: "challenges", label: "Challenges", icon: Gauge },
-    { id: "trials", label: "Free Trials", icon: Zap },
-  ] },
-  { label: "Funded", items: [
-    { id: "funded", label: "Funded Accounts", icon: WalletCards },
-    { id: "payouts", label: "Payouts", icon: CircleDollarSign },
-  ] },
-  { label: "Commerce", items: [
-    { id: "orders", label: "Orders", icon: ListChecks },
-    { id: "payments", label: "Payments", icon: CreditCard },
-    { id: "refunds", label: "Refunds", icon: RefreshCw },
-  ] },
-  { label: "Trading", items: [
-    { id: "trades", label: "Trades", icon: Activity },
-  ] },
-  { label: "Risk", items: [
-    { id: "risk", label: "Risk Overview", icon: ShieldAlert },
-    { id: "breaches", label: "Breaches", icon: AlertTriangle },
-  ] },
-  { label: "Growth", items: [
-    { id: "funnel", label: "Funnel", icon: BarChart3 },
-    { id: "revenue", label: "Revenue", icon: Activity },
-    { id: "affiliates", label: "Affiliates", icon: Users },
-  ] },
-  { label: "Support", items: [{ id: "support", label: "Cases", icon: LifeBuoy }] },
-  { label: "Operations", items: [
-    { id: "launch-readiness", label: "Launch Readiness", icon: ShieldAlert },
-    { id: "jobs", label: "Jobs", icon: FileClock },
-    { id: "integrations", label: "Integrations", icon: Activity },
-    { id: "errors", label: "Errors", icon: AlertTriangle },
-  ] },
-  { label: "Configuration", items: [
-    { id: "products", label: "Challenge Products", icon: Settings2 },
-    { id: "pricing", label: "Pricing", icon: SlidersHorizontal },
-    { id: "platforms", label: "Trading Platforms", icon: Gauge },
-  ] },
-  { label: "Admin", items: [
-    { id: "admins", label: "Admin Users", icon: Users },
-    { id: "audit", label: "Audit Log", icon: FileClock },
-  ] },
+  { id: "overview", label: "Command Center", icon: LayoutDashboard },
+  { id: "users", label: "Customers", icon: Users },
+  { id: "challenges", label: "Trading Accounts", icon: Gauge },
+  { id: "orders", label: "Finance", icon: WalletCards },
+  { id: "risk", label: "Risk & Reviews", icon: ShieldAlert },
+  { id: "support", label: "Support", icon: LifeBuoy },
+  { id: "funnel", label: "Analytics", icon: BarChart3 },
+  { id: "integrations", label: "Settings & System", icon: Settings2 },
 ];
 
+const WORKSPACE_TABS = {
+  challenges: [
+    { id: "challenges", label: "Paid Challenges" },
+    { id: "trials", label: "Free Trials" },
+    { id: "funded", label: "Funded Accounts" },
+    { id: "trades", label: "Trade Activity" },
+  ],
+  orders: [
+    { id: "orders", label: "Orders" },
+    { id: "payments", label: "Payments" },
+    { id: "payouts", label: "Payouts" },
+    { id: "refunds", label: "Refunds" },
+  ],
+  risk: [
+    { id: "risk", label: "Risk Overview" },
+    { id: "breaches", label: "Breaches" },
+  ],
+  funnel: [
+    { id: "funnel", label: "Conversion Funnel" },
+    { id: "revenue", label: "Revenue" },
+    { id: "affiliates", label: "Affiliates" },
+  ],
+  integrations: [
+    { id: "integrations", label: "Integrations" },
+    { id: "products", label: "Challenge Products" },
+    { id: "pricing", label: "Pricing" },
+    { id: "platforms", label: "Trading Platforms" },
+    { id: "launch-readiness", label: "Launch Readiness" },
+    { id: "jobs", label: "Jobs" },
+    { id: "errors", label: "Errors" },
+    { id: "admins", label: "Administrators" },
+    { id: "audit", label: "Audit Log" },
+  ],
+};
+
+const workspaceForPage = page =>
+  Object.keys(WORKSPACE_TABS).find(workspace => WORKSPACE_TABS[workspace].some(tab => tab.id === page)) || page;
+
 const TITLES = {
-  overview: ["Overview", "Business health and actions requiring attention"],
+  overview: ["Command Center", "Business health, priorities and actions requiring attention"],
   users: ["Users", "Canonical customer records and lifecycle activity"],
   challenges: ["Challenges", "Paid evaluation accounts and challenge state"],
   trials: ["Free Trials", "Demo evaluations and conversion readiness"],
@@ -1380,6 +1385,8 @@ export default function AdminDashboard() {
   };
 
   const pageStatusOptions = PAGE_STATUS_OPTIONS[page] || [];
+  const workspaceId = workspaceForPage(page);
+  const workspaceTabs = WORKSPACE_TABS[workspaceId] || [];
   const userDetail = selectedDetail?.customer;
   const accountDetail = selectedDetail?.account;
   const tradingDetail = selectedDetail?.trading;
@@ -1437,10 +1444,26 @@ export default function AdminDashboard() {
           <div><div className="text-sm font-bold tracking-[-0.02em] text-white">ACG FUNDED</div><div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-600">Admin</div></div>
           <button className="text-zinc-500 lg:hidden" onClick={() => setSidebarOpen(false)}><X size={17} /></button>
         </div>
-        <nav className="h-[calc(100vh-128px)] overflow-y-auto px-3 py-4">
-          {NAV.map(group => <div key={group.label} className="mb-5"><p className="mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-700">{group.label}</p>
-            {group.items.map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => changePage(item.id)} className={`mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[12px] font-medium transition ${page===item.id ? "bg-white text-black" : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"}`}><Icon size={14} /><span>{item.label}</span></button>; })}
-          </div>)}
+        <nav aria-label="Admin workspaces" className="h-[calc(100vh-128px)] overflow-y-auto px-3 py-5">
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Workspaces</p>
+          {NAV.filter(item => item.id !== "integrations").map(item => {
+            const Icon = item.icon;
+            const active = workspaceId === item.id;
+            return <button key={item.id} onClick={() => changePage(item.id)} aria-current={active ? "page" : undefined}
+              className={`mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition ${active ? "bg-white text-black" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"}`}>
+              <Icon size={16} /><span>{item.label}</span>
+            </button>;
+          })}
+          <div className="my-5 border-t border-white/[0.08]" />
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Administration</p>
+          {NAV.filter(item => item.id === "integrations").map(item => {
+            const Icon = item.icon;
+            const active = workspaceId === item.id;
+            return <button key={item.id} onClick={() => changePage(item.id)} aria-current={active ? "page" : undefined}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition ${active ? "bg-white text-black" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"}`}>
+              <Icon size={16} /><span>{item.label}</span>
+            </button>;
+          })}
         </nav>
         <div className="absolute inset-x-0 bottom-0 border-t border-white/[0.06] p-3">
           <button onClick={signOut} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-zinc-500 hover:bg-white/[0.04] hover:text-white"><LogOut size={14} /> Sign out</button>
@@ -1451,7 +1474,7 @@ export default function AdminDashboard() {
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#090909]/90 px-4 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-lg border border-white/10 p-2 text-zinc-400 lg:hidden" onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>
-            <div className="min-w-0"><h1 className="truncate text-[15px] font-semibold text-white">{TITLES[page]?.[0]}</h1><p className="hidden truncate text-[10px] text-zinc-600 sm:block">{TITLES[page]?.[1]}</p></div>
+            <div className="min-w-0"><h1 className="truncate text-[17px] font-semibold text-white">{NAV.find(item => item.id === workspaceId)?.label || TITLES[page]?.[0]}</h1><p className="hidden truncate text-[11px] text-zinc-500 sm:block">{TITLES[page]?.[1]}</p></div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="rounded-lg border border-white/[0.08] p-2 text-zinc-500 hover:text-white"><RefreshCw size={14} /></button>
@@ -1461,6 +1484,17 @@ export default function AdminDashboard() {
         </header>
 
         <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
+          {workspaceTabs.length > 0 && (
+            <nav aria-label={`${NAV.find(item => item.id === workspaceId)?.label} sections`} className="mb-5 flex gap-1 overflow-x-auto border-b border-white/[0.08] pb-px">
+              {workspaceTabs.map(tab => (
+                <button key={tab.id} type="button" onClick={() => changePage(tab.id)}
+                  aria-current={page === tab.id ? "page" : undefined}
+                  className={`shrink-0 border-b-2 px-3 py-3 text-[12px] font-medium transition ${page === tab.id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          )}
           {toolbar && <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 flex-1"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" /><input value={search} onChange={e => { setSearch(e.target.value); setListPage(1); }} placeholder="Search by email, ID, order or account…" className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#0e0e0e] pl-9 pr-3 text-xs text-white outline-none placeholder:text-zinc-700 focus:border-white/20" /></div>
             {pageStatusOptions.length > 0 && <select value={status} onChange={e => { setStatus(e.target.value); setListPage(1); setQueue(""); }} className="h-10 rounded-lg border border-white/[0.08] bg-[#0e0e0e] px-3 text-xs text-zinc-400 outline-none">
