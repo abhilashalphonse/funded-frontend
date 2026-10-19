@@ -665,7 +665,7 @@ export default function AdminDashboard() {
     setSelectedDetail(null);
     try {
       if (page === "users") setSelectedDetail(await adminFetch(`/users/${encodeURIComponent(row.customerId)}`));
-      if (["challenges", "trials", "funded", "breaches"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
+      if (["challenges", "trials", "funded", "breaches", "risk"].includes(page)) setSelectedDetail(await adminFetch(`/challenges/${encodeURIComponent(row.accountId)}`));
       if (page === "orders" || page === "payments") setSelectedDetail({ payment: row });
       if (page === "payouts") setSelectedDetail(await adminFetch(`/payouts/${encodeURIComponent(row.payoutId)}`));
       if (page === "trades" && row.account?.externalRef) {
@@ -832,6 +832,13 @@ export default function AdminDashboard() {
     const paidCount = key => checkoutSteps.find(stage => stage.key === key)?.count || 0;
     return (
       <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-white">Today at a glance</h2>
+            <p className="mt-1 text-xs text-zinc-400">Business results and work that needs an operator's attention.</p>
+          </div>
+          <span className="text-[11px] text-zinc-500">Live admin records · refresh to update</span>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi label="Revenue Today" value={money(k.revenueToday)} detail={`${k.paidChallengesToday || 0} paid challenges`} />
           <Kpi label="New Users Today" value={k.newUsersToday || 0} detail={`${k.totalUsers || 0} active customers`} />
@@ -845,8 +852,8 @@ export default function AdminDashboard() {
           <Kpi label="Human Support Queue" value={k.supportEscalated || 0} />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
-          <section className="rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
+        <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+          <section className="order-2 rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
             <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold text-white">30-day funnel</h3><p className="mt-1 text-xs text-zinc-500">Tracking signals are preliminary; confirmed payments use actual payment records.</p></div><button onClick={() => changePage("funnel")} className="text-xs text-zinc-400 hover:text-white">View funnel</button></div>
             <div className="mt-5 space-y-3">
               {[
@@ -865,17 +872,25 @@ export default function AdminDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
-            <h3 className="text-sm font-semibold text-white">Requires attention</h3>
+          <section className="order-1 rounded-xl border border-white/[0.07] bg-[#0f0f0f] p-5">
+            <div className="flex items-center justify-between">
+              <div><h3 className="text-sm font-semibold text-white">Action Center</h3>
+                <p className="mt-1 text-xs text-zinc-500">Open a queue to investigate, review or resolve a case.</p>
+              </div>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Priority queues</span>
+            </div>
             <div className="mt-4 space-y-2">
               {[
-                ["Provisioning", k.pendingProvisioning, "orders", "provisioning"],
-                ["Failed payments", k.failedPaymentsToday, "payments", "failed-payments"],
-                ["Breaches", k.breachedToday, "breaches", ""],
-                ["Support escalations", k.supportEscalated, "support", "escalated"],
-              ].map(([label, value, destination, nextQueue]) => (
-                <button key={label} onClick={() => openQueue(destination, nextQueue)} className="flex w-full items-center justify-between rounded-lg border border-white/[0.06] px-3 py-3 text-left hover:bg-white/[0.03]">
-                  <span className="text-xs text-zinc-400">{label}</span><span className="flex items-center gap-2 text-sm font-semibold text-white">{value || 0}<ChevronRight size={13} className="text-zinc-600" /></span>
+                ["Account activation", "Paid orders requiring provisioning attention", k.pendingProvisioning, "orders", "provisioning"],
+                ["Payment failures today", "Review unsuccessful transactions", k.failedPaymentsToday, "payments", "failed-payments"],
+                ["Breaches today", "Inspect rule breaches and evidence", k.breachedToday, "breaches", ""],
+                ["Support escalations", "Conversations waiting for a person", k.supportEscalated, "support", "escalated"],
+              ].map(([label, description, value, destination, nextQueue]) => (
+                <button key={label} type="button" onClick={() => openQueue(destination, nextQueue)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/[0.08] px-3 py-3 text-left transition hover:border-white/20 hover:bg-white/[0.04]">
+                  <span className="min-w-0"><span className="block text-[13px] font-medium text-zinc-200">{label}</span>
+                    <span className="mt-1 block text-[11px] text-zinc-500">{description}</span></span>
+                  <span className="flex shrink-0 items-center gap-2"><span className="min-w-7 rounded-md bg-white/[0.07] px-2 py-1 text-center text-xs font-semibold text-white">{value || 0}</span><ChevronRight size={15} className="text-zinc-500" /></span>
                 </button>
               ))}
             </div>
@@ -1197,10 +1212,10 @@ export default function AdminDashboard() {
     return (
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <Kpi label="Requested" value={requested} detail="Awaiting payout review" />
-          <Kpi label="Review / Approved" value={reviewing} detail="Operator attention" />
-          <Kpi label="Processing / Sent" value={processing} detail="Money moving" />
-          <Kpi label="Paid to traders" value={money(paid)} detail="Completed payout value" />
+          <Kpi label="Requested (page)" value={requested} detail="Awaiting payout review" />
+          <Kpi label="Review / Approved (page)" value={reviewing} detail="Operator attention" />
+          <Kpi label="Processing / Sent (page)" value={processing} detail="Money moving" />
+          <Kpi label="Paid to traders (page)" value={money(paid)} detail="Completed payout value for visible rows" />
           <Kpi label="ACG payout fees · INR" value={money(acgFeesInr, "INR")} detail={`${exactReceiptCount}/${paidRows.length} exact receipts verified`} />
         </div>
 
@@ -1222,6 +1237,7 @@ export default function AdminDashboard() {
           ]}
         />
         <Pagination pagination={data?.pagination} onPage={goToListPage} />
+        <p className="text-[11px] text-zinc-500">Payout summaries above cover only the records loaded on this page, not all payouts. A full-period aggregate requires a separate authoritative API.</p>
       </div>
     );
   };
@@ -1478,7 +1494,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="rounded-lg border border-white/[0.08] p-2 text-zinc-500 hover:text-white"><RefreshCw size={14} /></button>
-            <button className="rounded-lg border border-white/[0.08] p-2 text-zinc-500"><Bell size={14} /></button>
+
             <div className="hidden max-w-[220px] truncate rounded-lg border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-500 sm:block">{user?.email}</div>
           </div>
         </header>
@@ -1524,7 +1540,7 @@ export default function AdminDashboard() {
         </>}
       </Inspector>}
 
-      {selected && ["challenges","trials","funded","breaches","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
+      {selected && ["challenges","trials","funded","breaches","risk","trades"].includes(page) && <Inspector title={selected.accountId} subtitle={`${selected.accountMode} · ${money(selected.accountSize,"USD")}`} onClose={() => {setSelected(null);setSelectedDetail(null);}}>
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load account" text={selectedDetail.error} /> : <>
           <div className="grid gap-3 sm:grid-cols-3"><Kpi label="Balance" value={money(accountDetail?.balance,"USD")} /><Kpi label="Equity" value={money(accountDetail?.equity,"USD")} /><Kpi label="Profit" value={signedMoney(currentProfit,"USD")} /></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
