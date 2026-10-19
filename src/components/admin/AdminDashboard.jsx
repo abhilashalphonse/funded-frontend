@@ -506,6 +506,8 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [selectedDetail, setSelectedDetail] = useState(null);
+  const [customerTab, setCustomerTab] = useState("overview");
+  const [accountTab, setAccountTab] = useState("overview");
   const [action, setAction] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [supportReply, setSupportReply] = useState("");
@@ -621,6 +623,7 @@ export default function AdminDashboard() {
   };
 
   const openAccountDetail = async row => {
+    setAccountTab("overview");
     const accountId = row?.accountId || row?.account?.externalRef;
     if (!accountId) return;
     const targetPage = row?.accountMode === "DEMO"
@@ -661,6 +664,8 @@ export default function AdminDashboard() {
   };
 
   const openRow = async row => {
+    if (page === "users") setCustomerTab("overview");
+    if (["challenges", "trials", "funded", "breaches", "risk", "trades"].includes(page)) setAccountTab("overview");
     setSelected(row);
     setSelectedDetail(null);
     try {
@@ -1556,7 +1561,21 @@ export default function AdminDashboard() {
             />
             <Kpi label="Trading Days" value={accountDetail?.projections?.tradingDays || 0} />
           </div>
-          {breachDetail && (
+          <nav aria-label="Account detail sections" className="mt-5 flex gap-1 overflow-x-auto border-b border-white/[0.08]">
+            {[
+              ["overview", "Overview"],
+              ["trading", "Trading"],
+              ["risk", "Risk & Rules"],
+              ["history", "History"],
+            ].map(([id, label]) => (
+              <button key={id} type="button" onClick={() => setAccountTab(id)}
+                aria-current={accountTab === id ? "page" : undefined}
+                className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium ${accountTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          {accountTab === "risk" && breachDetail && (
             <section className="mt-5 rounded-xl border border-red-400/20 bg-red-400/[0.06] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -1590,7 +1609,8 @@ export default function AdminDashboard() {
             </section>
           )}
 
-          <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
+          {accountTab === "overview" && (
+            <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-xs font-semibold text-white">Account 360°</p><p className="mt-1 text-[11px] text-zinc-500">Customer, platform, lifecycle and risk state.</p></div>
               <Badge>{accountDetail?.accountMode === "DEMO" ? "TRIAL" : accountDetail?.status === "FUNDED" ? "MASTER" : "CHALLENGE"}</Badge>
@@ -1617,8 +1637,10 @@ export default function AdminDashboard() {
                 ["Updated", dateTime(accountDetail?.updatedAt)],
               ].map(([label, value]) => <div key={label}><p className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</p><p className="mt-1 break-all text-xs text-zinc-200">{value || "—"}</p></div>)}
             </div>
-          </section>
+            </section>
+          )}
 
+          {accountTab === "trading" && (
           <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
             <p className="text-xs font-semibold text-white">Trading statistics</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -1629,7 +1651,7 @@ export default function AdminDashboard() {
             </div>
           </section>
 
-          {selectedDetail?.tradingError && (
+          {accountTab === "trading" && selectedDetail?.tradingError && (
             <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-4 text-xs text-amber-200">
               Trader history is temporarily unavailable: {selectedDetail.tradingError.message}
             </div>
@@ -1637,6 +1659,7 @@ export default function AdminDashboard() {
 
           {tradingDetail && (
             <>
+              {accountTab === "trading" && (<>
               <section className="mt-5">
                 <div className="mb-3 flex items-end justify-between"><div><h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Open positions</h3><p className="mt-1 text-[11px] text-zinc-600">{openPositions.length} currently open</p></div></div>
                 <DataTable rows={openPositions} empty="No open positions." columns={[
@@ -1703,6 +1726,8 @@ export default function AdminDashboard() {
                 ]} />
               </section>
 
+              </>)}
+              {accountTab === "risk" && (<>
               <section className="mt-5">
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Trading permission observations</h3><p className="mt-1 text-[11px] text-zinc-600">{tradingPolicyShadowEvents.length} recent observations · Permission version {tradingDetail?.tradingPermissionStatus?.permissionVersion ?? 'unknown'}</p></div><div className="flex flex-wrap gap-2"><Badge>NEWS {permissionControl?.newsDisabled ? 'DISABLED BY OPERATOR' : effectivePermissions?.newsTrading?.mode || 'UNKNOWN'}</Badge><Badge>WEEKEND {permissionControl?.weekendDisabled ? 'DISABLED BY OPERATOR' : effectivePermissions?.weekendHolding?.mode || 'UNKNOWN'}</Badge></div></div>
                 <DataTable rows={tradingPolicyShadowEvents} empty="No news/weekend shadow events recorded for this account." columns={[
@@ -1730,6 +1755,8 @@ export default function AdminDashboard() {
                 ]} />
               </section>
 
+              </>)}
+              {accountTab === "history" && (
               <section className="mt-5">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">Lifecycle timeline</h3>
                 <DataTable rows={lifecycleEvents} empty="No Trader lifecycle events recorded." columns={[
@@ -1741,9 +1768,11 @@ export default function AdminDashboard() {
                   { key: "actorType", label: "Actor" },
                 ]} />
               </section>
+              )}
             </>
           )}
 
+          {accountTab === "overview" && (<>
           <section className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4">
             <p className="text-xs font-semibold text-white">Commercial & activation</p>
             <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1768,6 +1797,7 @@ export default function AdminDashboard() {
             {accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
           </div></div></div>
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><p className="text-xs font-semibold text-white">Rules snapshot</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><p className="text-[10px] text-zinc-600">Daily drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.dailyDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Max drawdown</p><p className="mt-1 text-sm text-zinc-300">{pct(accountDetail?.rules?.maxDrawdown)}</p></div><div><p className="text-[10px] text-zinc-600">Minimum trading days</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.rules?.minimumTradingDays || 0}</p></div><div><p className="text-[10px] text-zinc-600">Platform</p><p className="mt-1 text-sm text-zinc-300">{accountDetail?.platform || "—"}</p></div></div></div>
+          </>)}
         </>}
       </Inspector>}
 
