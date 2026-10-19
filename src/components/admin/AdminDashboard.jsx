@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, AlertTriangle, BarChart3, Bell, ChevronRight, CircleDollarSign,
-  CreditCard, FileClock, Gauge, LayoutDashboard, LifeBuoy, ListChecks, LogOut,
-  Menu, RefreshCw, Search, Settings2, ShieldAlert, SlidersHorizontal, Users,
-  WalletCards, X, Zap
+  Activity, BarChart3, ChevronRight, Gauge, LayoutDashboard, LifeBuoy, LogOut, Menu, RefreshCw, Search, Settings2, ShieldAlert, Users, WalletCards, X
 } from "lucide-react";
 import { useAuth } from "../../AuthContext.jsx";
 import LaunchReadinessPanel from "./LaunchReadinessPanel.jsx";
@@ -34,7 +31,6 @@ const WORKSPACE_TABS = {
     { id: "orders", label: "Orders" },
     { id: "payments", label: "Payments" },
     { id: "payouts", label: "Payouts" },
-    { id: "refunds", label: "Refunds" },
   ],
   risk: [
     { id: "risk", label: "Risk Overview" },
@@ -43,23 +39,26 @@ const WORKSPACE_TABS = {
   funnel: [
     { id: "funnel", label: "Conversion Funnel" },
     { id: "revenue", label: "Revenue" },
-    { id: "affiliates", label: "Affiliates" },
   ],
   integrations: [
     { id: "integrations", label: "Integrations" },
-    { id: "products", label: "Challenge Products" },
-    { id: "pricing", label: "Pricing" },
     { id: "platforms", label: "Trading Platforms" },
     { id: "launch-readiness", label: "Launch Readiness" },
-    { id: "jobs", label: "Jobs" },
-    { id: "errors", label: "Errors" },
     { id: "admins", label: "Administrators" },
     { id: "audit", label: "Audit Log" },
   ],
 };
 
+// Unconnected modules remain addressable through existing bookmarks, but do not
+// occupy everyday navigation until they provide a real operational workflow.
+const UNAVAILABLE_WORKSPACE_PAGES = {
+  refunds: "orders", affiliates: "funnel",
+  products: "integrations", pricing: "integrations",
+  jobs: "integrations", errors: "integrations",
+};
 const workspaceForPage = page =>
-  Object.keys(WORKSPACE_TABS).find(workspace => WORKSPACE_TABS[workspace].some(tab => tab.id === page)) || page;
+  Object.keys(WORKSPACE_TABS).find(workspace => WORKSPACE_TABS[workspace].some(tab => tab.id === page))
+  || UNAVAILABLE_WORKSPACE_PAGES[page] || page;
 
 const TITLES = {
   overview: ["Command Center", "Business health, priorities and actions requiring attention"],
