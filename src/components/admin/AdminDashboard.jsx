@@ -1566,7 +1566,12 @@ export default function AdminDashboard() {
 
   const pageStatusOptions = PAGE_STATUS_OPTIONS[page] || [];
   const workspaceId = workspaceForPage(page);
-  const workspaceTabs = WORKSPACE_TABS[workspaceId] || [];
+  const workspaceTabs = (WORKSPACE_TABS[workspaceId] || []).filter(tab =>
+    tab.id === "payouts" ? canOperate("FINANCE_WRITE")
+      : ["integrations", "platforms", "launch-readiness", "admins", "audit"].includes(tab.id)
+        ? canOperate("SYSTEM_WRITE")
+        : true
+  );
   const userDetail = selectedDetail?.customer;
   const accountDetail = selectedDetail?.account;
   const tradingDetail = selectedDetail?.trading;
@@ -1636,7 +1641,7 @@ export default function AdminDashboard() {
           })}
           <div className="my-5 border-t border-white/[0.08]" />
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Administration</p>
-          {NAV.filter(item => item.id === "integrations").map(item => {
+          {NAV.filter(item => item.id === "integrations" && canOperate("SYSTEM_WRITE")).map(item => {
             const Icon = item.icon;
             const active = workspaceId === item.id;
             return <button key={item.id} onClick={() => changePage(item.id)} aria-current={active ? "page" : undefined}
