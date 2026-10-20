@@ -724,6 +724,23 @@ export default function AdminDashboard() {
     setSelectedDetail({ payment: row });
   };
 
+  const openSupportFromCustomer = async row => {
+    setReturnCustomer({ customer: selected, detail: selectedDetail, tab: "support" });
+    setPage("support");
+    setSearch("");
+    setStatus("");
+    setListPage(1);
+    setQueue("");
+    setSelected(row);
+    setSelectedDetail(null);
+    setSupportReply("");
+    try {
+      setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(row.conversationId)}`));
+    } catch (err) {
+      setSelectedDetail({ error: err?.message || "Could not open customer support case." });
+    }
+  };
+
   const openRow = async row => {
     if (page === "users") setCustomerTab("overview");
     if (["challenges", "trials", "funded", "breaches", "risk", "trades"].includes(page)) {
@@ -1635,7 +1652,7 @@ export default function AdminDashboard() {
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load customer" text={selectedDetail.error} /> : <>
           <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3"><Kpi label="Total Spend" value={money(selectedDetail.stats?.totalSpend)} /><Kpi label="Accounts" value={selectedDetail.stats?.accounts || 0} /><Kpi label="Orders" value={selectedDetail.stats?.orders || 0} /></div>
           <nav aria-label="Customer profile sections" className="mt-5 flex gap-1 border-b border-white/[0.08]">
-            {[["overview", "Overview"], ["accounts", "Accounts"], ["orders", "Orders"]].map(([id, label]) => (
+            {[["overview", "Overview"], ["accounts", "Accounts"], ["orders", "Orders"], ["support", "Support"]].map(([id, label]) => (
               <button key={id} type="button" onClick={() => setCustomerTab(id)}
                 aria-current={customerTab === id ? "page" : undefined}
                 className={`border-b-2 px-3 py-3 text-xs font-medium ${customerTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
@@ -1671,6 +1688,16 @@ export default function AdminDashboard() {
           {customerTab === "orders" && (<section className="mt-5">
             <h3 className="mb-3 text-sm font-semibold text-white">Orders & payments</h3>
             <DataTable rows={selectedDetail.payments || []} onRow={openPaymentDetail} columns={paymentColumns.slice(0,6)} />
+          </section>)}
+          {customerTab === "support" && (<section className="mt-5">
+            <h3 className="mb-3 text-sm font-semibold text-white">Recent support history</h3>
+            <DataTable rows={selectedDetail.support || []} onRow={openSupportFromCustomer} columns={[
+              { key: "conversationId", label: "Case" },
+              { key: "category", label: "Category" },
+              { key: "channel", label: "Channel" },
+              { key: "lastMessageAt", label: "Last activity", render: row => dateTime(row.lastMessageAt) },
+              { key: "status", label: "Status", render: row => <Badge>{row.status}</Badge> },
+            ]} />
           </section>)}
         </>}
       </Inspector>}
@@ -2205,6 +2232,7 @@ export default function AdminDashboard() {
         subtitle={selectedDetail?.conversation?.email?.customerEmail || selectedDetail?.customer?.primaryEmail || selected.conversationId}
         onClose={() => { setSelected(null); setSelectedDetail(null); setSupportReply(""); }}
       >
+        {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load support case" text={selectedDetail.error} /> : (() => {
           const conversation = selectedDetail.conversation;
           return <div className="space-y-5">
