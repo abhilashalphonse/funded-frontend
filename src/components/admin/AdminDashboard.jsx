@@ -548,6 +548,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [operationNotice, setOperationNotice] = useState(null);
+  const [adminIdentity, setAdminIdentity] = useState(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [listPage, setListPage] = useState(1);
@@ -591,6 +592,20 @@ export default function AdminDashboard() {
     }
     return payload.data;
   }, [getAccessToken]);
+
+  useEffect(() => {
+    let active = true;
+    adminFetch("/me").then(identity => { if (active) setAdminIdentity(identity); })
+      .catch(() => { if (active) setAdminIdentity(null); });
+    return () => { active = false; };
+  }, [adminFetch]);
+
+  const canOperate = capability => {
+    const role = adminIdentity?.role;
+    return role === "SUPER_ADMIN" || (role === "FINANCE" && capability === "FINANCE_WRITE")
+      || (role === "RISK" && capability === "RISK_WRITE")
+      || (role === "SUPPORT" && capability === "SUPPORT_WRITE");
+  };
 
   const endpoint = useMemo(() => {
     const q = search.trim() ? `&q=${encodeURIComponent(search.trim())}` : "";
@@ -1428,7 +1443,7 @@ export default function AdminDashboard() {
                     <span className="text-[10px] uppercase tracking-widest text-zinc-600">{gateway.active ? "Current route" : "Available route"}</span>
                     <button
                       type="button"
-                      disabled={!canActivate}
+                      disabled={!canActivate || !canOperate("FINANCE_WRITE")}
                       onClick={() => setAction({ type: "upiGateway", id: gateway.id, value: gateway.id, label: `Activate ${gateway.label}` })}
                       className="rounded-lg border border-white/[0.09] px-3 py-2 text-[11px] font-semibold text-zinc-200 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-35"
                     >
@@ -1644,7 +1659,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2">
             <button onClick={load} className="flex size-10 items-center justify-center rounded-lg border border-white/[0.08] text-zinc-400 hover:text-white" aria-label="Refresh admin data"><RefreshCw size={16} /></button>
 
-            <div className="hidden max-w-[220px] truncate rounded-lg border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-500 sm:block">{user?.email}</div>
+            <div className="hidden max-w-[220px] truncate rounded-lg border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-500 sm:block">{adminIdentity?.role ? `${adminIdentity.role} · ` : ""}{user?.email}</div>
           </div>
         </header>
 
@@ -1706,8 +1721,8 @@ export default function AdminDashboard() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div><p className="text-xs font-semibold text-white">Customer status</p><div className="mt-2"><Badge>{userDetail?.status}</Badge></div></div>
                 <div className="flex gap-2">
-                  {userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
-                  {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
+                  {canOperate("CUSTOMERS_WRITE") && userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
+                  {canOperate("CUSTOMERS_WRITE") && userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
                 </div>
               </div>
               <div className="mt-4 grid gap-3 border-t border-white/[0.08] pt-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Joined</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.createdAt || selected?.createdAt)}</p></div><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Last login</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.lastAuthenticatedAt || selected?.lastAuthenticatedAt)}</p></div></div>
@@ -2001,10 +2016,10 @@ export default function AdminDashboard() {
           </section>
 
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">State</p><div className="mt-2"><Badge>{accountDetail?.status}</Badge></div></div><div className="flex flex-wrap gap-2">
-            {["ACTIVE","PHASE_2","FUNDED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
-            {accountDetail?.status === "LOCKED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"UNLOCK",label:"Unlock account"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300">Unlock</button>}
-            {accountDetail?.status === "FUNDED_REVIEW" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"APPROVE_FUNDED",label:"Approve funded account"})} className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs font-semibold text-emerald-300">Approve Funded</button>}
-            {accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
+            {canOperate("RISK_WRITE") && ["ACTIVE","PHASE_2","FUNDED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
+            {canOperate("RISK_WRITE") && accountDetail?.status === "LOCKED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"UNLOCK",label:"Unlock account"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300">Unlock</button>}
+            {canOperate("RISK_WRITE") && accountDetail?.status === "FUNDED_REVIEW" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"APPROVE_FUNDED",label:"Approve funded account"})} className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs font-semibold text-emerald-300">Approve Funded</button>}
+            {canOperate("RISK_WRITE") && accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
           </div></div></div>
 
           </>)}
@@ -2062,6 +2077,7 @@ export default function AdminDashboard() {
           </div>
           {selected.status === "PAID" && !selected.accountId && selected.activation?.status !== "ACTIVE" && (
             <button
+              disabled={!canOperate("FINANCE_WRITE")}
               onClick={() => setAction({type:"payment",id:selected._id,value:"RETRY_ACTIVATION",label:"Retry account activation"})}
               className="mt-5 rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs font-semibold text-amber-300"
             >
@@ -2312,7 +2328,7 @@ export default function AdminDashboard() {
                   {conversation.status === "ESCALATED" && (
                     <button
                       onClick={returnSupportToAi}
-                      disabled={supportBusy}
+                      disabled={supportBusy || !canOperate("SUPPORT_WRITE")}
                       className="rounded-lg border border-sky-400/20 bg-sky-400/[0.06] px-4 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-400/[0.1] disabled:opacity-40"
                     >
                       Return to AI
@@ -2320,14 +2336,14 @@ export default function AdminDashboard() {
                   )}
                   <button
                     onClick={closeSupportCase}
-                    disabled={supportBusy}
+                    disabled={supportBusy || !canOperate("SUPPORT_WRITE")}
                     className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-40"
                   >
                     Close case
                   </button>
                   <button
                     onClick={sendHumanSupportReply}
-                    disabled={!supportReply.trim() || supportBusy}
+                    disabled={!supportReply.trim() || supportBusy || !canOperate("SUPPORT_WRITE")}
                     className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black disabled:opacity-40"
                   >
                     {supportBusy ? "Sending…" : conversation.channel === "EMAIL" ? "Send email reply" : "Send reply"}
@@ -2339,7 +2355,7 @@ export default function AdminDashboard() {
         })()}
       </Inspector>}
 
-      {payoutAction && selectedDetail?.payout && (
+      {canOperate("FINANCE_WRITE") && payoutAction && selectedDetail?.payout && (
         <PayoutActionModal
           action={payoutAction}
           payout={selectedDetail.payout}
