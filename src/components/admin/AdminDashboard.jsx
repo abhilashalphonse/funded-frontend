@@ -4,6 +4,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../AuthContext.jsx";
 import LaunchReadinessPanel from "./LaunchReadinessPanel.jsx";
+import AdminDataGrid from "./AdminDataGrid.jsx";
+import { pageRange } from "./adminGridModel.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -191,103 +193,50 @@ function Loading() {
   return <div className="flex min-h-[320px] items-center justify-center"><div className="size-6 animate-spin rounded-full border-2 border-white/15 border-t-white" /></div>;
 }
 
-function DataTable({ columns, rows, onRow, empty = "No records found." }) {
-  if (!rows?.length) return <Empty title={empty} text="Adjust the current filters or check again when new activity is recorded." />;
-  const cell = (row, col) => col.render ? col.render(row) : row[col.key] ?? "—";
-  const rowKey = (row, index) => row._id || row.payoutId || row.customerId || row.accountId || row.orderId || row.conversationId || index;
-
-  return (
-    <div className="min-w-0">
-      {/* Mobile cards preserve every column and keep the existing row actions. */}
-      <div className="space-y-2 md:hidden" aria-label="Records">
-        {rows.map((row, index) => (
-          <article key={rowKey(row, index)} className="min-w-0 rounded-xl border border-white/[0.08] bg-[#101010] p-3.5">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">{columns[0]?.label}</p>
-                <div className="mt-1 break-words text-[13px] font-semibold text-white [overflow-wrap:anywhere]">{columns[0] ? cell(row, columns[0]) : "—"}</div>
-              </div>
-              {onRow && (
-                <button type="button" onClick={() => onRow(row)}
-                  aria-label={`Open ${columns[0]?.label || "record"} details`}
-                  className="flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-zinc-200 hover:bg-white/[0.06]">
-                  Open <ChevronRight size={14} />
-                </button>
-              )}
-            </div>
-            <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 border-t border-white/[0.06] pt-3">
-              {columns.slice(1, 5).map(col => (
-                <div key={col.key} className="min-w-0">
-                  <dt className="text-[10px] font-medium text-zinc-500">{col.label}</dt>
-                  <dd className="mt-1 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{cell(row, col)}</dd>
-                </div>
-              ))}
-            </dl>
-            {columns.length > 5 && (
-              <details className="mt-3 border-t border-white/[0.06] pt-2">
-                <summary className="cursor-pointer py-2 text-xs font-medium text-zinc-400 hover:text-white">
-                  More fields ({columns.length - 5})
-                </summary>
-                <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 pt-2">
-                  {columns.slice(5).map(col => (
-                    <div key={col.key} className="min-w-0">
-                      <dt className="text-[10px] font-medium text-zinc-500">{col.label}</dt>
-                      <dd className="mt-1 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{cell(row, col)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </details>
-            )}
-          </article>
-        ))}
-      </div>
-      <div className="hidden min-w-0 overflow-hidden rounded-xl border border-white/[0.07] bg-[#0f0f0f] md:block">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-xs">
-            <thead className="border-b border-white/[0.07] bg-white/[0.02] text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-              <tr>{columns.map(col => <th key={col.key} className="whitespace-nowrap px-4 py-3 font-medium">{col.label}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.05]">
-              {rows.map((row, index) => (
-                <tr key={rowKey(row, index)}
-                  onClick={() => onRow?.(row)}
-                  className={onRow ? "cursor-pointer transition hover:bg-white/[0.035]" : ""}>
-                  {columns.map(col => <td key={col.key} className="whitespace-nowrap px-4 py-3 text-zinc-300">{cell(row, col)}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+function DataTable({ columns, rows, onRow, empty, serverPaged = false, tableId }) {
+  const inferredId = tableId || columns.map(column => column.key).join("-").slice(0, 180);
+  return <AdminDataGrid key={inferredId} tableId={inferredId} columns={columns} rows={rows}
+    onRow={onRow} empty={empty} serverPaged={serverPaged} />;
 }
 
-function Pagination({ pagination, onPage }) {
-  if (!pagination || Number(pagination.pages || 1) <= 1) return null;
-  const current = Number(pagination.page || 1);
-  const pages = Number(pagination.pages || 1);
-  const total = Number(pagination.total || 0);
+function Pagination({ pagination, onPage, pageSize, onPageSize }) {
+  const current = Math.max(1, Number(pagination?.page || 1));
+  const { pages, total, from, to } = pageRange(pagination);
+  const [jump, setJump] = useState(String(current));
+  useEffect(() => { setJump(String(current)); }, [current]);
+  if (!pagination) return null;
+  const go = next => onPage(Math.max(1, Math.min(pages, next)));
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-white/[0.07] bg-[#0f0f0f] px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-      <span>{total.toLocaleString()} records · Page {current} of {pages}</span>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={current <= 1}
-          onClick={() => onPage(current - 1)}
-          className="rounded-lg border border-white/[0.09] px-3 py-2 font-semibold text-zinc-300 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35"
-        >
-          Previous
-        </button>
-        <button
-          type="button"
-          disabled={current >= pages}
-          onClick={() => onPage(current + 1)}
-          className="rounded-lg border border-white/[0.09] px-3 py-2 font-semibold text-zinc-300 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35"
-        >
-          Next
-        </button>
+    <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-[#0f0f0f] px-3 py-3 text-xs text-zinc-400 sm:px-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p><span className="font-semibold text-white">{from.toLocaleString()}–{to.toLocaleString()}</span> of {total.toLocaleString()} records</p>
+        <label className="flex items-center gap-2">
+          Rows per page
+          <select aria-label="Rows per page" value={pageSize || limit}
+            onChange={event => onPageSize?.(Number(event.target.value))}
+            className="h-9 rounded-lg border border-white/10 bg-[#090909] px-2 text-xs text-white">
+            {[10,25,50,100,250].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span>Page {current} of {pages}</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current <= 1} onClick={() => go(1)}>First</button>
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current <= 1} onClick={() => go(current - 1)}>Previous</button>
+          <form className="flex items-center gap-1.5" onSubmit={event => { event.preventDefault(); go(Number(jump) || current); }}>
+            <input aria-label="Jump to page" type="number" min={1} max={pages}
+              value={jump} onChange={event => setJump(event.target.value)}
+              className="h-9 w-14 rounded-lg border border-white/10 bg-[#090909] px-1 text-center text-white" />
+            <button type="submit" className="h-9 rounded-lg border border-white/10 px-2 text-zinc-300">Go</button>
+          </form>
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current >= pages} onClick={() => go(current + 1)}>Next</button>
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current >= pages} onClick={() => go(pages)}>Last</button>
+        </div>
       </div>
     </div>
   );
@@ -541,9 +490,12 @@ export default function AdminDashboard() {
   const [system, setSystem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [operationNotice, setOperationNotice] = useState(null);
+  const [adminIdentity, setAdminIdentity] = useState(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [listPage, setListPage] = useState(1);
+  const [listLimit, setListLimit] = useState(25);
   const [queue, setQueue] = useState("");
   const [tradeLoadingMore, setTradeLoadingMore] = useState(false);
   const [days, setDays] = useState("30");
@@ -578,42 +530,58 @@ export default function AdminDashboard() {
     if (!response.ok) {
       const err = new Error(payload?.message || `Admin request failed (${response.status}).`);
       err.status = response.status;
+      err.code = payload?.code;
+      err.details = payload?.data;
       throw err;
     }
     return payload.data;
   }, [getAccessToken]);
+
+  useEffect(() => {
+    let active = true;
+    adminFetch("/me").then(identity => { if (active) setAdminIdentity(identity); })
+      .catch(() => { if (active) setAdminIdentity(null); });
+    return () => { active = false; };
+  }, [adminFetch]);
+
+  const canOperate = capability => {
+    const role = adminIdentity?.role;
+    return role === "SUPER_ADMIN" || (role === "FINANCE" && capability === "FINANCE_WRITE")
+      || (role === "RISK" && capability === "RISK_WRITE")
+      || (role === "SUPPORT" && capability === "SUPPORT_WRITE");
+  };
 
   const endpoint = useMemo(() => {
     const q = search.trim() ? `&q=${encodeURIComponent(search.trim())}` : "";
     const s = status ? `&status=${encodeURIComponent(status)}` : "";
     const p = `&page=${listPage}`;
     if (page === "overview") return "/overview";
-    if (page === "users") return `/users?limit=100${p}${q}${s}`;
-    if (page === "challenges") return `/challenges?limit=100${p}${q}${s}`;
-    if (page === "trials") return `/challenges?mode=DEMO&limit=100${p}${q}${s}`;
-    if (page === "funded") return `/challenges?funded=true&limit=100${p}${q}${s}`;
+    if (page === "users") return `/users?limit=${listLimit}${p}${q}${s}`;
+    if (page === "challenges") return `/challenges?limit=${listLimit}${p}${q}${s}`;
+    if (page === "trials") return `/challenges?mode=DEMO&limit=${listLimit}${p}${q}${s}`;
+    if (page === "funded") return `/challenges?funded=true&limit=${listLimit}${p}${q}${s}`;
     if (page === "orders" || page === "payments") {
       const attention = queue === "provisioning"
         ? "&attention=provisioning"
         : queue === "failed-payments"
           ? "&attention=failed-today"
           : s;
-      return `/${page}?limit=100${p}${q}${attention}`;
+      return `/${page}?limit=${listLimit}${p}${q}${attention}`;
     }
-    if (page === "payouts") return `/payouts?limit=100${p}${q}${s}`;
+    if (page === "payouts") return `/payouts?limit=${listLimit}${p}${q}${s}`;
     if (page === "trades") return "/trades?limit=200";
-    if (page === "risk" || page === "breaches") return "/risk";
+    if (page === "risk" || page === "breaches") return queue === "breaches-today" ? "/risk?breached=today" : "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
     if (page === "support") {
       const supportStatus = queue === "escalated" ? "&status=ESCALATED" : s;
-      return `/support?limit=100${p}${q}${supportStatus}`;
+      return `/support?limit=${listLimit}${p}${q}${supportStatus}`;
     }
     if (page === "launch-readiness") return "/launch-readiness?limit=20";
-    if (page === "audit") return `/audit?limit=100${p}`;
+    if (page === "audit") return `/audit?limit=${listLimit}${p}`;
     if (page === "admins") return "/admin-users";
     if (["jobs", "integrations", "errors", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
     return "/overview";
-  }, [page, search, status, days, listPage, queue]);
+  }, [page, search, status, days, listPage, listLimit, queue]);
 
   const load = useCallback(async () => {
     const requestId = ++loadSequence.current;
@@ -651,6 +619,7 @@ export default function AdminDashboard() {
     setSelected(null);
     setSelectedDetail(null);
     setSidebarOpen(false);
+    setOperationNotice(null);
   };
 
   const openQueue = (destination, nextQueue = "") => {
@@ -662,6 +631,7 @@ export default function AdminDashboard() {
     setSelected(null);
     setSelectedDetail(null);
     setSidebarOpen(false);
+    setOperationNotice(null);
   };
 
   const goToListPage = nextPage => {
@@ -671,7 +641,7 @@ export default function AdminDashboard() {
   };
 
   const openAccountDetail = async row => {
-    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail, tab: customerTab } : null);
     setAccountTab(String(row?.status || "").toUpperCase() === "BREACHED" ? "risk" : "overview");
     const accountId = row?.accountId || row?.account?.externalRef;
     if (!accountId) return;
@@ -703,7 +673,7 @@ export default function AdminDashboard() {
   };
 
   const openPaymentDetail = row => {
-    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail, tab: customerTab } : null);
     setPage("payments");
     setSearch("");
     setStatus("");
@@ -711,6 +681,23 @@ export default function AdminDashboard() {
     setQueue("");
     setSelected(row);
     setSelectedDetail({ payment: row });
+  };
+
+  const openSupportFromCustomer = async row => {
+    setReturnCustomer({ customer: selected, detail: selectedDetail, tab: "support" });
+    setPage("support");
+    setSearch("");
+    setStatus("");
+    setListPage(1);
+    setQueue("");
+    setSelected(row);
+    setSelectedDetail(null);
+    setSupportReply("");
+    try {
+      setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(row.conversationId)}`));
+    } catch (err) {
+      setSelectedDetail({ error: err?.message || "Could not open customer support case." });
+    }
   };
 
   const openRow = async row => {
@@ -747,23 +734,38 @@ export default function AdminDashboard() {
 
   const performAction = async reason => {
     if (!action) return;
+    const currentAction = action;
     setActionBusy(true);
+    setOperationNotice(null);
     try {
-      if (action.type === "customer") {
-        await adminFetch(`/users/${encodeURIComponent(action.id)}/status`, { method: "POST", body: JSON.stringify({ status: action.value, reason }) });
-      } else if (action.type === "payment") {
-        await adminFetch(`/payments/${encodeURIComponent(action.id)}/retry-activation`, { method: "POST", body: JSON.stringify({ reason }) });
-      } else if (action.type === "upiGateway") {
-        await adminFetch("/upi-gateways/active", { method: "POST", body: JSON.stringify({ gatewayId: action.value, reason }) });
+      if (currentAction.type === "customer") {
+        await adminFetch(`/users/${encodeURIComponent(currentAction.id)}/status`, { method: "POST", body: JSON.stringify({ status: currentAction.value, reason }) });
+      } else if (currentAction.type === "payment") {
+        await adminFetch(`/payments/${encodeURIComponent(currentAction.id)}/retry-activation`, { method: "POST", body: JSON.stringify({ reason }) });
+      } else if (currentAction.type === "upiGateway") {
+        await adminFetch("/upi-gateways/active", { method: "POST", body: JSON.stringify({ gatewayId: currentAction.value, reason }) });
       } else {
-        await adminFetch(`/challenges/${encodeURIComponent(action.id)}/action`, { method: "POST", body: JSON.stringify({ action: action.value, reason }) });
+        await adminFetch(`/challenges/${encodeURIComponent(currentAction.id)}/action`, { method: "POST", body: JSON.stringify({ action: currentAction.value, reason }) });
       }
       setAction(null);
       setSelected(null);
       setSelectedDetail(null);
+      setOperationNotice({ kind: "success", message: `${currentAction.label} completed. The operator audit trail has been updated.` });
       await load();
     } catch (err) {
-      setError(err.message);
+      if (err?.code === "TRADING_PLATFORM_CONTROL_PARTIAL_FAILURE" && currentAction.type === "customer") {
+        const failed = Array.isArray(err.details?.platformErrors) ? err.details.platformErrors.length : 0;
+        setAction(null); // The customer status mutation committed: do not suggest blindly retrying.
+        setOperationNotice({ kind: "warning", message: `Customer status was changed, but ${failed || "one or more"} linked trading account operation(s) failed. Review the affected accounts before taking another action. ${err.message}` });
+        try {
+          const refreshed = await adminFetch(`/users/${encodeURIComponent(currentAction.id)}`);
+          setSelectedDetail(refreshed);
+          setSelected(refreshed.customer);
+        } catch { /* Preserve partial failure notice if follow-up read fails. */ }
+        await load();
+      } else {
+        setOperationNotice({ kind: "error", message: err?.message || "Admin action failed. No success has been confirmed." });
+      }
     } finally {
       setActionBusy(false);
     }
@@ -778,7 +780,7 @@ export default function AdminDashboard() {
     setQueue("");
     setSelected(returnCustomer.customer);
     setSelectedDetail(returnCustomer.detail);
-    setCustomerTab("accounts");
+    setCustomerTab(returnCustomer.tab || "accounts");
     setReturnCustomer(null);
   };
 
@@ -787,7 +789,7 @@ export default function AdminDashboard() {
   const performPayoutAction = async input => {
     if (!payoutAction?.id) return;
     setPayoutBusy(true);
-    setError("");
+    setOperationNotice(null);
     try {
       const payoutId = encodeURIComponent(payoutAction.id);
       const path = payoutAction.value === "RETRY_EXECUTION"
@@ -808,9 +810,10 @@ export default function AdminDashboard() {
       setSelected(detail?.payout || selected);
       setSelectedDetail(detail);
       setPayoutAction(null);
+      setOperationNotice({ kind: "success", message: "Payout action completed and the payout record was refreshed." });
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to update payout.");
+      setOperationNotice({ kind: "error", message: err?.message || "Unable to update payout. No success has been confirmed." });
     } finally {
       setPayoutBusy(false);
     }
@@ -830,10 +833,11 @@ export default function AdminDashboard() {
         body: JSON.stringify({ message }),
       });
       setSupportReply("");
+      setOperationNotice({ kind: "success", message: "Support reply sent successfully." });
       setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to send support reply.");
+      setOperationNotice({ kind: "error", message: err?.message || "Support reply could not be sent." });
     } finally {
       setSupportBusy(false);
     }
@@ -843,16 +847,17 @@ export default function AdminDashboard() {
     const conversationId = selectedDetail?.conversation?.conversationId;
     if (!conversationId || supportBusy) return;
     setSupportBusy(true);
-    setError("");
+    setOperationNotice(null);
     try {
       await adminFetch(`/support/${encodeURIComponent(conversationId)}/return-to-ai`, {
         method: "POST",
         body: JSON.stringify({ reason: "Human support returned conversation to AI" }),
       });
       setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
+      setOperationNotice({ kind: "success", message: "Support conversation returned to AI." });
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to return support case to AI.");
+      setOperationNotice({ kind: "error", message: err?.message || "Could not return support case to AI." });
     } finally {
       setSupportBusy(false);
     }
@@ -868,9 +873,10 @@ export default function AdminDashboard() {
         body: JSON.stringify({ reason: "Resolved by human support" }),
       });
       setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
+      setOperationNotice({ kind: "success", message: "Support case closed." });
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to close support case.");
+      setOperationNotice({ kind: "error", message: err?.message || "Could not close support case." });
     } finally {
       setSupportBusy(false);
     }
@@ -954,7 +960,7 @@ export default function AdminDashboard() {
               {[
                 ["Account activation", "Paid orders requiring provisioning attention", k.pendingProvisioning, "orders", "provisioning"],
                 ["Payment failures today", "Review unsuccessful transactions", k.failedPaymentsToday, "payments", "failed-payments"],
-                ["Breaches today", "Inspect rule breaches and evidence", k.breachedToday, "breaches", ""],
+                ["Breaches today", "Inspect rule breaches and evidence", k.breachedToday, "breaches", "breaches-today"],
                 ["Support escalations", "Conversations waiting for a person", k.supportEscalated, "support", "escalated"],
               ].map(([label, description, value, destination, nextQueue]) => (
                 <button key={label} type="button" onClick={() => openQueue(destination, nextQueue)}
@@ -998,7 +1004,7 @@ export default function AdminDashboard() {
     );
   };
 
-  const renderUsers = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
+  const renderUsers = () => <div className="space-y-3"><DataTable serverPaged rows={rows} onRow={openRow} columns={[
     { key: "primaryEmail", label: "User" },
     { key: "customerId", label: "Customer ID" },
     { key: "createdAt", label: "Joined", render: r => dateTime(r.createdAt) },
@@ -1008,7 +1014,7 @@ export default function AdminDashboard() {
     { key: "funded", label: "Funded", render: r => r.stats?.funded || 0 },
     { key: "spend", label: "Spend", render: r => money(r.stats?.totalSpend || 0) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
-  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const challengeColumns = [
     { key: "accountId", label: "Account" },
@@ -1027,7 +1033,7 @@ export default function AdminDashboard() {
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ];
 
-  const renderChallenges = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={challengeColumns} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  const renderChallenges = () => <div className="space-y-3"><DataTable serverPaged rows={rows} onRow={openRow} columns={challengeColumns} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const paymentColumns = [
     { key: "orderId", label: "Order" },
@@ -1040,6 +1046,17 @@ export default function AdminDashboard() {
     { key: "accountId", label: "Account", render: r => r.accountId || "Not created" },
     { key: "createdAt", label: "Created", render: r => dateTime(r.createdAt) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
+  ];
+
+  const orderColumns = [
+    { key: "orderId", label: "Order" },
+    { key: "email", label: "Customer" },
+    { key: "challenge", label: "Challenge", render: row => paymentChallengeLabel(row) },
+    { key: "amount", label: "Order total", render: row => money(row.amount, row.currency || "USD") },
+    { key: "activation", label: "Activation", render: row => <Badge>{row.activation?.status || "NOT_STARTED"}</Badge> },
+    { key: "accountId", label: "Trading account", render: row => row.accountId || "Not provisioned" },
+    { key: "createdAt", label: "Ordered", render: row => dateTime(row.createdAt) },
+    { key: "status", label: "Status", render: row => <Badge>{row.status}</Badge> },
   ];
 
   const renderTrades = () => {
@@ -1103,16 +1120,25 @@ export default function AdminDashboard() {
   };
 
   const renderRisk = () => {
-    const breachRows = page === "breaches" ? (data?.breached || []) : [...(data?.breached || []), ...(data?.locked || []), ...(data?.failedProvisioning || [])];
+    const categories = page === "breaches"
+      ? [data?.breached || []]
+      : [data?.breached || [], data?.locked || [], data?.fundedReview || [], data?.failedProvisioning || []];
+    const uniqueRows = [...new Map(categories.flat().filter(row => row?.accountId).map(row => [row.accountId, row])).values()];
+    const counts = data?.counts || {};
+    const todayFilter = data?.breachWindow === "today" || queue === "breaches-today";
+    const limited = ([
+      ["breached", data?.breached], ["locked", data?.locked], ["fundedReview", data?.fundedReview], ["failedProvisioning", data?.failedProvisioning],
+    ]).some(([key, items]) => (counts[key] || 0) > (items?.length || 0));
     return (
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-          <Kpi label="Breached" value={data?.breached?.length || 0} />
-          <Kpi label="Locked" value={data?.locked?.length || 0} />
-          <Kpi label="Funded Review" value={data?.fundedReview?.length || 0} />
-          <Kpi label="Provisioning Failed" value={data?.failedProvisioning?.length || 0} />
+          <Kpi label={todayFilter ? "Breaches Today (UTC)" : "Breached"} value={counts.breached ?? data?.breached?.length ?? 0} />
+          <Kpi label="Locked" value={counts.locked ?? data?.locked?.length ?? 0} />
+          <Kpi label="Funded Review" value={counts.fundedReview ?? data?.fundedReview?.length ?? 0} />
+          <Kpi label="Provisioning Failed" value={counts.failedProvisioning ?? data?.failedProvisioning?.length ?? 0} />
         </div>
-        <DataTable rows={breachRows} onRow={openRow} columns={challengeColumns} />
+        {limited && <p className="text-xs text-amber-200">These are full category totals. The review table shows only the latest {data?.limitPerCategory || 100} records per category.</p>}
+        <DataTable rows={uniqueRows} onRow={openRow} columns={challengeColumns} />
       </div>
     );
   };
@@ -1291,6 +1317,7 @@ export default function AdminDashboard() {
         </div>
 
         <DataTable
+          serverPaged
           rows={rows}
           onRow={openRow}
           empty="No payout requests found."
@@ -1307,13 +1334,13 @@ export default function AdminDashboard() {
             { key: "requestedAt", label: "Requested", render: row => dateTime(row.requestedAt) },
           ]}
         />
-        <Pagination pagination={data?.pagination} onPage={goToListPage} />
+        <Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} />
         <p className="text-[11px] text-zinc-500">Payout summaries above cover only the records loaded on this page, not all payouts. A full-period aggregate requires a separate authoritative API.</p>
       </div>
     );
   };
 
-  const renderSupport = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
+  const renderSupport = () => <div className="space-y-3"><DataTable serverPaged rows={rows} onRow={openRow} columns={[
     { key: "conversationId", label: "Case" },
     { key: "channel", label: "Channel", render: r => <Badge>{r.channel || "WEB"}</Badge> },
     { key: "customer", label: "Customer", render: r => r.email?.customerEmail || r.customerId || "Anonymous" },
@@ -1321,10 +1348,11 @@ export default function AdminDashboard() {
     { key: "category", label: "Category" },
     { key: "lastMessageAt", label: "Last Activity", render: r => dateTime(r.lastMessageAt) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
-  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const renderSystem = () => (
     <div className="space-y-5">
+      <p className="text-xs leading-5 text-zinc-400">Integration indicators show configuration and API response state—not live provider availability probes. Verify provider connectivity separately before critical financial operations.</p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{(data?.services || []).map(item => <div key={item.name} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-[#111] px-4 py-4"><div><p className="text-sm font-medium text-zinc-200">{item.name}</p><p className="mt-1 text-[11px] text-zinc-600">Operational configuration</p></div><Badge>{item.status}</Badge></div>)}</div>
 
       {page === "integrations" && (
@@ -1360,7 +1388,7 @@ export default function AdminDashboard() {
                     <span className="text-[10px] uppercase tracking-widest text-zinc-600">{gateway.active ? "Current route" : "Available route"}</span>
                     <button
                       type="button"
-                      disabled={!canActivate}
+                      disabled={!canActivate || !canOperate("FINANCE_WRITE")}
                       onClick={() => setAction({ type: "upiGateway", id: gateway.id, value: gateway.id, label: `Activate ${gateway.label}` })}
                       className="rounded-lg border border-white/[0.09] px-3 py-2 text-[11px] font-semibold text-zinc-200 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-35"
                     >
@@ -1433,11 +1461,11 @@ export default function AdminDashboard() {
     <Empty title={title} text={capabilityKey && capability(capabilityKey) === false ? `${text} The backend explicitly reports this capability as not connected, so the admin does not fabricate state.` : text} />
   );
 
-  const renderAudit = () => <div className="space-y-3"><DataTable rows={rows} columns={[
+  const renderAudit = () => <div className="space-y-3"><DataTable serverPaged rows={rows} columns={[
     { key: "createdAt", label: "Timestamp", render: r => dateTime(r.createdAt) },
     { key: "adminEmail", label: "Admin" }, { key: "action", label: "Action" }, { key: "entityType", label: "Entity Type" },
     { key: "entityId", label: "Entity" }, { key: "reason", label: "Reason" }, { key: "ip", label: "IP" },
-  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const renderContent = () => {
     if (loading) return <Loading />;
@@ -1445,7 +1473,17 @@ export default function AdminDashboard() {
     if (page === "overview") return renderOverview();
     if (page === "users") return renderUsers();
     if (["challenges","trials","funded"].includes(page)) return renderChallenges();
-    if (page === "orders" || page === "payments") return <div className="space-y-3"><DataTable rows={rows} columns={paymentColumns} onRow={openRow} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+    if (page === "orders" || page === "payments") return (
+      <div className="space-y-3">
+        <p className="text-xs leading-5 text-zinc-400">
+          {page === "orders"
+            ? "Customer purchases, challenge fulfillment and trading-account provisioning."
+            : "Provider transactions, settlement references and payment state. Payments and orders are two views of the same records."}
+        </p>
+        <DataTable serverPaged rows={rows} columns={page === "orders" ? orderColumns : paymentColumns} onRow={openRow} />
+        <Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} />
+      </div>
+    );
     if (page === "trades") return renderTrades();
     if (page === "risk" || page === "breaches") return renderRisk();
     if (page === "funnel") return renderFunnel();
@@ -1453,7 +1491,7 @@ export default function AdminDashboard() {
     if (page === "support") return renderSupport();
     if (page === "launch-readiness") return <LaunchReadinessPanel data={data} adminFetch={adminFetch} reload={load} />;
     if (page === "integrations" || page === "platforms") return renderSystem();
-    if (page === "admins") return <div className="space-y-4"><DataTable rows={rows} columns={[
+    if (page === "admins") return <div className="space-y-4"><DataTable serverPaged rows={rows} columns={[
       { key: "email", label: "Admin" },
       { key: "role", label: "Role" },
       { key: "source", label: "Source" },
@@ -1473,7 +1511,12 @@ export default function AdminDashboard() {
 
   const pageStatusOptions = PAGE_STATUS_OPTIONS[page] || [];
   const workspaceId = workspaceForPage(page);
-  const workspaceTabs = WORKSPACE_TABS[workspaceId] || [];
+  const workspaceTabs = (WORKSPACE_TABS[workspaceId] || []).filter(tab =>
+    tab.id === "payouts" ? canOperate("FINANCE_WRITE")
+      : ["integrations", "platforms", "launch-readiness", "admins", "audit"].includes(tab.id)
+        ? canOperate("SYSTEM_WRITE")
+        : true
+  );
   const userDetail = selectedDetail?.customer;
   const accountDetail = selectedDetail?.account;
   const tradingDetail = selectedDetail?.trading;
@@ -1543,7 +1586,7 @@ export default function AdminDashboard() {
           })}
           <div className="my-5 border-t border-white/[0.08]" />
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Administration</p>
-          {NAV.filter(item => item.id === "integrations").map(item => {
+          {NAV.filter(item => item.id === "integrations" && canOperate("SYSTEM_WRITE")).map(item => {
             const Icon = item.icon;
             const active = workspaceId === item.id;
             return <button key={item.id} onClick={() => changePage(item.id)} aria-current={active ? "page" : undefined}
@@ -1566,7 +1609,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2">
             <button onClick={load} className="flex size-10 items-center justify-center rounded-lg border border-white/[0.08] text-zinc-400 hover:text-white" aria-label="Refresh admin data"><RefreshCw size={16} /></button>
 
-            <div className="hidden max-w-[220px] truncate rounded-lg border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-500 sm:block">{user?.email}</div>
+            <div className="hidden max-w-[220px] truncate rounded-lg border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-500 sm:block">{adminIdentity?.role ? `${adminIdentity.role} · ` : ""}{user?.email}</div>
           </div>
         </header>
 
@@ -1600,6 +1643,13 @@ export default function AdminDashboard() {
             <div><p className="text-xs font-semibold text-amber-200">{QUEUE_LABELS[queue] || humanize(queue)}</p><p className="mt-0.5 text-[11px] text-zinc-500">Showing only records requiring this operational follow-up.</p></div>
             <button type="button" onClick={() => { setQueue(""); setStatus(""); setListPage(1); }} className="rounded-lg border border-white/10 px-3 py-2 text-[11px] font-semibold text-zinc-300 hover:bg-white/[0.04]">Clear queue</button>
           </div>}
+          {operationNotice && (
+            <div role={operationNotice.kind === "error" ? "alert" : "status"}
+              className={`fixed right-3 top-16 z-[80] flex max-h-[60dvh] w-[calc(100vw-1.5rem)] max-w-md items-start justify-between gap-3 overflow-y-auto rounded-xl border px-4 py-3 text-xs leading-5 shadow-2xl ${operationNotice.kind === "success" ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-100" : "border-amber-400/25 bg-amber-400/[0.06] text-amber-100"}`}>
+              <p className="min-w-0 break-words">{operationNotice.message}</p>
+              <button type="button" onClick={() => setOperationNotice(null)} aria-label="Dismiss operation notice" className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/10"><X size={14} /></button>
+            </div>
+          )}
           {renderContent()}
         </main>
       </div>
@@ -1608,7 +1658,7 @@ export default function AdminDashboard() {
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load customer" text={selectedDetail.error} /> : <>
           <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3"><Kpi label="Total Spend" value={money(selectedDetail.stats?.totalSpend)} /><Kpi label="Accounts" value={selectedDetail.stats?.accounts || 0} /><Kpi label="Orders" value={selectedDetail.stats?.orders || 0} /></div>
           <nav aria-label="Customer profile sections" className="mt-5 flex gap-1 border-b border-white/[0.08]">
-            {[["overview", "Overview"], ["accounts", "Accounts"], ["orders", "Orders"]].map(([id, label]) => (
+            {[["overview", "Overview"], ["accounts", "Accounts"], ["orders", "Orders"], ["support", "Support"]].map(([id, label]) => (
               <button key={id} type="button" onClick={() => setCustomerTab(id)}
                 aria-current={customerTab === id ? "page" : undefined}
                 className={`border-b-2 px-3 py-3 text-xs font-medium ${customerTab === id ? "border-white text-white" : "border-transparent text-zinc-500 hover:text-zinc-200"}`}>
@@ -1621,8 +1671,8 @@ export default function AdminDashboard() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div><p className="text-xs font-semibold text-white">Customer status</p><div className="mt-2"><Badge>{userDetail?.status}</Badge></div></div>
                 <div className="flex gap-2">
-                  {userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
-                  {userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
+                  {canOperate("CUSTOMERS_WRITE") && userDetail?.status !== "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"BLOCKED",label:"Block customer"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-400/10">Block</button>}
+                  {canOperate("CUSTOMERS_WRITE") && userDetail?.status === "BLOCKED" && <button onClick={() => setAction({type:"customer",id:userDetail.customerId,value:"ACTIVE",label:"Reactivate customer"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/10">Reactivate</button>}
                 </div>
               </div>
               <div className="mt-4 grid gap-3 border-t border-white/[0.08] pt-4 sm:grid-cols-2"><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Joined</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.createdAt || selected?.createdAt)}</p></div><div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Last login</p><p className="mt-1 text-xs text-zinc-200">{dateTime(userDetail?.lastAuthenticatedAt || selected?.lastAuthenticatedAt)}</p></div></div>
@@ -1644,6 +1694,16 @@ export default function AdminDashboard() {
           {customerTab === "orders" && (<section className="mt-5">
             <h3 className="mb-3 text-sm font-semibold text-white">Orders & payments</h3>
             <DataTable rows={selectedDetail.payments || []} onRow={openPaymentDetail} columns={paymentColumns.slice(0,6)} />
+          </section>)}
+          {customerTab === "support" && (<section className="mt-5">
+            <h3 className="mb-3 text-sm font-semibold text-white">Recent support history</h3>
+            <DataTable rows={selectedDetail.support || []} onRow={openSupportFromCustomer} columns={[
+              { key: "conversationId", label: "Case" },
+              { key: "category", label: "Category" },
+              { key: "channel", label: "Channel" },
+              { key: "lastMessageAt", label: "Last activity", render: row => dateTime(row.lastMessageAt) },
+              { key: "status", label: "Status", render: row => <Badge>{row.status}</Badge> },
+            ]} />
           </section>)}
         </>}
       </Inspector>}
@@ -1906,10 +1966,10 @@ export default function AdminDashboard() {
           </section>
 
           <div className="mt-5 rounded-xl border border-white/[0.07] bg-[#111] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-widest text-zinc-600">State</p><div className="mt-2"><Badge>{accountDetail?.status}</Badge></div></div><div className="flex flex-wrap gap-2">
-            {["ACTIVE","PHASE_2","FUNDED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
-            {accountDetail?.status === "LOCKED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"UNLOCK",label:"Unlock account"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300">Unlock</button>}
-            {accountDetail?.status === "FUNDED_REVIEW" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"APPROVE_FUNDED",label:"Approve funded account"})} className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs font-semibold text-emerald-300">Approve Funded</button>}
-            {accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
+            {canOperate("RISK_WRITE") && ["ACTIVE","PHASE_2","FUNDED"].includes(accountDetail?.status) && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"LOCK",label:"Lock account"})} className="rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold text-amber-300">Lock</button>}
+            {canOperate("RISK_WRITE") && accountDetail?.status === "LOCKED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"UNLOCK",label:"Unlock account"})} className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-300">Unlock</button>}
+            {canOperate("RISK_WRITE") && accountDetail?.status === "FUNDED_REVIEW" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"APPROVE_FUNDED",label:"Approve funded account"})} className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs font-semibold text-emerald-300">Approve Funded</button>}
+            {canOperate("RISK_WRITE") && accountDetail?.status !== "CLOSED" && <button onClick={() => setAction({type:"challenge",id:accountDetail.accountId,value:"CLOSE",label:"Close account"})} className="rounded-lg border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-300">Close</button>}
           </div></div></div>
 
           </>)}
@@ -1967,6 +2027,7 @@ export default function AdminDashboard() {
           </div>
           {selected.status === "PAID" && !selected.accountId && selected.activation?.status !== "ACTIVE" && (
             <button
+              disabled={!canOperate("FINANCE_WRITE")}
               onClick={() => setAction({type:"payment",id:selected._id,value:"RETRY_ACTIVATION",label:"Retry account activation"})}
               className="mt-5 rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs font-semibold text-amber-300"
             >
@@ -2124,7 +2185,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {actions.map(item => (
+                {canOperate("FINANCE_WRITE") && actions.map(item => (
                   <button
                     key={item.value}
                     type="button"
@@ -2141,7 +2202,7 @@ export default function AdminDashboard() {
                   </button>
                 ))}
 
-                {data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
+                {canOperate("FINANCE_WRITE") && data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
                   <button
                     type="button"
                     onClick={() => setPayoutAction({ value: "RETRY_EXECUTION", label: "Retry automatic transfer", tone: "positive", id: payout.payoutId })}
@@ -2151,7 +2212,7 @@ export default function AdminDashboard() {
                   </button>
                 )}
 
-                {["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay" && (
+                {canOperate("FINANCE_WRITE") && ["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay" && (
                   <button
                     type="button"
                     onClick={() => setPayoutAction({ value: "RECONCILE", label: "Verify Sunpay status", tone: "neutral", id: payout.payoutId })}
@@ -2162,7 +2223,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {!actions.length && !(
+              {!canOperate("FINANCE_WRITE") ? <p className="mt-4 text-xs text-zinc-500">Finance access is required to change this payout.</p> : !actions.length && !(
                 (data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError)
                 || (["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay")
               ) && (
@@ -2178,6 +2239,7 @@ export default function AdminDashboard() {
         subtitle={selectedDetail?.conversation?.email?.customerEmail || selectedDetail?.customer?.primaryEmail || selected.conversationId}
         onClose={() => { setSelected(null); setSelectedDetail(null); setSupportReply(""); }}
       >
+        {returnCustomer && <button type="button" onClick={returnToCustomer} className="mb-4 flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-zinc-300 hover:text-white">← Back to customer</button>}
         {!selectedDetail ? <Loading /> : selectedDetail.error ? <Empty title="Unable to load support case" text={selectedDetail.error} /> : (() => {
           const conversation = selectedDetail.conversation;
           return <div className="space-y-5">
@@ -2216,7 +2278,7 @@ export default function AdminDashboard() {
                   {conversation.status === "ESCALATED" && (
                     <button
                       onClick={returnSupportToAi}
-                      disabled={supportBusy}
+                      disabled={supportBusy || !canOperate("SUPPORT_WRITE")}
                       className="rounded-lg border border-sky-400/20 bg-sky-400/[0.06] px-4 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-400/[0.1] disabled:opacity-40"
                     >
                       Return to AI
@@ -2224,14 +2286,14 @@ export default function AdminDashboard() {
                   )}
                   <button
                     onClick={closeSupportCase}
-                    disabled={supportBusy}
+                    disabled={supportBusy || !canOperate("SUPPORT_WRITE")}
                     className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-40"
                   >
                     Close case
                   </button>
                   <button
                     onClick={sendHumanSupportReply}
-                    disabled={!supportReply.trim() || supportBusy}
+                    disabled={!supportReply.trim() || supportBusy || !canOperate("SUPPORT_WRITE")}
                     className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black disabled:opacity-40"
                   >
                     {supportBusy ? "Sending…" : conversation.channel === "EMAIL" ? "Send email reply" : "Send reply"}
@@ -2243,7 +2305,7 @@ export default function AdminDashboard() {
         })()}
       </Inspector>}
 
-      {payoutAction && selectedDetail?.payout && (
+      {canOperate("FINANCE_WRITE") && payoutAction && selectedDetail?.payout && (
         <PayoutActionModal
           action={payoutAction}
           payout={selectedDetail.payout}
