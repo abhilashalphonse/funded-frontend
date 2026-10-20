@@ -775,23 +775,38 @@ export default function AdminDashboard() {
 
   const performAction = async reason => {
     if (!action) return;
+    const currentAction = action;
     setActionBusy(true);
+    setOperationNotice(null);
     try {
-      if (action.type === "customer") {
-        await adminFetch(`/users/${encodeURIComponent(action.id)}/status`, { method: "POST", body: JSON.stringify({ status: action.value, reason }) });
-      } else if (action.type === "payment") {
-        await adminFetch(`/payments/${encodeURIComponent(action.id)}/retry-activation`, { method: "POST", body: JSON.stringify({ reason }) });
-      } else if (action.type === "upiGateway") {
-        await adminFetch("/upi-gateways/active", { method: "POST", body: JSON.stringify({ gatewayId: action.value, reason }) });
+      if (currentAction.type === "customer") {
+        await adminFetch(`/users/${encodeURIComponent(currentAction.id)}/status`, { method: "POST", body: JSON.stringify({ status: currentAction.value, reason }) });
+      } else if (currentAction.type === "payment") {
+        await adminFetch(`/payments/${encodeURIComponent(currentAction.id)}/retry-activation`, { method: "POST", body: JSON.stringify({ reason }) });
+      } else if (currentAction.type === "upiGateway") {
+        await adminFetch("/upi-gateways/active", { method: "POST", body: JSON.stringify({ gatewayId: currentAction.value, reason }) });
       } else {
-        await adminFetch(`/challenges/${encodeURIComponent(action.id)}/action`, { method: "POST", body: JSON.stringify({ action: action.value, reason }) });
+        await adminFetch(`/challenges/${encodeURIComponent(currentAction.id)}/action`, { method: "POST", body: JSON.stringify({ action: currentAction.value, reason }) });
       }
       setAction(null);
       setSelected(null);
       setSelectedDetail(null);
+      setOperationNotice({ kind: "success", message: `${currentAction.label} completed. The operator audit trail has been updated.` });
       await load();
     } catch (err) {
-      setError(err.message);
+      if (err?.code === "TRADING_PLATFORM_CONTROL_PARTIAL_FAILURE" && currentAction.type === "customer") {
+        const failed = Array.isArray(err.details?.platformErrors) ? err.details.platformErrors.length : 0;
+        setAction(null); // The customer status mutation committed: do not suggest blindly retrying.
+        setOperationNotice({ kind: "warning", message: `Customer status was changed, but ${failed || "one or more"} linked trading account operation(s) failed. Review the affected accounts before taking another action. ${err.message}` });
+        try {
+          const refreshed = await adminFetch(`/users/${encodeURIComponent(currentAction.id)}`);
+          setSelectedDetail(refreshed);
+          setSelected(refreshed.customer);
+        } catch { /* Preserve partial failure notice if follow-up read fails. */ }
+        await load();
+      } else {
+        setOperationNotice({ kind: "error", message: err?.message || "Admin action failed. No success has been confirmed." });
+      }
     } finally {
       setActionBusy(false);
     }
@@ -815,7 +830,7 @@ export default function AdminDashboard() {
   const performPayoutAction = async input => {
     if (!payoutAction?.id) return;
     setPayoutBusy(true);
-    setError("");
+    setOperationNotice(null);
     try {
       const payoutId = encodeURIComponent(payoutAction.id);
       const path = payoutAction.value === "RETRY_EXECUTION"
@@ -836,9 +851,10 @@ export default function AdminDashboard() {
       setSelected(detail?.payout || selected);
       setSelectedDetail(detail);
       setPayoutAction(null);
+      setOperationNotice({ kind: "success", message: "Payout action completed and the payout record was refreshed." });
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to update payout.");
+      setOperationNotice({ kind: "error", message: err?.message || "Unable to update payout. No success has been confirmed." });
     } finally {
       setPayoutBusy(false);
     }
@@ -858,10 +874,11 @@ export default function AdminDashboard() {
         body: JSON.stringify({ message }),
       });
       setSupportReply("");
+      setOperationNotice({ kind: "success", message: "Support reply sent successfully." });
       setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to send support reply.");
+      setOperationNotice({ kind: "error", message: err?.message || "Support reply could not be sent." });
     } finally {
       setSupportBusy(false);
     }
@@ -871,16 +888,17 @@ export default function AdminDashboard() {
     const conversationId = selectedDetail?.conversation?.conversationId;
     if (!conversationId || supportBusy) return;
     setSupportBusy(true);
-    setError("");
+    setOperationNotice(null);
     try {
       await adminFetch(`/support/${encodeURIComponent(conversationId)}/return-to-ai`, {
         method: "POST",
         body: JSON.stringify({ reason: "Human support returned conversation to AI" }),
       });
       setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
+      setOperationNotice({ kind: "success", message: "Support conversation returned to AI." });
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to return support case to AI.");
+      setOperationNotice({ kind: "error", message: err?.message || "Could not return support case to AI." });
     } finally {
       setSupportBusy(false);
     }
@@ -896,9 +914,10 @@ export default function AdminDashboard() {
         body: JSON.stringify({ reason: "Resolved by human support" }),
       });
       setSelectedDetail(await adminFetch(`/support/${encodeURIComponent(conversationId)}`));
+      setOperationNotice({ kind: "success", message: "Support case closed." });
       await load();
     } catch (err) {
-      setError(err?.message || "Unable to close support case.");
+      setOperationNotice({ kind: "error", message: err?.message || "Could not close support case." });
     } finally {
       setSupportBusy(false);
     }
@@ -1639,7 +1658,7 @@ export default function AdminDashboard() {
           </div>}
           {operationNotice && (
             <div role={operationNotice.kind === "error" ? "alert" : "status"}
-              className={`mb-4 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-xs leading-5 ${operationNotice.kind === "success" ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-100" : "border-amber-400/25 bg-amber-400/[0.06] text-amber-100"}`}>
+              className={`fixed right-3 top-16 z-[80] flex max-h-[60dvh] w-[calc(100vw-1.5rem)] max-w-md items-start justify-between gap-3 overflow-y-auto rounded-xl border px-4 py-3 text-xs leading-5 shadow-2xl ${operationNotice.kind === "success" ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-100" : "border-amber-400/25 bg-amber-400/[0.06] text-amber-100"}`}>
               <p className="min-w-0 break-words">{operationNotice.message}</p>
               <button type="button" onClick={() => setOperationNotice(null)} aria-label="Dismiss operation notice" className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/10"><X size={14} /></button>
             </div>
