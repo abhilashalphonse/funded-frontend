@@ -3,14 +3,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../src/components/admin/AdminDashboard.jsx", import.meta.url), "utf8");
+const grid = readFileSync(new URL("../src/components/admin/AdminDataGrid.jsx", import.meta.url), "utf8");
 
-test("admin records have mobile cards without removing desktop table columns", () => {
-  assert.match(source, /className="space-y-2 md:hidden" aria-label="Records"/);
-  assert.match(source, /className="hidden min-w-0 overflow-hidden rounded-xl/);
-  assert.match(source, /columns\.slice\(1, 5\)/);
-  assert.match(source, /columns\.slice\(5\)/);
-  assert.match(source, /onClick=\{\(\) => onRow\(row\)\}/);
-  assert.match(source, /More fields \(\{columns\.length - 5\}\)/);
+test("admin grid renders mobile record cards and a retained desktop table", () => {
+  assert.match(source, /<AdminDataGrid key=\{inferredId\}/);
+  assert.match(grid, /md:hidden" aria-label="Records"/);
+  assert.match(grid, /md:table/);
+  assert.match(grid, /sticky top-0 z-20/);
+  assert.match(grid, /More fields/);
+  assert.match(grid, /onClick=\{\(\) => openRow\(row\)\}/);
 });
 
 test("mobile workspace and account section pickers use existing navigation functions", () => {
