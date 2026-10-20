@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { applyGridOperations, orderColumns, pageLocalRows } from "./adminGridModel.js";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Columns3, Filter, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 
-const COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 const WIDTHS = [120, 160, 200, 260, 340];
 const BTN = "inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-medium text-zinc-300 hover:border-white/20 hover:text-white disabled:opacity-30";
 const FIELD = "h-9 w-full min-w-0 rounded-lg border border-white/10 bg-[#090909] px-3 text-xs text-white outline-none focus:border-white/30";
@@ -59,15 +59,9 @@ export default function AdminDataGrid({
     catch { /* Private browsing should still work without persistence. */ }
   }, [settingsKey, settings]);
 
-  const columnOrder = useMemo(() => {
-    const byKey = new Map(columns.map(c => [c.key, c]));
-    return [
-      ...settings.order.filter(key => byKey.has(key)).map(key => byKey.get(key)),
-      ...columns.filter(c => !settings.order.includes(c.key)),
-    ];
-  }, [columns, settings.order]);
+  const columnOrder = useMemo(() => orderColumns(columns, settings), [columns, settings.order]);
 
-  // Never hide the identity column or status in the mobile record header.
+  // The identity column is fixed; the status badge remains visible on mobile.
   const identityColumn = columns[0];
   const statusColumn = columns.find(c => c.key === "status");
   const visible = columnOrder.filter(c =>
@@ -75,29 +69,14 @@ export default function AdminDataGrid({
   const activeFilters = Object.entries(columnFilters).filter(([key, value]) =>
     columns.some(c => c.key === key) && String(value || "").trim());
   const activeFilterCount = activeFilters.length;
-  const filtered = useMemo(() => {
-    const byKey = new Map(columns.map(c => [c.key, c]));
-    const narrowed = activeFilters.length
-      ? rows.filter(row => activeFilters.every(([key, term]) =>
-          String(valueFor(row, byKey.get(key)) ?? "").toLocaleLowerCase()
-            .includes(String(term).trim().toLocaleLowerCase())))
-      : rows;
-    if (!sort.key) return narrowed;
-    const column = byKey.get(sort.key);
-    if (!column) return narrowed;
-    const multiplier = sort.direction === "desc" ? -1 : 1;
-    return [...narrowed].sort((a, b) => {
-      const av = valueFor(a, column);
-      const bv = valueFor(b, column);
-      if (typeof av === "number" && typeof bv === "number") return (av - bv) * multiplier;
-      return COLLATOR.compare(String(av ?? ""), String(bv ?? "")) * multiplier;
-    });
-  }, [rows, columns, sort.key, sort.direction, columnFilters]);
-
-  const localPages = Math.max(1, Math.ceil(filtered.length / localSize));
-  const currentLocalPage = Math.min(localPage, localPages);
-  const pageRows = serverPaged ? filtered : filtered.slice(
-    (currentLocalPage - 1) * localSize, currentLocalPage * localSize);
+  const filtered = useMemo(
+    () => applyGridOperations(rows, columns, columnFilters, sort, valueFor),
+    [rows, columns, sort.key, sort.direction, columnFilters]
+  );
+  const local = pageLocalRows(filtered, localPage, localSize);
+  const localPages = local.pages;
+  const currentLocalPage = local.currentPage;
+  const pageRows = serverPaged ? filtered : local.rows;
 
   const firstKey = identityColumn?.key;
   const updateSettings = patch => setSettings(previous => ({ ...previous, ...patch }));
