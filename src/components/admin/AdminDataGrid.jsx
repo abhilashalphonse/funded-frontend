@@ -258,11 +258,11 @@ export default function AdminDataGrid({
         <table className="hidden min-w-full border-separate border-spacing-0 text-left text-xs md:table">
           <thead className="sticky top-0 z-20 bg-[#161616] text-[10px] uppercase tracking-wider text-zinc-400">
             <tr>{visible.map((col, index) => (
-              <th key={col.key} scope="col" style={{ minWidth: settings.widths[col.key] || 160, width: settings.widths[col.key] || 160 }}
+              <th key={col.key} scope="col" aria-sort={sort.key === col.key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"} style={{ minWidth: settings.widths[col.key] || 160, width: settings.widths[col.key] || 160 }}
                 className={"border-b border-r border-white/[0.07] bg-[#161616] px-3 py-2 font-medium " +
                   (index === 0 ? "sticky left-0 z-30" : "")}>
                 <button type="button" onClick={() => updateSort(col.key)}
-                  aria-label={"Sort by " + col.label} aria-sort={undefined}
+                  aria-label={"Sort by " + col.label}
                   className="flex w-full items-center justify-between gap-2 text-left hover:text-white">
                   <span className="truncate">{col.label}</span>
                   {sort.key === col.key
