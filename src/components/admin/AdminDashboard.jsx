@@ -198,31 +198,48 @@ function DataTable({ columns, rows, onRow, empty, serverPaged = false, tableId }
     onRow={onRow} empty={empty} serverPaged={serverPaged} />;
 }
 
-function Pagination({ pagination, onPage }) {
-  if (!pagination || Number(pagination.pages || 1) <= 1) return null;
-  const current = Number(pagination.page || 1);
-  const pages = Number(pagination.pages || 1);
-  const total = Number(pagination.total || 0);
+function Pagination({ pagination, onPage, pageSize, onPageSize }) {
+  const current = Math.max(1, Number(pagination?.page || 1));
+  const pages = Math.max(1, Number(pagination?.pages || 1));
+  const total = Math.max(0, Number(pagination?.total || 0));
+  const limit = Number(pagination?.limit || pageSize || 25);
+  const [jump, setJump] = useState(String(current));
+  useEffect(() => { setJump(String(current)); }, [current]);
+  if (!pagination) return null;
+  const from = total ? (current - 1) * limit + 1 : 0;
+  const to = Math.min(total, current * limit);
+  const go = next => onPage(Math.max(1, Math.min(pages, next)));
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-white/[0.07] bg-[#0f0f0f] px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-      <span>{total.toLocaleString()} records · Page {current} of {pages}</span>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={current <= 1}
-          onClick={() => onPage(current - 1)}
-          className="rounded-lg border border-white/[0.09] px-3 py-2 font-semibold text-zinc-300 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35"
-        >
-          Previous
-        </button>
-        <button
-          type="button"
-          disabled={current >= pages}
-          onClick={() => onPage(current + 1)}
-          className="rounded-lg border border-white/[0.09] px-3 py-2 font-semibold text-zinc-300 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35"
-        >
-          Next
-        </button>
+    <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-[#0f0f0f] px-3 py-3 text-xs text-zinc-400 sm:px-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p><span className="font-semibold text-white">{from.toLocaleString()}–{to.toLocaleString()}</span> of {total.toLocaleString()} records</p>
+        <label className="flex items-center gap-2">
+          Rows per page
+          <select aria-label="Rows per page" value={pageSize || limit}
+            onChange={event => onPageSize?.(Number(event.target.value))}
+            className="h-9 rounded-lg border border-white/10 bg-[#090909] px-2 text-xs text-white">
+            {[10,25,50,100,250].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span>Page {current} of {pages}</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current <= 1} onClick={() => go(1)}>First</button>
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current <= 1} onClick={() => go(current - 1)}>Previous</button>
+          <form className="flex items-center gap-1.5" onSubmit={event => { event.preventDefault(); go(Number(jump) || current); }}>
+            <input aria-label="Jump to page" type="number" min={1} max={pages}
+              value={jump} onChange={event => setJump(event.target.value)}
+              className="h-9 w-14 rounded-lg border border-white/10 bg-[#090909] px-1 text-center text-white" />
+            <button type="submit" className="h-9 rounded-lg border border-white/10 px-2 text-zinc-300">Go</button>
+          </form>
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current >= pages} onClick={() => go(current + 1)}>Next</button>
+          <button type="button" className="h-9 rounded-lg border border-white/10 px-3 text-zinc-300 disabled:opacity-30"
+            disabled={current >= pages} onClick={() => go(pages)}>Last</button>
+        </div>
       </div>
     </div>
   );
@@ -990,7 +1007,7 @@ export default function AdminDashboard() {
     );
   };
 
-  const renderUsers = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
+  const renderUsers = () => <div className="space-y-3"><DataTable serverPaged rows={rows} onRow={openRow} columns={[
     { key: "primaryEmail", label: "User" },
     { key: "customerId", label: "Customer ID" },
     { key: "createdAt", label: "Joined", render: r => dateTime(r.createdAt) },
@@ -1000,7 +1017,7 @@ export default function AdminDashboard() {
     { key: "funded", label: "Funded", render: r => r.stats?.funded || 0 },
     { key: "spend", label: "Spend", render: r => money(r.stats?.totalSpend || 0) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
-  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const challengeColumns = [
     { key: "accountId", label: "Account" },
@@ -1019,7 +1036,7 @@ export default function AdminDashboard() {
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ];
 
-  const renderChallenges = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={challengeColumns} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  const renderChallenges = () => <div className="space-y-3"><DataTable serverPaged rows={rows} onRow={openRow} columns={challengeColumns} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const paymentColumns = [
     { key: "orderId", label: "Order" },
@@ -1303,6 +1320,7 @@ export default function AdminDashboard() {
         </div>
 
         <DataTable
+          serverPaged
           rows={rows}
           onRow={openRow}
           empty="No payout requests found."
@@ -1319,13 +1337,13 @@ export default function AdminDashboard() {
             { key: "requestedAt", label: "Requested", render: row => dateTime(row.requestedAt) },
           ]}
         />
-        <Pagination pagination={data?.pagination} onPage={goToListPage} />
+        <Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} />
         <p className="text-[11px] text-zinc-500">Payout summaries above cover only the records loaded on this page, not all payouts. A full-period aggregate requires a separate authoritative API.</p>
       </div>
     );
   };
 
-  const renderSupport = () => <div className="space-y-3"><DataTable rows={rows} onRow={openRow} columns={[
+  const renderSupport = () => <div className="space-y-3"><DataTable serverPaged rows={rows} onRow={openRow} columns={[
     { key: "conversationId", label: "Case" },
     { key: "channel", label: "Channel", render: r => <Badge>{r.channel || "WEB"}</Badge> },
     { key: "customer", label: "Customer", render: r => r.email?.customerEmail || r.customerId || "Anonymous" },
@@ -1333,7 +1351,7 @@ export default function AdminDashboard() {
     { key: "category", label: "Category" },
     { key: "lastMessageAt", label: "Last Activity", render: r => dateTime(r.lastMessageAt) },
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
-  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const renderSystem = () => (
     <div className="space-y-5">
@@ -1446,11 +1464,11 @@ export default function AdminDashboard() {
     <Empty title={title} text={capabilityKey && capability(capabilityKey) === false ? `${text} The backend explicitly reports this capability as not connected, so the admin does not fabricate state.` : text} />
   );
 
-  const renderAudit = () => <div className="space-y-3"><DataTable rows={rows} columns={[
+  const renderAudit = () => <div className="space-y-3"><DataTable serverPaged rows={rows} columns={[
     { key: "createdAt", label: "Timestamp", render: r => dateTime(r.createdAt) },
     { key: "adminEmail", label: "Admin" }, { key: "action", label: "Action" }, { key: "entityType", label: "Entity Type" },
     { key: "entityId", label: "Entity" }, { key: "reason", label: "Reason" }, { key: "ip", label: "IP" },
-  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+  ]} /><Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} /></div>;
 
   const renderContent = () => {
     if (loading) return <Loading />;
@@ -1465,8 +1483,8 @@ export default function AdminDashboard() {
             ? "Customer purchases, challenge fulfillment and trading-account provisioning."
             : "Provider transactions, settlement references and payment state. Payments and orders are two views of the same records."}
         </p>
-        <DataTable rows={rows} columns={page === "orders" ? orderColumns : paymentColumns} onRow={openRow} />
-        <Pagination pagination={data?.pagination} onPage={goToListPage} />
+        <DataTable serverPaged rows={rows} columns={page === "orders" ? orderColumns : paymentColumns} onRow={openRow} />
+        <Pagination pagination={data?.pagination} onPage={goToListPage} pageSize={listLimit} onPageSize={size => { setListLimit(size); setListPage(1); }} />
       </div>
     );
     if (page === "trades") return renderTrades();
@@ -1476,7 +1494,7 @@ export default function AdminDashboard() {
     if (page === "support") return renderSupport();
     if (page === "launch-readiness") return <LaunchReadinessPanel data={data} adminFetch={adminFetch} reload={load} />;
     if (page === "integrations" || page === "platforms") return renderSystem();
-    if (page === "admins") return <div className="space-y-4"><DataTable rows={rows} columns={[
+    if (page === "admins") return <div className="space-y-4"><DataTable serverPaged rows={rows} columns={[
       { key: "email", label: "Admin" },
       { key: "role", label: "Role" },
       { key: "source", label: "Source" },
