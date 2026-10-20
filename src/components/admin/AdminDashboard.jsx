@@ -611,7 +611,7 @@ export default function AdminDashboard() {
     }
     if (page === "payouts") return `/payouts?limit=100${p}${q}${s}`;
     if (page === "trades") return "/trades?limit=200";
-    if (page === "risk" || page === "breaches") return "/risk";
+    if (page === "risk" || page === "breaches") return queue === "breaches-today" ? "/risk?breached=today" : "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
     if (page === "support") {
       const supportStatus = queue === "escalated" ? "&status=ESCALATED" : s;
@@ -682,7 +682,7 @@ export default function AdminDashboard() {
   };
 
   const openAccountDetail = async row => {
-    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail, tab: customerTab } : null);
     setAccountTab(String(row?.status || "").toUpperCase() === "BREACHED" ? "risk" : "overview");
     const accountId = row?.accountId || row?.account?.externalRef;
     if (!accountId) return;
@@ -714,7 +714,7 @@ export default function AdminDashboard() {
   };
 
   const openPaymentDetail = row => {
-    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail } : null);
+    setReturnCustomer(page === "users" && selected ? { customer: selected, detail: selectedDetail, tab: customerTab } : null);
     setPage("payments");
     setSearch("");
     setStatus("");
@@ -789,7 +789,7 @@ export default function AdminDashboard() {
     setQueue("");
     setSelected(returnCustomer.customer);
     setSelectedDetail(returnCustomer.detail);
-    setCustomerTab("accounts");
+    setCustomerTab(returnCustomer.tab || "accounts");
     setReturnCustomer(null);
   };
 
@@ -965,7 +965,7 @@ export default function AdminDashboard() {
               {[
                 ["Account activation", "Paid orders requiring provisioning attention", k.pendingProvisioning, "orders", "provisioning"],
                 ["Payment failures today", "Review unsuccessful transactions", k.failedPaymentsToday, "payments", "failed-payments"],
-                ["Breaches today", "Inspect rule breaches and evidence", k.breachedToday, "breaches", ""],
+                ["Breaches today", "Inspect rule breaches and evidence", k.breachedToday, "breaches", "breaches-today"],
                 ["Support escalations", "Conversations waiting for a person", k.supportEscalated, "support", "escalated"],
               ].map(([label, description, value, destination, nextQueue]) => (
                 <button key={label} type="button" onClick={() => openQueue(destination, nextQueue)}
@@ -1114,16 +1114,25 @@ export default function AdminDashboard() {
   };
 
   const renderRisk = () => {
-    const breachRows = page === "breaches" ? (data?.breached || []) : [...(data?.breached || []), ...(data?.locked || []), ...(data?.failedProvisioning || [])];
+    const categories = page === "breaches"
+      ? [data?.breached || []]
+      : [data?.breached || [], data?.locked || [], data?.fundedReview || [], data?.failedProvisioning || []];
+    const uniqueRows = [...new Map(categories.flat().filter(row => row?.accountId).map(row => [row.accountId, row])).values()];
+    const counts = data?.counts || {};
+    const todayFilter = data?.breachWindow === "today" || queue === "breaches-today";
+    const limited = ([
+      ["breached", data?.breached], ["locked", data?.locked], ["fundedReview", data?.fundedReview], ["failedProvisioning", data?.failedProvisioning],
+    ]).some(([key, items]) => (counts[key] || 0) > (items?.length || 0));
     return (
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-          <Kpi label="Breached" value={data?.breached?.length || 0} />
-          <Kpi label="Locked" value={data?.locked?.length || 0} />
-          <Kpi label="Funded Review" value={data?.fundedReview?.length || 0} />
-          <Kpi label="Provisioning Failed" value={data?.failedProvisioning?.length || 0} />
+          <Kpi label={todayFilter ? "Breaches Today (UTC)" : "Breached"} value={counts.breached ?? data?.breached?.length ?? 0} />
+          <Kpi label="Locked" value={counts.locked ?? data?.locked?.length ?? 0} />
+          <Kpi label="Funded Review" value={counts.fundedReview ?? data?.fundedReview?.length ?? 0} />
+          <Kpi label="Provisioning Failed" value={counts.failedProvisioning ?? data?.failedProvisioning?.length ?? 0} />
         </div>
-        <DataTable rows={breachRows} onRow={openRow} columns={challengeColumns} />
+        {limited && <p className="text-xs text-amber-200">These are full category totals. The review table shows only the latest {data?.limitPerCategory || 100} records per category.</p>}
+        <DataTable rows={uniqueRows} onRow={openRow} columns={challengeColumns} />
       </div>
     );
   };
