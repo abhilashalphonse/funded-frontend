@@ -2235,7 +2235,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {actions.map(item => (
+                {canOperate("FINANCE_WRITE") && actions.map(item => (
                   <button
                     key={item.value}
                     type="button"
@@ -2252,7 +2252,7 @@ export default function AdminDashboard() {
                   </button>
                 ))}
 
-                {data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
+                {canOperate("FINANCE_WRITE") && data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError && (
                   <button
                     type="button"
                     onClick={() => setPayoutAction({ value: "RETRY_EXECUTION", label: "Retry automatic transfer", tone: "positive", id: payout.payoutId })}
@@ -2262,7 +2262,7 @@ export default function AdminDashboard() {
                   </button>
                 )}
 
-                {["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay" && (
+                {canOperate("FINANCE_WRITE") && ["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay" && (
                   <button
                     type="button"
                     onClick={() => setPayoutAction({ value: "RECONCILE", label: "Verify Sunpay status", tone: "neutral", id: payout.payoutId })}
@@ -2273,7 +2273,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {!actions.length && !(
+              {!canOperate("FINANCE_WRITE") ? <p className="mt-4 text-xs text-zinc-500">Finance access is required to change this payout.</p> : !actions.length && !(
                 (data?.capabilities?.payoutAutomation && payout?.status === "APPROVED" && payout?.provider === "sunpay" && payout?.providerLastError)
                 || (["PROCESSING", "SENT"].includes(String(payout?.status || "").toUpperCase()) && payout?.provider === "sunpay")
               ) && (
