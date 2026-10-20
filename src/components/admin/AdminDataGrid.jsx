@@ -130,6 +130,22 @@ export default function AdminDataGrid({
         </div>
       )}
 
+      <div className="flex items-center gap-2 md:hidden">
+        <label className="min-w-0 flex-1 text-[11px] text-zinc-500">
+          Sort
+          <select aria-label="Sort records by" className={FIELD + " mt-1"} value={sort.key}
+            onChange={e => { setSort({ key: e.target.value, direction: "asc" }); setLocalPage(1); }}>
+            <option value="">Default order</option>
+            {columns.map(col => <option key={col.key} value={col.key}>{col.label}</option>)}
+          </select>
+        </label>
+        <button type="button" disabled={!sort.key}
+          onClick={() => { setSort(current => ({ ...current, direction: current.direction === "asc" ? "desc" : "asc" })); setLocalPage(1); }}
+          className={BTN + " mt-5"} aria-label="Reverse mobile sort direction">
+          {sort.direction === "asc" ? "Ascending" : "Descending"} <ArrowUpDown size={13} />
+        </button>
+      </div>
+
       {filtersOpen && (
         <div id={"grid-filters-" + tableId} className="rounded-xl border border-white/10 bg-[#101010] p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -282,7 +298,7 @@ export default function AdminDataGrid({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
-        <span>{serverPaged ? "Loaded-page operations" : "Local table"} · {filtered.length.toLocaleString()} matching</span>
+        <span>{serverPaged ? "Page-only sort and filters · use search/status for all records" : "Local table"} · {filtered.length.toLocaleString()} matching</span>
         <div className="flex items-center gap-2">
           {!serverPaged && (
             <>
