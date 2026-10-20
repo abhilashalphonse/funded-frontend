@@ -1089,6 +1089,17 @@ export default function AdminDashboard() {
     { key: "status", label: "Status", render: r => <Badge>{r.status}</Badge> },
   ];
 
+  const orderColumns = [
+    { key: "orderId", label: "Order" },
+    { key: "email", label: "Customer" },
+    { key: "challenge", label: "Challenge", render: row => paymentChallengeLabel(row) },
+    { key: "amount", label: "Order total", render: row => money(row.amount, row.currency || "USD") },
+    { key: "activation", label: "Activation", render: row => <Badge>{row.activation?.status || "NOT_STARTED"}</Badge> },
+    { key: "accountId", label: "Trading account", render: row => row.accountId || "Not provisioned" },
+    { key: "createdAt", label: "Ordered", render: row => dateTime(row.createdAt) },
+    { key: "status", label: "Status", render: row => <Badge>{row.status}</Badge> },
+  ];
+
   const renderTrades = () => {
     const term = search.trim().toLowerCase();
     const items = (data?.items || []).filter(row => {
@@ -1381,6 +1392,7 @@ export default function AdminDashboard() {
 
   const renderSystem = () => (
     <div className="space-y-5">
+      <p className="text-xs leading-5 text-zinc-400">Integration indicators show configuration and API response state—not live provider availability probes. Verify provider connectivity separately before critical financial operations.</p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{(data?.services || []).map(item => <div key={item.name} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-[#111] px-4 py-4"><div><p className="text-sm font-medium text-zinc-200">{item.name}</p><p className="mt-1 text-[11px] text-zinc-600">Operational configuration</p></div><Badge>{item.status}</Badge></div>)}</div>
 
       {page === "integrations" && (
@@ -1501,7 +1513,17 @@ export default function AdminDashboard() {
     if (page === "overview") return renderOverview();
     if (page === "users") return renderUsers();
     if (["challenges","trials","funded"].includes(page)) return renderChallenges();
-    if (page === "orders" || page === "payments") return <div className="space-y-3"><DataTable rows={rows} columns={paymentColumns} onRow={openRow} /><Pagination pagination={data?.pagination} onPage={goToListPage} /></div>;
+    if (page === "orders" || page === "payments") return (
+      <div className="space-y-3">
+        <p className="text-xs leading-5 text-zinc-400">
+          {page === "orders"
+            ? "Customer purchases, challenge fulfillment and trading-account provisioning."
+            : "Provider transactions, settlement references and payment state. Payments and orders are two views of the same records."}
+        </p>
+        <DataTable rows={rows} columns={page === "orders" ? orderColumns : paymentColumns} onRow={openRow} />
+        <Pagination pagination={data?.pagination} onPage={goToListPage} />
+      </div>
+    );
     if (page === "trades") return renderTrades();
     if (page === "risk" || page === "breaches") return renderRisk();
     if (page === "funnel") return renderFunnel();
