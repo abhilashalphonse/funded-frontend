@@ -5,6 +5,7 @@ import {
 import { useAuth } from "../../AuthContext.jsx";
 import LaunchReadinessPanel from "./LaunchReadinessPanel.jsx";
 import AdminDataGrid from "./AdminDataGrid.jsx";
+import { pageRange } from "./adminGridModel.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -200,14 +201,10 @@ function DataTable({ columns, rows, onRow, empty, serverPaged = false, tableId }
 
 function Pagination({ pagination, onPage, pageSize, onPageSize }) {
   const current = Math.max(1, Number(pagination?.page || 1));
-  const pages = Math.max(1, Number(pagination?.pages || 1));
-  const total = Math.max(0, Number(pagination?.total || 0));
-  const limit = Number(pagination?.limit || pageSize || 25);
+  const { pages, total, from, to } = pageRange(pagination);
   const [jump, setJump] = useState(String(current));
   useEffect(() => { setJump(String(current)); }, [current]);
   if (!pagination) return null;
-  const from = total ? (current - 1) * limit + 1 : 0;
-  const to = Math.min(total, current * limit);
   const go = next => onPage(Math.max(1, Math.min(pages, next)));
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-[#0f0f0f] px-3 py-3 text-xs text-zinc-400 sm:px-4">
