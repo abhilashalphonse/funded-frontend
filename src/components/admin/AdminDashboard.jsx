@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../AuthContext.jsx";
 import LaunchReadinessPanel from "./LaunchReadinessPanel.jsx";
+import AdminDataGrid from "./AdminDataGrid.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -191,82 +192,10 @@ function Loading() {
   return <div className="flex min-h-[320px] items-center justify-center"><div className="size-6 animate-spin rounded-full border-2 border-white/15 border-t-white" /></div>;
 }
 
-function DataTable({ columns, rows, onRow, empty = "No records found." }) {
-  if (!rows?.length) return <Empty title={empty} text="Adjust the current filters or check again when new activity is recorded." />;
-  const cell = (row, col) => col.render ? col.render(row) : row[col.key] ?? "—";
-  const rowKey = (row, index) => row._id || row.payoutId || row.customerId || row.accountId || row.orderId || row.conversationId || index;
-  const statusColumn = columns.find(column => column.key === "status");
-
-  return (
-    <div className="min-w-0">
-      {/* Mobile cards preserve every column and keep the existing row actions. */}
-      <div className="space-y-2 md:hidden" aria-label="Records">
-        {rows.map((row, index) => (
-          <article key={rowKey(row, index)} className="min-w-0 rounded-xl border border-white/[0.08] bg-[#101010] p-3.5">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">{columns[0]?.label}</p>
-                <div className="mt-1 break-words text-[13px] font-semibold text-white [overflow-wrap:anywhere]">{columns[0] ? cell(row, columns[0]) : "—"}</div>
-              </div>
-              {(statusColumn || onRow) && (
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  {statusColumn && <div aria-label="Record status" className="max-w-[118px] break-words text-right">{cell(row, statusColumn)}</div>}
-                  {onRow && (
-                    <button type="button" onClick={() => onRow(row)}
-                      aria-label={`Open ${columns[0]?.label || "record"} details`}
-                      className="flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-zinc-200 hover:bg-white/[0.06]">
-                      Open <ChevronRight size={14} />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 border-t border-white/[0.06] pt-3">
-              {columns.slice(1, 5).map(col => (
-                <div key={col.key} className="min-w-0">
-                  <dt className="text-[10px] font-medium text-zinc-500">{col.label}</dt>
-                  <dd className="mt-1 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{cell(row, col)}</dd>
-                </div>
-              ))}
-            </dl>
-            {columns.length > 5 && (
-              <details className="mt-3 border-t border-white/[0.06] pt-2">
-                <summary className="cursor-pointer py-2 text-xs font-medium text-zinc-400 hover:text-white">
-                  More fields ({columns.length - 5})
-                </summary>
-                <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 pt-2">
-                  {columns.slice(5).map(col => (
-                    <div key={col.key} className="min-w-0">
-                      <dt className="text-[10px] font-medium text-zinc-500">{col.label}</dt>
-                      <dd className="mt-1 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{cell(row, col)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </details>
-            )}
-          </article>
-        ))}
-      </div>
-      <div className="hidden min-w-0 overflow-hidden rounded-xl border border-white/[0.07] bg-[#0f0f0f] md:block">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-xs">
-            <thead className="border-b border-white/[0.07] bg-white/[0.02] text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-              <tr>{columns.map(col => <th key={col.key} className="whitespace-nowrap px-4 py-3 font-medium">{col.label}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.05]">
-              {rows.map((row, index) => (
-                <tr key={rowKey(row, index)}
-                  onClick={() => onRow?.(row)}
-                  className={onRow ? "cursor-pointer transition hover:bg-white/[0.035]" : ""}>
-                  {columns.map(col => <td key={col.key} className="whitespace-nowrap px-4 py-3 text-zinc-300">{cell(row, col)}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+function DataTable({ columns, rows, onRow, empty, serverPaged = false, tableId }) {
+  const inferredId = tableId || columns.map(column => column.key).join("-").slice(0, 180);
+  return <AdminDataGrid key={inferredId} tableId={inferredId} columns={columns} rows={rows}
+    onRow={onRow} empty={empty} serverPaged={serverPaged} />;
 }
 
 function Pagination({ pagination, onPage }) {
@@ -552,6 +481,7 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [listPage, setListPage] = useState(1);
+  const [listLimit, setListLimit] = useState(25);
   const [queue, setQueue] = useState("");
   const [tradeLoadingMore, setTradeLoadingMore] = useState(false);
   const [days, setDays] = useState("30");
@@ -612,32 +542,32 @@ export default function AdminDashboard() {
     const s = status ? `&status=${encodeURIComponent(status)}` : "";
     const p = `&page=${listPage}`;
     if (page === "overview") return "/overview";
-    if (page === "users") return `/users?limit=100${p}${q}${s}`;
-    if (page === "challenges") return `/challenges?limit=100${p}${q}${s}`;
-    if (page === "trials") return `/challenges?mode=DEMO&limit=100${p}${q}${s}`;
-    if (page === "funded") return `/challenges?funded=true&limit=100${p}${q}${s}`;
+    if (page === "users") return `/users?limit=${listLimit}${p}${q}${s}`;
+    if (page === "challenges") return `/challenges?limit=${listLimit}${p}${q}${s}`;
+    if (page === "trials") return `/challenges?mode=DEMO&limit=${listLimit}${p}${q}${s}`;
+    if (page === "funded") return `/challenges?funded=true&limit=${listLimit}${p}${q}${s}`;
     if (page === "orders" || page === "payments") {
       const attention = queue === "provisioning"
         ? "&attention=provisioning"
         : queue === "failed-payments"
           ? "&attention=failed-today"
           : s;
-      return `/${page}?limit=100${p}${q}${attention}`;
+      return `/${page}?limit=${listLimit}${p}${q}${attention}`;
     }
-    if (page === "payouts") return `/payouts?limit=100${p}${q}${s}`;
+    if (page === "payouts") return `/payouts?limit=${listLimit}${p}${q}${s}`;
     if (page === "trades") return "/trades?limit=200";
     if (page === "risk" || page === "breaches") return queue === "breaches-today" ? "/risk?breached=today" : "/risk";
     if (page === "funnel" || page === "revenue") return `/funnel?days=${days}`;
     if (page === "support") {
       const supportStatus = queue === "escalated" ? "&status=ESCALATED" : s;
-      return `/support?limit=100${p}${q}${supportStatus}`;
+      return `/support?limit=${listLimit}${p}${q}${supportStatus}`;
     }
     if (page === "launch-readiness") return "/launch-readiness?limit=20";
-    if (page === "audit") return `/audit?limit=100${p}`;
+    if (page === "audit") return `/audit?limit=${listLimit}${p}`;
     if (page === "admins") return "/admin-users";
     if (["jobs", "integrations", "errors", "refunds", "products", "pricing", "platforms", "affiliates"].includes(page)) return "/system";
     return "/overview";
-  }, [page, search, status, days, listPage, queue]);
+  }, [page, search, status, days, listPage, listLimit, queue]);
 
   const load = useCallback(async () => {
     const requestId = ++loadSequence.current;
