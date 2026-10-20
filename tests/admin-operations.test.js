@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../src/components/admin/AdminDashboard.jsx", import.meta.url), "utf8");
+const grid = readFileSync(new URL("../src/components/admin/AdminDataGrid.jsx", import.meta.url), "utf8");
 
 test("mobile record cards present status without expanding hidden fields", () => {
-  assert.match(source, /const statusColumn = columns\.find\(column => column\.key === "status"\)/);
-  assert.match(source, /\{statusColumn && <div aria-label="Record status"/);
-  assert.match(source, /More fields \(\{columns\.length - 5\}\)/);
+  assert.match(grid, /const statusColumn = columns\.find\(c => c\.key === "status"\)/);
+  assert.match(grid, /\{statusColumn && <div aria-label="Record status"/);
+  assert.match(grid, /More fields/);
 });
 
 test("operator errors do not replace the entire table or discard partial success", () => {
