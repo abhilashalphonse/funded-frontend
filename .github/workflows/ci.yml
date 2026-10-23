@@ -28,7 +28,37 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Test account timeline formatting
+      # Both repositories are public. Compare against the same named branch
+      # when it exists, otherwise the backend default branch. Fail closed on drift.
+      - name: Select paired backend branch
+        id: pricing_backend
+        shell: bash
+        env:
+          CANDIDATE_REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          chosen=main
+          if [[ "$CANDIDATE_REF" != "main" ]] && git ls-remote --exit-code --heads https://github.com/abhilashalphonse/funded-backend.git "refs/heads/$CANDIDATE_REF" >/dev/null; then
+            chosen="$CANDIDATE_REF"
+          fi
+          echo "ref=$chosen" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout paired backend pricing source
+        uses: actions/checkout@v4
+        with:
+          repository: abhilashalphonse/funded-backend
+          ref: ${{ steps.pricing_backend.outputs.ref }}
+          path: funded-backend
+          persist-credentials: false
+
+      - name: Required frontend/backend pricing parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$GITHUB_WORKSPACE/funded-backend/src/pricing/pricingEngine.js"
+          BACKEND_PRICING_ENGINE="$GITHUB_WORKSPACE/funded-backend/src/pricing/pricingEngine.js" node --test tests/challenge-pricing-v2.test.js
+
+      - name: Run frontend tests
         run: npm test
 
       - name: Build
