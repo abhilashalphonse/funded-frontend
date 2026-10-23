@@ -16,7 +16,14 @@ env:
   VITE_API_URL: https://funded-backend-production.up.railway.app
 
 jobs:
+  # Reuse the same full validation job as PR CI, pinned to THIS exact commit.
+  # Firebase never starts if pricing parity, tests or production build fail.
+  validate:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   deploy:
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

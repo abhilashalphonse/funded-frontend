@@ -16,7 +16,13 @@ env:
   VITE_API_URL: https://funded-backend-production.up.railway.app
 
 jobs:
+  validate:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   build_and_preview:
+    needs: validate
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
