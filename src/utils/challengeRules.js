@@ -349,11 +349,6 @@ export const BASE_PRICE_CURVES = {
 
 const ONE_STEP_ADJUSTMENTS = {
   profitTarget: {
-    5: 0.35,
-    6: 0.27,
-    7: 0.20,
-    8: 0.13,
-    9: 0.06,
     10: 0,
     11: -0.04,
     12: -0.08,
@@ -399,9 +394,6 @@ const ONE_STEP_ADJUSTMENTS = {
 
 const TWO_STEP_ADJUSTMENTS = {
   phase1ProfitTarget: {
-    5: 0.22,
-    6: 0.15,
-    7: 0.08,
     8: 0,
     9: -0.05,
     10: -0.09,
@@ -413,7 +405,6 @@ const TWO_STEP_ADJUSTMENTS = {
    * 6% is the default Phase 2 target.
    */
   phase2ProfitTarget: {
-  5: 0.20,
   6: 0,
   7: -0.06,
   8: -0.11,
