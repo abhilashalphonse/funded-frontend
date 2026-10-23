@@ -41,6 +41,9 @@
    CHALLENGE TYPES
 ====================================================================== */
 
+// Commercial rules for new purchases. Historical paid orders keep their saved snapshots.
+export const PRICING_VERSION = '2026-10-challenge-v2';
+
 export const STEP_TYPES = {
   ONE_STEP: '1step',
   TWO_STEP: '2step',
@@ -149,19 +152,19 @@ export const DEFAULT_COMMERCIAL_CONFIG = {
  */
 export const RULE_BOUNDS = {
   profitTarget: {
-    min: 5,
+    min: 10,
     max: 12,
     increment: 1,
   },
 
   phase1ProfitTarget: {
-    min: 5,
+    min: 8,
     max: 12,
     increment: 1,
   },
 
   phase2ProfitTarget: {
-    min: 5,
+    min: 6,
     max: 12,
     increment: 1,
   },
@@ -174,7 +177,7 @@ export const RULE_BOUNDS = {
 
   maxLoss: {
     min: 5,
-    max: 10,
+    max: 12,
     increment: 1,
   },
 
@@ -346,11 +349,6 @@ export const BASE_PRICE_CURVES = {
 
 const ONE_STEP_ADJUSTMENTS = {
   profitTarget: {
-    5: 0.35,
-    6: 0.27,
-    7: 0.20,
-    8: 0.13,
-    9: 0.06,
     10: 0,
     11: -0.04,
     12: -0.08,
@@ -370,6 +368,8 @@ const ONE_STEP_ADJUSTMENTS = {
     8: 0.16,
     9: 0.25,
     10: 0.35,
+    11: 0.45,
+    12: 0.55,
   },
 
   /**
@@ -394,9 +394,6 @@ const ONE_STEP_ADJUSTMENTS = {
 
 const TWO_STEP_ADJUSTMENTS = {
   phase1ProfitTarget: {
-    5: 0.22,
-    6: 0.15,
-    7: 0.08,
     8: 0,
     9: -0.05,
     10: -0.09,
@@ -408,7 +405,6 @@ const TWO_STEP_ADJUSTMENTS = {
    * 6% is the default Phase 2 target.
    */
   phase2ProfitTarget: {
-  5: 0.20,
   6: 0,
   7: -0.06,
   8: -0.11,
@@ -432,6 +428,8 @@ const TWO_STEP_ADJUSTMENTS = {
     8: -0.06,
     9: -0.03,
     10: 0,
+    11: 0.10,
+    12: 0.20,
   },
 
   minTradingDays: {
@@ -501,7 +499,7 @@ export const WEEKEND_HOLDING_ADJUSTMENT = 0.05;
  * Prevent extreme configurations from becoming commercially
  * nonsensical.
  */
-export const PRICE_MULTIPLIER_FLOOR = 0.40;
+export const PRICE_MULTIPLIER_FLOOR = 0.70;
 
 export const PRICE_MULTIPLIER_CEILING = 1.95;
 

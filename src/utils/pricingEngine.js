@@ -15,6 +15,7 @@
 
 import {
   STEP_TYPES,
+  PRICING_VERSION,
   ACCOUNT_SIZE_CONFIG,
   RULE_BOUNDS,
   BASE_PRICE_CURVES,
@@ -839,6 +840,7 @@ export function calculatePrice(
     finalPrice,
 
     currency: 'USD',
+    pricingVersion: PRICING_VERSION,
 
     multiplier:
       finalMultiplier,
