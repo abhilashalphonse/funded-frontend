@@ -4,6 +4,7 @@ import { Loader2, ChevronLeft, Lock, Mail, Check, AlertCircle, Bitcoin, QrCode, 
 import logo from "../assets/ACG.png";
 import { useAuth } from "../AuthContext.jsx";
 import { getAnalyticsSessionId, getAttribution, trackEvent } from "../utils/analytics.js";
+import { checkoutPriceMatches, isRefreshableCheckoutError, validCheckoutQuote } from "../utils/checkoutQuote.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const STATUS = { IDLE: "IDLE", PROCESSING: "PROCESSING", ACTIVATING: "ACTIVATING", ACTIVE: "ACTIVE", ACTIVATION_FAILED: "ACTIVATION_FAILED" };
@@ -158,7 +159,7 @@ function Terms({ checked, onChange }) {
   </label>;
 }
 
-function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSignIn, getAccessToken, isAuthenticated = false, onDashboard, onSetupAccount }) {
+function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSignIn, getAccessToken, isAuthenticated = false, onDashboard, onSetupAccount, onPriceChanged }) {
   const [method, setMethod] = useState("UPI");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [status, setStatus] = useState(STATUS.IDLE);
@@ -166,6 +167,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   const [paymentId, setPaymentId] = useState(null);
   const [statusToken, setStatusToken] = useState(null);
   const [upiQuote, setUpiQuote] = useState(null);
+  const [upiQuoteRevision, setUpiQuoteRevision] = useState(0);
   const [upiQuoteLoading, setUpiQuoteLoading] = useState(false);
   const [upiQuoteError, setUpiQuoteError] = useState("");
   const [upiUnavailable, setUpiUnavailable] = useState(null);
@@ -231,7 +233,7 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
 
     void loadQuote();
     return () => { active = false; };
-  }, [definition, commercial]);
+  }, [definition, commercial, upiQuoteRevision]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -304,6 +306,12 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
   const createPayment = async () => {
     if (!canSubmit) return;
     const isUpi = method === "UPI";
+    if (isUpi && (!upiQuote?.expiresAt || Date.now() >= Number(upiQuote.expiresAt))) {
+      setUpiQuote(null);
+      setNotice("UPI quote expired. Refreshing the amount.");
+      setUpiQuoteRevision(value => value + 1);
+      return;
+    }
     const paymentWindow = isUpi ? window.open("about:blank", "_blank") : null;
     if (isUpi && !paymentWindow) {
       setNotice("Your browser blocked the secure payment window. Allow pop-ups for ACG Funded and try again.");
@@ -332,13 +340,19 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
           email,
           challengeDefinition: definition,
           commercialConfig: commercial,
+          confirmedPrice: amount,
+          confirmedPricingVersion: plan.pricingPreview?.pricingVersion,
           ...(isUpi ? { quoteToken: upiQuote?.quoteToken } : { paymentMethod: method }),
           analyticsSessionId: getAnalyticsSessionId(),
           attribution: getAttribution(),
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.data?.checkoutUrl || !data?.data?.statusToken) throw new Error(data?.message || "Unable to create payment.");
+      if (!response.ok || !data?.data?.checkoutUrl || !data?.data?.statusToken) {
+        const error = new Error(data?.message || "Unable to create payment.");
+        error.code = data?.code;
+        throw error;
+      }
       setPaymentId(data.data.paymentId);
       setStatusToken(data.data.statusToken);
       if (typeof window !== "undefined") {
@@ -357,7 +371,13 @@ function PaymentSection({ plan, email, onEmailChange, emailLocked = false, onSig
     } catch (error) {
       if (typeof paymentWindow !== "undefined" && paymentWindow && !paymentWindow.closed) paymentWindow.close();
       setStatus(STATUS.IDLE);
-      setNotice(error.message || "Payment could not be started.");
+      if (["CHECKOUT_PRICE_CHANGED", "CHECKOUT_PRICE_CONFIRMATION_REQUIRED", "INVALID_CHALLENGE_CONFIGURATION"].includes(error.code)) {
+        onPriceChanged?.();
+      } else if (isUpi && isRefreshableCheckoutError(error.code)) {
+        setUpiQuote(null);
+        setUpiQuoteRevision(value => value + 1);
+      }
+      setNotice(isRefreshableCheckoutError(error.code) ? "Checkout quote updated. Review and retry." : error.message || "Payment could not be started.");
       void trackEvent("payment_failed", {
         stage: "payment_create",
         paymentMethod: method,
@@ -526,6 +546,62 @@ export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}
     if (user?.email) setEmail(current => current || user.email);
   }, [user?.email]);
   const hasPlan = useMemo(() => Boolean(plan?.challengeDefinition && plan?.commercialConfig), [plan]);
+  const [authoritativeQuote, setAuthoritativeQuote] = useState(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState("");
+  const [priceAccepted, setPriceAccepted] = useState(false);
+  const [quoteRevision, setQuoteRevision] = useState(0);
+  const returningPayment = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment");
+
+  useEffect(() => {
+    if (!hasPlan || returningPayment) return undefined;
+    let active = true;
+    setQuoteLoading(true);
+    setQuoteError("");
+    setAuthoritativeQuote(null);
+    setPriceAccepted(false);
+    const load = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/payments/quote`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({
+            challengeDefinition: plan.challengeDefinition,
+            commercialConfig: plan.commercialConfig,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !validCheckoutQuote(payload.data)) {
+          throw new Error(payload?.message || "Unable to verify the challenge price.");
+        }
+        if (!active) return;
+        setAuthoritativeQuote(payload.data);
+        setPriceAccepted(checkoutPriceMatches(plan.pricingPreview, payload.data));
+      } catch (error) {
+        if (active) setQuoteError(error.message || "Unable to verify the challenge price.");
+      } finally {
+        if (active) setQuoteLoading(false);
+      }
+    };
+    void load();
+    return () => { active = false; };
+  }, [hasPlan, plan, quoteRevision, returningPayment]);
+
+  const verifiedPlan = authoritativeQuote ? {
+    ...plan,
+    pricingPreview: {
+      ...plan.pricingPreview,
+      finalPrice: authoritativeQuote.amount,
+      currency: "USD",
+      pricingVersion: authoritativeQuote.pricingVersion,
+    },
+  } : plan;
+  const refreshPrice = () => {
+    setPriceAccepted(false);
+    setQuoteRevision(value => value + 1);
+  };
+
 
   useEffect(() => {
     if (!hasPlan) return;
@@ -536,9 +612,9 @@ export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}
     }, { entryIntent: "paid" });
   }, [hasPlan, plan]);
 
-  const returningPayment = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("payment");
   if (!hasPlan && returningPayment) return <PaymentReturn onHome={onHome} onDashboard={onDashboard} onSetupAccount={onSetupAccount} isAuthenticated={Boolean(user)} email={email || window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""} />;
   if (!hasPlan) return null;
+  if (returningPayment) return <PaymentReturn onHome={onHome} onDashboard={onDashboard} onSetupAccount={onSetupAccount} isAuthenticated={Boolean(user)} email={email || window.sessionStorage.getItem("acg:lastCheckoutEmail") || ""} />;
 
   return <section className="relative min-h-screen bg-[#05060A] font-sans text-zinc-300">
     <div className="relative z-10 mx-auto w-full max-w-[1240px] px-5 sm:px-8">
@@ -551,10 +627,28 @@ export default function PaymentPage({ plan, onBack = () => {}, onHome = () => {}
       </div>
       <div className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-2">
         <div className="order-2 lg:order-1">
-          <ChallengeSummary plan={plan} />
+          {authoritativeQuote ? <ChallengeSummary plan={verifiedPlan} /> : <div className="rounded-xl border border-white/10 p-6 text-sm text-zinc-400">Verifying challenge price...</div>}
         </div>
         <div className="order-1 lg:order-2">
-          <PaymentSection plan={plan} email={email} onEmailChange={setEmail} emailLocked={Boolean(user?.email)} onSignIn={onSignIn} getAccessToken={getAccessToken} isAuthenticated={Boolean(user)} onDashboard={onDashboard} onSetupAccount={onSetupAccount} />
+          {quoteLoading ? <p className="p-6 text-sm text-zinc-400">Checking current challenge price...</p>
+            : quoteError ? <div className="rounded-xl border border-white/10 p-6 text-sm text-zinc-300">
+                <p>{quoteError}</p>
+                <div className="mt-4 flex gap-3">
+                  <button type="button" onClick={refreshPrice} className="rounded-md bg-white px-4 py-2 font-medium text-black">Retry</button>
+                  <button type="button" onClick={onBack} className="rounded-md border border-white/20 px-4 py-2">Change challenge</button>
+                </div>
+              </div>
+            : authoritativeQuote && !priceAccepted ? <div className="rounded-xl border border-white/10 p-6 text-sm text-zinc-300">
+                <p className="font-semibold text-white">Review updated challenge price</p>
+                <p className="mt-2">The current price is {formatMoney(authoritativeQuote.amount)}. Your saved checkout showed {formatMoney(plan.pricingPreview?.finalPrice)}.</p>
+                <p className="mt-2 text-zinc-500">Confirm the new price before opening a payment invoice.</p>
+                <div className="mt-4 flex gap-3">
+                  <button type="button" onClick={() => setPriceAccepted(true)} className="rounded-md bg-white px-4 py-2 font-medium text-black">Accept current price</button>
+                  <button type="button" onClick={onBack} className="rounded-md border border-white/20 px-4 py-2">Change challenge</button>
+                </div>
+              </div>
+            : authoritativeQuote ? <PaymentSection plan={verifiedPlan} email={email} onEmailChange={setEmail} emailLocked={Boolean(user?.email)} onSignIn={onSignIn} getAccessToken={getAccessToken} isAuthenticated={Boolean(user)} onDashboard={onDashboard} onSetupAccount={onSetupAccount} onPriceChanged={refreshPrice} />
+            : null}
         </div>
       </div>
       <div className="pb-10 text-center text-[11px] text-zinc-600">ACG Funded · <a href="mailto:support@acgfunded.com" className="hover:text-zinc-400">Support</a></div>
