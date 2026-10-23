@@ -181,24 +181,39 @@ test("fewer than 10% of standard 2-step combinations reach the multiplier floor"
   assert.ok(atFloor / checked < 0.10);
 });
 
-test("frontend and backend agree across every 2-step rule and commercial combination", {
+function* oneStepRules() {
+  for (const profitTarget of values(RULE_BOUNDS.profitTarget))
+    for (const dailyLoss of values(RULE_BOUNDS.dailyLoss))
+      for (const maxLoss of values(RULE_BOUNDS.maxLoss))
+        for (const minTradingDays of values(RULE_BOUNDS.minTradingDays))
+          yield { profitTarget, dailyLoss, maxLoss, minTradingDays };
+}
+
+// CI supplies BACKEND_PRICING_ENGINE after checking out the paired backend.
+// In CI this test MUST run; the workflow fails if the paired source is missing.
+test("frontend/backend prices and adjustment details match all rules, all commercial options, and multiple account sizes", {
   skip: !process.env.BACKEND_PRICING_ENGINE,
 }, async () => {
-  // Set BACKEND_PRICING_ENGINE to the matching backend engine's absolute path.
   const { pathToFileURL } = await import("node:url");
   const backend = await import(pathToFileURL(process.env.BACKEND_PRICING_ENGINE).href);
-  for (const rules of twoStepRules()) {
-    for (const profitSplit of [60, 80, 90])
-      for (const payoutFrequency of ["Monthly", "Biweekly", "Weekly", "On Demand"])
-        for (const newsTrading of [false, true])
-          for (const weekendHolding of [false, true]) {
-            const config = { profitSplit, payoutFrequency, newsTrading, weekendHolding };
-            const d = definition("2step", rules);
-            const front = calculatePrice(d, config);
-            const back = backend.calculatePrice(d, config);
-            for (const field of ["basePrice", "adjustmentTotal", "multiplier", "subtotal", "finalPrice", "currency", "pricingVersion", "adjustmentItems"]) {
-              assert.deepEqual(front[field], back[field], field + ": " + JSON.stringify({ rules, config }));
+  let checked = 0;
+  for (const step of ["1step", "2step"]) {
+    const options = step === "1step" ? oneStepRules() : twoStepRules();
+    const sizes = step === "1step" ? [5000, 50000, 100000] : [5000, 50000, 100000, 200000];
+    for (const rules of options) for (const accountSize of sizes)
+      for (const profitSplit of [60, 80, 90])
+        for (const payoutFrequency of ["Monthly", "Biweekly", "Weekly", "On Demand"])
+          for (const newsTrading of [false, true])
+            for (const weekendHolding of [false, true]) {
+              const config = { profitSplit, payoutFrequency, newsTrading, weekendHolding };
+              const d = { ...definition(step, rules), accountSize };
+              const front = calculatePrice(d, config);
+              const back = backend.calculatePrice(d, config);
+              for (const field of ["basePrice", "adjustmentTotal", "multiplier", "subtotal", "finalPrice", "currency", "pricingVersion", "adjustmentItems"]) {
+                assert.deepEqual(front[field], back[field], field + ": " + JSON.stringify({ step, rules, config, accountSize }));
+              }
+              checked++;
             }
-          }
   }
+  assert.equal(checked, (288 * 3 + 3360 * 4) * 48);
 });
