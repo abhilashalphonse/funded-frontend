@@ -471,6 +471,19 @@ export const WEEKEND_HOLDING_ADJUSTMENT = 0.05;
  * Prevent extreme configurations from becoming commercially
  * nonsensical.
  */
+// Scope discounted commercial terms to 2-Step; keep 1-Step options/prices unchanged.
+export const TWO_STEP_PROFIT_SPLIT_ADJUSTMENTS = {
+  60: -0.06,
+  80: 0,
+  90: 0.12,
+};
+export const TWO_STEP_PAYOUT_ADJUSTMENTS = {
+  Monthly: -0.02,
+  Biweekly: 0,
+  Weekly: 0.10,
+  'On Demand': 0.22,
+};
+
 export const PRICE_MULTIPLIER_FLOOR = 0.70;
 
 export const PRICE_MULTIPLIER_CEILING = 1.95;
