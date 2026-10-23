@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { checkoutPriceMatches, validCheckoutQuote, isRefreshableCheckoutError } from "../src/utils/checkoutQuote.js";
+import { PRICING_VERSION } from "../src/utils/challengeRules.js";
 
-const quote = { amount: 189, currency: "USD", pricingVersion: "2026-10-challenge-v2" };
+const quote = { amount: 189, currency: "USD", pricingVersion: PRICING_VERSION };
 test("only complete authoritative USD quotes are accepted", () => {
   assert.equal(validCheckoutQuote(quote), true);
   assert.equal(validCheckoutQuote({ ...quote, amount: 0 }), false);

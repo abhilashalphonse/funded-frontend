@@ -42,7 +42,7 @@
 ====================================================================== */
 
 // Commercial rules for new purchases. Historical paid orders keep their saved snapshots.
-export const PRICING_VERSION = '2026-10-challenge-v2';
+export const PRICING_VERSION = '2026-10-challenge-v3';
 
 export const STEP_TYPES = {
   ONE_STEP: '1step',
@@ -393,44 +393,16 @@ const ONE_STEP_ADJUSTMENTS = {
 ---------------------------------------------------------------------- */
 
 const TWO_STEP_ADJUSTMENTS = {
-  phase1ProfitTarget: {
-    8: 0,
-    9: -0.05,
-    10: -0.09,
-    11: -0.12,
-    12: -0.15,
-  },
+  phase1ProfitTarget: { 8: 0, 9: -0.02, 10: -0.04, 11: -0.06, 12: -0.08 },
 
   /**
    * 6% is the default Phase 2 target.
    */
-  phase2ProfitTarget: {
-  6: 0,
-  7: -0.06,
-  8: -0.11,
-  9: -0.16,
-  10: -0.20,
-  11: -0.24,
-  12: -0.28,
-},
+  phase2ProfitTarget: { 6: 0, 7: -0.02, 8: -0.04, 9: -0.06, 10: -0.08, 11: -0.1, 12: -0.12 },
 
-  dailyLoss: {
-    2: -0.12,
-    3: -0.06,
-    4: -0.03,
-    5: 0,
-  },
+  dailyLoss: { 2: -0.06, 3: -0.03, 4: -0.015, 5: 0 },
 
-  maxLoss: {
-    5: -0.20,
-    6: -0.15,
-    7: -0.10,
-    8: -0.06,
-    9: -0.03,
-    10: 0,
-    11: 0.10,
-    12: 0.20,
-  },
+  maxLoss: { 5: -0.1, 6: -0.075, 7: -0.05, 8: -0.03, 9: -0.015, 10: 0, 11: 0.1, 12: 0.2 },
 
   minTradingDays: {
     3: 0,
@@ -499,6 +471,19 @@ export const WEEKEND_HOLDING_ADJUSTMENT = 0.05;
  * Prevent extreme configurations from becoming commercially
  * nonsensical.
  */
+// Scope discounted commercial terms to 2-Step; keep 1-Step options/prices unchanged.
+export const TWO_STEP_PROFIT_SPLIT_ADJUSTMENTS = {
+  60: -0.06,
+  80: 0,
+  90: 0.12,
+};
+export const TWO_STEP_PAYOUT_ADJUSTMENTS = {
+  Monthly: -0.02,
+  Biweekly: 0,
+  Weekly: 0.10,
+  'On Demand': 0.22,
+};
+
 export const PRICE_MULTIPLIER_FLOOR = 0.70;
 
 export const PRICE_MULTIPLIER_CEILING = 1.95;

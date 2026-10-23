@@ -21,7 +21,9 @@ import {
   BASE_PRICE_CURVES,
   ADJUSTMENT_TABLES,
   PROFIT_SPLIT_ADJUSTMENTS,
+  TWO_STEP_PROFIT_SPLIT_ADJUSTMENTS,
   PAYOUT_ADJUSTMENTS,
+  TWO_STEP_PAYOUT_ADJUSTMENTS,
   NEWS_TRADING_ADJUSTMENT,
   WEEKEND_HOLDING_ADJUSTMENT,
   PROFIT_SPLIT_OPTIONS,
@@ -301,20 +303,15 @@ export function computeAdjustments(
      Commercial options
   ---------------------------------------------------------------- */
 
-  items.profitSplit =
-    getAdjustment(
-      PROFIT_SPLIT_ADJUSTMENTS,
-      'profitSplit',
-      commercial.profitSplit
-    );
+  const profitSplitTable = step === STEP_TYPES.TWO_STEP
+    ? TWO_STEP_PROFIT_SPLIT_ADJUSTMENTS
+    : PROFIT_SPLIT_ADJUSTMENTS;
+  const payoutTable = step === STEP_TYPES.TWO_STEP
+    ? TWO_STEP_PAYOUT_ADJUSTMENTS
+    : PAYOUT_ADJUSTMENTS;
 
-
-  items.payoutFrequency =
-    getAdjustment(
-      PAYOUT_ADJUSTMENTS,
-      'payoutFrequency',
-      commercial.payoutFrequency
-    );
+  items.profitSplit = getAdjustment(profitSplitTable, 'profitSplit', commercial.profitSplit);
+  items.payoutFrequency = getAdjustment(payoutTable, 'payoutFrequency', commercial.payoutFrequency);
 
 
   items.newsTrading =
